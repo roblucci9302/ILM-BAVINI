@@ -1,0 +1,22 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "bavini"
+compatibility_flags = ["nodejs_compat"]
+compatibility_date = "2024-07-01"
+pages_build_output_dir = "./build/client"
+
+# OAuth Provider Secrets
+# These must be set via `wrangler secret put <SECRET_NAME>` or in the Cloudflare dashboard
+# DO NOT commit actual values - these are placeholders
+#
+# Required for OAuth authentication:
+# - GITHUB_CLIENT_ID: GitHub OAuth App Client ID
+# - GITHUB_CLIENT_SECRET: GitHub OAuth App Client Secret
+# - FIGMA_CLIENT_ID: Figma OAuth App Client ID
+# - FIGMA_CLIENT_SECRET: Figma OAuth App Client Secret
+# - NOTION_CLIENT_ID: Notion Integration Client ID
+# - NOTION_CLIENT_SECRET: Notion Integration Client Secret
+#
+# Set secrets with:
+#   wrangler secret put GITHUB_CLIENT_ID
+#   wrangler secret put GITHUB_CLIENT_SECRET
+#   etc.

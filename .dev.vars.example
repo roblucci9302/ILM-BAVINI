@@ -1,0 +1,21 @@
+# BAVINI OAuth Configuration
+# Copy this file to .dev.vars and fill in your credentials
+# DO NOT commit .dev.vars to version control
+
+# GitHub OAuth App
+# Create at: https://github.com/settings/developers
+# Callback URL: http://localhost:5173/api/auth/callback
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Figma OAuth App
+# Create at: https://www.figma.com/developers/apps
+# Callback URL: http://localhost:5173/api/auth/callback
+FIGMA_CLIENT_ID=your_figma_client_id
+FIGMA_CLIENT_SECRET=your_figma_client_secret
+
+# Notion Integration (Public)
+# Create at: https://www.notion.so/my-integrations
+# Redirect URI: http://localhost:5173/api/auth/callback
+NOTION_CLIENT_ID=your_notion_client_id
+NOTION_CLIENT_SECRET=your_notion_client_secret
