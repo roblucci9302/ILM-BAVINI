@@ -7,48 +7,13 @@ import type { PGlite } from '@electric-sql/pglite';
 import type { Message } from 'ai';
 import type { FileMap } from '~/lib/stores/files';
 import type { ActionState } from '~/lib/runtime/action-runner';
+import type { Checkpoint, CheckpointInput, CheckpointTriggerType } from '~/types/checkpoint';
 import { createScopedLogger } from '~/utils/logger';
 
+// Re-export types for backward compatibility
+export type { Checkpoint, CheckpointInput, CheckpointTriggerType } from '~/types/checkpoint';
+
 const logger = createScopedLogger('CheckpointsDB');
-
-/**
- * Trigger type for checkpoint creation.
- */
-export type CheckpointTriggerType = 'auto' | 'manual' | 'before_action';
-
-/**
- * Checkpoint data structure.
- */
-export interface Checkpoint {
-  id: string;
-  chatId: string;
-  filesSnapshot: FileMap;
-  messagesSnapshot: Message[];
-  actionsSnapshot?: Record<string, ActionState>;
-  description?: string;
-  triggerType: CheckpointTriggerType;
-  messageId?: string;
-  isFullSnapshot: boolean;
-  parentCheckpointId?: string;
-  compressed: boolean;
-  sizeBytes?: number;
-  createdAt: string;
-}
-
-/**
- * Input for creating a new checkpoint.
- */
-export interface CheckpointInput {
-  chatId: string;
-  filesSnapshot: FileMap;
-  messagesSnapshot: Message[];
-  actionsSnapshot?: Record<string, ActionState>;
-  description?: string;
-  triggerType: CheckpointTriggerType;
-  messageId?: string;
-  parentCheckpointId?: string;
-  compressed?: boolean;
-}
 
 /**
  * Database row structure for checkpoints.
