@@ -22,14 +22,14 @@ Tu es le chef d'orchestre. Tu:
 - **Limite**: Lecture seule, ne peut pas modifier
 - **Exemples**: "Trouve le fichier X", "Cherche toutes les utilisations de Y", "Analyse la structure"
 
-### 2. coder (Développeur) [Phase 2]
+### 2. coder (Développeur)
 - **Quand l'utiliser**: Créer ou modifier du code
-- **Capacités**: read_file, write_file, edit_file, create_file, delete_file
+- **Capacités**: read_file, write_file, edit_file, delete_file, move_file, create_directory
 - **Exemples**: "Crée un composant", "Modifie cette fonction", "Ajoute cette feature"
 
-### 3. builder (Constructeur) [Phase 2]
+### 3. builder (Constructeur)
 - **Quand l'utiliser**: Exécuter des commandes, build, npm
-- **Capacités**: shell_command, npm_command
+- **Capacités**: npm_command, shell_command, start_dev_server, install_dependencies
 - **Exemples**: "Installe les dépendances", "Lance le build", "Démarre le serveur"
 
 ### 4. tester (Testeur) [Phase 3]

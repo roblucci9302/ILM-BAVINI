@@ -16,6 +16,8 @@ export * from './types';
 export { BaseAgent } from './core/base-agent';
 export { AgentRegistry, agentRegistry } from './core/agent-registry';
 export type { RegisteredAgent, RegistryStats } from './core/agent-registry';
+export { TaskQueue, createTaskQueue } from './core/task-queue';
+export type { TaskQueueConfig, QueueStats } from './core/task-queue';
 
 // ============================================================================
 // AGENTS
@@ -23,9 +25,12 @@ export type { RegisteredAgent, RegistryStats } from './core/agent-registry';
 
 export { ExploreAgent, createExploreAgent } from './agents/explore-agent';
 export { Orchestrator, createOrchestrator } from './agents/orchestrator';
+export { CoderAgent, createCoderAgent } from './agents/coder-agent';
+export type { CoderFileSystem } from './agents/coder-agent';
+export { BuilderAgent, createBuilderAgent } from './agents/builder-agent';
 
 // ============================================================================
-// TOOLS
+// TOOLS - LECTURE
 // ============================================================================
 
 export {
@@ -39,20 +44,60 @@ export {
 export type { FileSystem } from './tools/read-tools';
 
 // ============================================================================
+// TOOLS - ÉCRITURE
+// ============================================================================
+
+export {
+  WRITE_TOOLS,
+  WriteFileTool,
+  EditFileTool,
+  DeleteFileTool,
+  CreateDirectoryTool,
+  MoveFileTool,
+  createWriteToolHandlers,
+  createMockWritableFileSystem,
+} from './tools/write-tools';
+export type { WritableFileSystem } from './tools/write-tools';
+
+// ============================================================================
+// TOOLS - SHELL
+// ============================================================================
+
+export {
+  SHELL_TOOLS,
+  NpmCommandTool,
+  ShellCommandTool,
+  StartDevServerTool,
+  StopServerTool,
+  InstallDependenciesTool,
+  GetProcessStatusTool,
+  createShellToolHandlers,
+  createMockShell,
+} from './tools/shell-tools';
+export type { ShellInterface, ShellResult, RunningProcess } from './tools/shell-tools';
+
+// ============================================================================
 // PROMPTS
 // ============================================================================
 
 export { EXPLORE_SYSTEM_PROMPT } from './prompts/explore-prompt';
 export { ORCHESTRATOR_SYSTEM_PROMPT, AGENT_CAPABILITIES } from './prompts/orchestrator-prompt';
+export { CODER_SYSTEM_PROMPT } from './prompts/coder-prompt';
+export { BUILDER_SYSTEM_PROMPT } from './prompts/builder-prompt';
 
 // ============================================================================
 // SYSTÈME D'AGENTS COMPLET
 // ============================================================================
 
 import { AgentRegistry } from './core/agent-registry';
+import { TaskQueue } from './core/task-queue';
 import { createExploreAgent } from './agents/explore-agent';
 import { createOrchestrator } from './agents/orchestrator';
+import { createCoderAgent } from './agents/coder-agent';
+import { createBuilderAgent } from './agents/builder-agent';
 import type { FileSystem } from './tools/read-tools';
+import type { WritableFileSystem } from './tools/write-tools';
+import type { ShellInterface } from './tools/shell-tools';
 import type { Task, TaskResult, AgentEventCallback } from './types';
 import {
   handleAgentEvent,
@@ -62,20 +107,35 @@ import {
 } from '../stores/agents';
 
 /**
+ * Type FileSystem complète (lecture + écriture)
+ * WritableFileSystem inclut toutes les méthodes de lecture et d'écriture
+ */
+export type FullFileSystem = WritableFileSystem;
+
+/**
  * Configuration du système d'agents
  */
 export interface AgentSystemConfig {
   /** Clé API Anthropic */
   apiKey: string;
 
-  /** Système de fichiers (WebContainer) */
+  /** Système de fichiers (WebContainer) - lecture seule */
   fileSystem: FileSystem;
+
+  /** Système de fichiers avec écriture (optionnel, pour Coder Agent) */
+  writableFileSystem?: FullFileSystem;
+
+  /** Interface shell (optionnel, pour Builder Agent) */
+  shell?: ShellInterface;
 
   /** Callback pour les événements (optionnel) */
   onEvent?: AgentEventCallback;
 
   /** Activer les logs détaillés */
   verbose?: boolean;
+
+  /** Nombre max de tâches parallèles */
+  maxParallelTasks?: number;
 }
 
 /**
@@ -84,16 +144,23 @@ export interface AgentSystemConfig {
  */
 export class AgentSystem {
   private registry: AgentRegistry;
+  private taskQueue: TaskQueue | null = null;
   private apiKey: string;
   private fileSystem: FileSystem;
+  private writableFileSystem?: FullFileSystem;
+  private shell?: ShellInterface;
   private eventCallback?: AgentEventCallback;
+  private maxParallelTasks: number;
   private initialized = false;
 
   constructor(config: AgentSystemConfig) {
     this.registry = AgentRegistry.getInstance();
     this.apiKey = config.apiKey;
     this.fileSystem = config.fileSystem;
+    this.writableFileSystem = config.writableFileSystem;
+    this.shell = config.shell;
     this.eventCallback = config.onEvent;
+    this.maxParallelTasks = config.maxParallelTasks ?? 3;
 
     // Réinitialiser les stores
     resetAgentStores();
@@ -111,12 +178,36 @@ export class AgentSystem {
     const exploreAgent = createExploreAgent(this.fileSystem);
     this.registry.register(exploreAgent);
 
+    // Créer et enregistrer le Coder Agent (si FileSystem writable disponible)
+    if (this.writableFileSystem) {
+      const coderAgent = createCoderAgent(this.writableFileSystem);
+      this.registry.register(coderAgent);
+    }
+
+    // Créer et enregistrer le Builder Agent (si Shell disponible)
+    if (this.shell) {
+      const builderAgent = createBuilderAgent(this.shell);
+      this.registry.register(builderAgent);
+    }
+
     // Créer et enregistrer l'Orchestrator
     const orchestrator = createOrchestrator();
     orchestrator.setApiKey(this.apiKey);
     this.registry.register(orchestrator);
 
-    // S'abonner aux événements
+    // Créer la task queue
+    this.taskQueue = new TaskQueue(this.registry, this.apiKey, {
+      maxParallel: this.maxParallelTasks,
+      onEvent: (event) => {
+        handleAgentEvent(event);
+
+        if (this.eventCallback) {
+          this.eventCallback(event);
+        }
+      },
+    });
+
+    // S'abonner aux événements du registry
     this.registry.subscribe((event) => {
       // Mettre à jour les stores
       handleAgentEvent(event);
@@ -131,8 +222,15 @@ export class AgentSystem {
 
     addAgentLog('orchestrator', {
       level: 'info',
-      message: 'Agent system initialized',
+      message: 'Agent system initialized with ' + this.registry.getAll().size + ' agents',
     });
+  }
+
+  /**
+   * Obtenir la task queue
+   */
+  getTaskQueue(): TaskQueue | null {
+    return this.taskQueue;
   }
 
   /**
