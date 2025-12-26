@@ -298,15 +298,3 @@ export function secureCompare(a: string, b: string): boolean {
   return result === 0;
 }
 
-/**
- * Validate OAuth token format (basic validation)
- * Checks for non-empty string with reasonable length
- */
-export function isValidToken(token: string): boolean {
-  if (!token || typeof token !== 'string') {
-    return false;
-  }
-
-  // Tokens should be at least 10 chars and not excessively long
-  return token.length >= 10 && token.length <= 4096;
-}
