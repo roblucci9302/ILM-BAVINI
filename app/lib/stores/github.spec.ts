@@ -19,11 +19,11 @@ import {
   disconnectGitHub,
   clearGitHubError,
 } from './github';
-import * as gitSettings from './git-settings';
+import * as authTokens from '~/lib/auth/tokens';
 import * as githubApi from '~/lib/github/api';
 
-vi.mock('./git-settings', () => ({
-  getGitToken: vi.fn(),
+vi.mock('~/lib/auth/tokens', () => ({
+  getAccessToken: vi.fn(),
 }));
 
 vi.mock('~/lib/github/api', () => ({
@@ -96,7 +96,7 @@ describe('GitHub Store', () => {
 
   describe('fetchGitHubUser', () => {
     it('should fetch and store user when token is present', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.getAuthenticatedUser).mockResolvedValue({
         success: true,
         data: mockUser as any,
@@ -110,7 +110,7 @@ describe('GitHub Store', () => {
     });
 
     it('should return null when no token', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(null);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(undefined);
 
       const result = await fetchGitHubUser();
 
@@ -119,7 +119,7 @@ describe('GitHub Store', () => {
     });
 
     it('should handle API error', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.getAuthenticatedUser).mockResolvedValue({
         success: false,
         error: 'API Error',
@@ -134,7 +134,7 @@ describe('GitHub Store', () => {
 
   describe('fetchUserRepos', () => {
     it('should fetch and store repos', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.listUserRepos).mockResolvedValue({
         success: true,
         data: mockRepos as any,
@@ -147,7 +147,7 @@ describe('GitHub Store', () => {
     });
 
     it('should return empty array when no token', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(null);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(undefined);
 
       const result = await fetchUserRepos();
 
@@ -165,7 +165,7 @@ describe('GitHub Store', () => {
 
     it('should clear issues and PRs when selecting new repo', async () => {
       // First set some issues/PRs
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.listIssues).mockResolvedValue({ success: true, data: mockIssues as any });
       selectRepo('testuser', 'repo1');
       await fetchRepoIssues();
@@ -193,7 +193,7 @@ describe('GitHub Store', () => {
 
   describe('fetchRepoIssues', () => {
     beforeEach(() => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       selectRepo('testuser', 'repo1');
     });
 
@@ -221,7 +221,7 @@ describe('GitHub Store', () => {
 
   describe('fetchRepoPullRequests', () => {
     beforeEach(() => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       selectRepo('testuser', 'repo1');
     });
 
@@ -240,7 +240,7 @@ describe('GitHub Store', () => {
 
   describe('initializeGitHub', () => {
     it('should fetch user and repos on initialization', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.getAuthenticatedUser).mockResolvedValue({
         success: true,
         data: mockUser as any,
@@ -258,7 +258,7 @@ describe('GitHub Store', () => {
     });
 
     it('should return false when user fetch fails', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.getAuthenticatedUser).mockResolvedValue({
         success: false,
         error: 'Auth failed',
@@ -272,7 +272,7 @@ describe('GitHub Store', () => {
 
   describe('disconnectGitHub', () => {
     it('should reset all state', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.getAuthenticatedUser).mockResolvedValue({
         success: true,
         data: mockUser as any,
@@ -289,7 +289,7 @@ describe('GitHub Store', () => {
 
   describe('clearGitHubError', () => {
     it('should clear error state', async () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(null);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(undefined);
       await fetchGitHubUser(); // This will set an error
 
       expect(githubError.get()).not.toBeNull();
@@ -308,7 +308,7 @@ describe('GitHub Store', () => {
     it('isGitHubConnected should reflect user presence', async () => {
       expect(isGitHubConnected.get()).toBe(false);
 
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(mockToken);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(mockToken);
       vi.mocked(githubApi.getAuthenticatedUser).mockResolvedValue({
         success: true,
         data: mockUser as any,

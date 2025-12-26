@@ -4,7 +4,7 @@ import * as nodePath from 'node:path';
 import { syncToWebContainer } from '~/lib/git/file-sync';
 import * as gitOps from '~/lib/git/operations';
 import { initPyodide, installPackages, runPython } from '~/lib/pyodide';
-import { getGitToken } from '~/lib/stores/git-settings';
+import { getAccessToken } from '~/lib/auth/tokens';
 import type { BoltAction, GitAction, GitHubAction, PythonAction } from '~/types/actions';
 import * as githubApi from '~/lib/github/api';
 import { createScopedLogger } from '~/utils/logger';
@@ -210,8 +210,8 @@ export class ActionRunner {
 
     logger.debug(`Running git ${gitAction.operation}`);
 
-    // create onAuth callback using token from action or settings
-    const token = gitAction.token || getGitToken();
+    // create onAuth callback using token from action or OAuth
+    const token = gitAction.token || getAccessToken('github');
     const onAuth = token
       ? async () => ({
           username: 'oauth2',
@@ -341,7 +341,7 @@ export class ActionRunner {
     }
 
     const githubAction = action as GitHubAction & ActionState;
-    const token = getGitToken();
+    const token = getAccessToken('github');
 
     if (!token) {
       throw new Error('Token GitHub requis. Connectez votre compte GitHub dans les paramètres.');

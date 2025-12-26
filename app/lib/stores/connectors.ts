@@ -1,17 +1,15 @@
 /**
  * Connectors store for managing third-party service integrations.
  * Uses localStorage for persistence across sessions.
- * Syncs with git-settings for GitHub token management.
+ * OAuth tokens are managed through lib/auth/tokens.ts
  * Supports both OAuth and API key authentication.
  */
 
-import { atom, map } from 'nanostores';
-import { gitSettingsStore, setGitToken, getGitToken, kGitToken } from './git-settings';
+import { atom } from 'nanostores';
 import {
   supportsOAuth,
   initializeOAuthTokens,
   oauthTokensStore,
-  storeToken,
   removeToken,
   getAccessToken,
   isProviderConnected,
@@ -132,7 +130,7 @@ function getDefaultState(): ConnectorsState {
   return state as ConnectorsState;
 }
 
-// Initialize store from localStorage and sync with git-settings
+// Initialize store from localStorage
 function initStore(): ConnectorsState {
   const defaultState = getDefaultState();
 
@@ -154,24 +152,6 @@ function initStore(): ConnectorsState {
         }
       }
 
-      // sync with existing git token from git-settings
-      const existingGitToken = localStorage.getItem(kGitToken);
-
-      if (existingGitToken && !state.github.isConnected) {
-        // git token exists but connector shows disconnected - sync it
-        state.github = {
-          isConnected: true,
-          credentials: { token: existingGitToken },
-          lastConnected: Date.now(),
-        };
-      } else if (!existingGitToken && state.github.isConnected) {
-        // connector shows connected but no git token - sync it
-        state.github = {
-          isConnected: false,
-          credentials: {},
-        };
-      }
-
       return state;
     } catch {
       // ignore parse errors
@@ -182,42 +162,6 @@ function initStore(): ConnectorsState {
 }
 
 export const connectorsStore = atom<ConnectorsState>(initStore());
-
-/*
- * Subscribe to git-settings changes to keep GitHub connector in sync
- * This handles cases where git token is set directly (e.g., from action-runner)
- */
-if (!import.meta.env.SSR) {
-  gitSettingsStore.subscribe((gitSettings) => {
-    const currentState = connectorsStore.get();
-    const githubConnector = currentState.github;
-
-    if (gitSettings.token && !githubConnector.isConnected) {
-      // token was set externally, update connector state
-      const newState: ConnectorsState = {
-        ...currentState,
-        github: {
-          isConnected: true,
-          credentials: { token: gitSettings.token },
-          lastConnected: Date.now(),
-        },
-      };
-      connectorsStore.set(newState);
-      persistState(newState);
-    } else if (!gitSettings.token && githubConnector.isConnected) {
-      // token was cleared externally, update connector state
-      const newState: ConnectorsState = {
-        ...currentState,
-        github: {
-          isConnected: false,
-          credentials: {},
-        },
-      };
-      connectorsStore.set(newState);
-      persistState(newState);
-    }
-  });
-}
 
 // Settings modal state
 export const settingsModalOpen = atom<boolean>(false);
@@ -234,7 +178,6 @@ function persistState(state: ConnectorsState): void {
 
 /**
  * Connect a connector with credentials.
- * Syncs GitHub token with git-settings store.
  */
 export function connectConnector(id: ConnectorId, credentials: Record<string, string>): void {
   const current = connectorsStore.get();
@@ -250,16 +193,10 @@ export function connectConnector(id: ConnectorId, credentials: Record<string, st
 
   connectorsStore.set(newState);
   persistState(newState);
-
-  // sync GitHub token with git-settings
-  if (id === 'github' && credentials.token) {
-    setGitToken(credentials.token);
-  }
 }
 
 /**
  * Disconnect a connector.
- * Syncs GitHub token with git-settings store.
  */
 export function disconnectConnector(id: ConnectorId): void {
   const current = connectorsStore.get();
@@ -274,11 +211,6 @@ export function disconnectConnector(id: ConnectorId): void {
 
   connectorsStore.set(newState);
   persistState(newState);
-
-  // sync GitHub token with git-settings
-  if (id === 'github') {
-    setGitToken(null);
-  }
 }
 
 /**
@@ -401,11 +333,6 @@ export function handleOAuthSuccess(providerId: string): void {
 
   connectorsStore.set(newState);
   persistState(newState);
-
-  // Sync with git-settings if GitHub
-  if (id === 'github') {
-    setGitToken(accessToken);
-  }
 }
 
 /**
@@ -435,11 +362,6 @@ export function disconnectOAuthConnector(id: ConnectorId): void {
 
   connectorsStore.set(newState);
   persistState(newState);
-
-  // Sync with git-settings if GitHub
-  if (id === 'github') {
-    setGitToken(null);
-  }
 }
 
 /**
@@ -500,10 +422,6 @@ function syncOAuthTokensToConnectors(): void {
         expiresAt: token.expiresAt,
       };
       hasChanges = true;
-
-      if (id === 'github') {
-        setGitToken(token.accessToken);
-      }
     }
   }
 
@@ -516,10 +434,6 @@ function syncOAuthTokensToConnectors(): void {
         isOAuth: true,
       };
       hasChanges = true;
-
-      if (connector.id === 'github') {
-        setGitToken(null);
-      }
     }
   }
 

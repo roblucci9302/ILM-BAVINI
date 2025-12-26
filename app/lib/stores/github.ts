@@ -1,12 +1,12 @@
 /**
  * GitHub store for managing GitHub state (user, repos, issues, PRs).
- * Uses the GitHub API client and git-settings for authentication.
+ * Uses the GitHub API client and OAuth tokens for authentication.
  */
 
 import { atom, computed } from 'nanostores';
 import * as githubApi from '~/lib/github/api';
 import type { GitHubUser, GitHubRepo, GitHubIssue, GitHubPullRequest } from '~/lib/github/types';
-import { getGitToken } from './git-settings';
+import { getAccessToken } from '~/lib/auth/tokens';
 
 /*
  * ============================================
@@ -106,7 +106,7 @@ function setError(error: string | null): void {
  * Fetch the authenticated GitHub user.
  */
 export async function fetchGitHubUser(): Promise<GitHubUser | null> {
-  const token = getGitToken();
+  const token = getAccessToken('github');
 
   if (!token) {
     setError('Token GitHub non configuré');
@@ -134,7 +134,7 @@ export async function fetchGitHubUser(): Promise<GitHubUser | null> {
  * Fetch repositories for the authenticated user.
  */
 export async function fetchUserRepos(): Promise<GitHubRepo[]> {
-  const token = getGitToken();
+  const token = getAccessToken('github');
 
   if (!token) {
     setError('Token GitHub non configuré');
@@ -188,7 +188,7 @@ export function clearSelectedRepo(): void {
  * Fetch issues for the selected repository.
  */
 export async function fetchRepoIssues(state?: 'open' | 'closed' | 'all'): Promise<GitHubIssue[]> {
-  const token = getGitToken();
+  const token = getAccessToken('github');
   const currentState = githubStore.get();
   const { selectedRepo } = currentState;
 
@@ -225,7 +225,7 @@ export async function fetchRepoIssues(state?: 'open' | 'closed' | 'all'): Promis
  * Fetch pull requests for the selected repository.
  */
 export async function fetchRepoPullRequests(state?: 'open' | 'closed' | 'all'): Promise<GitHubPullRequest[]> {
-  const token = getGitToken();
+  const token = getAccessToken('github');
   const currentState = githubStore.get();
   const { selectedRepo } = currentState;
 
@@ -262,7 +262,7 @@ export async function fetchRepoPullRequests(state?: 'open' | 'closed' | 'all'): 
  * Create a new issue in the selected repository.
  */
 export async function createIssue(title: string, body?: string, labels?: string[]): Promise<GitHubIssue | null> {
-  const token = getGitToken();
+  const token = getAccessToken('github');
   const { selectedRepo } = githubStore.get();
 
   if (!token) {
@@ -305,7 +305,7 @@ export async function createPullRequest(
   base: string,
   body?: string,
 ): Promise<GitHubPullRequest | null> {
-  const token = getGitToken();
+  const token = getAccessToken('github');
   const { selectedRepo } = githubStore.get();
 
   if (!token) {
