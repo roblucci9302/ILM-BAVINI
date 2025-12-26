@@ -22,8 +22,8 @@ vi.mock('~/lib/stores/github', () => ({
   clearGitHubError: vi.fn(),
 }));
 
-vi.mock('~/lib/stores/git-settings', () => ({
-  getGitToken: vi.fn(),
+vi.mock('~/lib/auth/tokens', () => ({
+  getAccessToken: vi.fn(),
 }));
 
 vi.mock('@nanostores/react', () => ({
@@ -44,7 +44,7 @@ vi.mock('~/utils/easings', () => ({
   cubicEasingFn: (t: number) => t,
 }));
 
-import * as gitSettings from '~/lib/stores/git-settings';
+import * as authTokens from '~/lib/auth/tokens';
 import * as githubStore from '~/lib/stores/github';
 
 describe('GitHubPanel', () => {
@@ -54,7 +54,7 @@ describe('GitHubPanel', () => {
 
   describe('not connected state', () => {
     it('should show not connected message when no token', () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(null);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(undefined);
 
       render(<GitHubPanel />);
 
@@ -63,7 +63,7 @@ describe('GitHubPanel', () => {
     });
 
     it('should show link to create token', () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue(null);
+      vi.mocked(authTokens.getAccessToken).mockReturnValue(undefined);
 
       render(<GitHubPanel />);
 
@@ -74,7 +74,7 @@ describe('GitHubPanel', () => {
 
   describe('loading state', () => {
     it('should show loading indicator when loading', () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue('token');
+      vi.mocked(authTokens.getAccessToken).mockReturnValue('token');
       vi.mocked(githubStore.isLoading.get).mockReturnValue(true);
       vi.mocked(githubStore.isGitHubConnected.get).mockReturnValue(false);
 
@@ -86,7 +86,7 @@ describe('GitHubPanel', () => {
 
   describe('error state', () => {
     it('should show error message when error occurs without connection', () => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue('token');
+      vi.mocked(authTokens.getAccessToken).mockReturnValue('token');
       vi.mocked(githubStore.isLoading.get).mockReturnValue(false);
       vi.mocked(githubStore.isGitHubConnected.get).mockReturnValue(false);
       vi.mocked(githubStore.githubError.get).mockReturnValue('Authentication failed');
@@ -100,7 +100,7 @@ describe('GitHubPanel', () => {
 
   describe('connected state', () => {
     beforeEach(() => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue('token');
+      vi.mocked(authTokens.getAccessToken).mockReturnValue('token');
       vi.mocked(githubStore.isLoading.get).mockReturnValue(false);
       vi.mocked(githubStore.isGitHubConnected.get).mockReturnValue(true);
       vi.mocked(githubStore.githubUser.get).mockReturnValue({
@@ -159,7 +159,7 @@ describe('GitHubPanel', () => {
 
   describe('selected repository', () => {
     beforeEach(() => {
-      vi.mocked(gitSettings.getGitToken).mockReturnValue('token');
+      vi.mocked(authTokens.getAccessToken).mockReturnValue('token');
       vi.mocked(githubStore.isLoading.get).mockReturnValue(false);
       vi.mocked(githubStore.isGitHubConnected.get).mockReturnValue(true);
       vi.mocked(githubStore.githubUser.get).mockReturnValue({

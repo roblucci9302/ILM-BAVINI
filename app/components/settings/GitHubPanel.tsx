@@ -18,7 +18,7 @@ import {
   fetchRepoPullRequests,
   clearGitHubError,
 } from '~/lib/stores/github';
-import { getGitToken } from '~/lib/stores/git-settings';
+import { getAccessToken } from '~/lib/auth/tokens';
 import { classNames } from '~/utils/classNames';
 import { cubicEasingFn } from '~/utils/easings';
 import type { GitHubRepo } from '~/lib/github/types';
@@ -65,7 +65,7 @@ export const GitHubPanel = memo(() => {
   const error = useStore(githubError);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const token = getGitToken();
+  const token = getAccessToken('github');
 
   useEffect(() => {
     if (token && !connected && !loading) {

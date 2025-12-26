@@ -20,7 +20,6 @@ import {
   getApiKeyConnectors,
   type AuthMethod,
 } from './connectors';
-import { setGitToken, gitSettingsStore, kGitToken } from './git-settings';
 
 describe('connectors store', () => {
   beforeEach(() => {
@@ -34,10 +33,6 @@ describe('connectors store', () => {
     connectorsStore.set(defaultState as any);
     settingsModalOpen.set(false);
     activeSettingsTab.set('connectors');
-
-    // reset git settings
-    setGitToken(null);
-    localStorage.removeItem(kGitToken);
   });
 
   describe('CONNECTORS configuration', () => {
@@ -233,84 +228,6 @@ describe('connectors store', () => {
         expect(supabase?.authMethod).toBe('oauth');
         expect(netlify?.authMethod).toBe('oauth');
       });
-    });
-  });
-
-  describe('GitHub-gitSettings sync', () => {
-    it('should sync GitHub token to git-settings when connecting', () => {
-      connectConnector('github', { token: 'ghp_test_token_123' });
-
-      // verify connector state
-      expect(getConnectorState('github').isConnected).toBe(true);
-
-      // verify git-settings was synced
-      expect(gitSettingsStore.get().token).toBe('ghp_test_token_123');
-    });
-
-    it('should clear git-settings token when disconnecting GitHub', () => {
-      // first connect
-      connectConnector('github', { token: 'ghp_test_token_456' });
-
-      expect(gitSettingsStore.get().token).toBe('ghp_test_token_456');
-
-      // then disconnect
-      disconnectConnector('github');
-
-      // verify git-settings was cleared
-      expect(gitSettingsStore.get().token).toBe(null);
-      expect(getConnectorState('github').isConnected).toBe(false);
-    });
-
-    it('should not sync non-GitHub connectors to git-settings', () => {
-      connectConnector('supabase', { url: 'https://test.supabase.co', anonKey: 'key' });
-
-      expect(gitSettingsStore.get().token).toBe(null);
-    });
-
-    it('should update GitHub connector when git-settings token changes externally', async () => {
-      // simulate external token set (e.g., from action-runner)
-      setGitToken('ghp_external_token');
-
-      // give subscription time to propagate
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const state = getConnectorState('github');
-
-      expect(state.isConnected).toBe(true);
-      expect(state.credentials.token).toBe('ghp_external_token');
-    });
-
-    it('should disconnect GitHub connector when git-settings token is cleared externally', async () => {
-      // first connect
-      connectConnector('github', { token: 'ghp_connected_token' });
-
-      expect(getConnectorState('github').isConnected).toBe(true);
-
-      // simulate external token clear
-      setGitToken(null);
-
-      // give subscription time to propagate
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(getConnectorState('github').isConnected).toBe(false);
-    });
-
-    it('should preserve GitHub lastConnected timestamp on reconnect', async () => {
-      connectConnector('github', { token: 'ghp_first_token' });
-
-      const firstLastConnected = getConnectorState('github').lastConnected;
-
-      // wait a bit to ensure different timestamp
-      await new Promise((resolve) => setTimeout(resolve, 20));
-
-      // reconnect via external token
-      setGitToken('ghp_new_token');
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const newLastConnected = getConnectorState('github').lastConnected;
-
-      // lastConnected should be updated
-      expect(newLastConnected).toBeGreaterThanOrEqual(firstLastConnected!);
     });
   });
 });
