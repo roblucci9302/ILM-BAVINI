@@ -1,25 +1,19 @@
 /**
  * OAuth Providers Registry
  *
- * Centralized export of all OAuth provider configurations
+ * Centralized registry for all OAuth provider configurations
  * Core providers only: GitHub, Supabase, Netlify
  */
 
 import type { OAuthProviderConfig } from '../oauth';
+import type { CloudflareEnv } from '../env';
 import { createGitHubProvider, getGitHubUser, verifyGitHubToken, type GitHubUser } from './github';
 import { createNetlifyProvider, getNetlifyUser, verifyNetlifyToken, type NetlifyUser } from './netlify';
-import {
-  createSupabaseProvider,
-  getSupabaseOrganizations,
-  getSupabaseProjects,
-  verifySupabaseToken,
-  refreshSupabaseToken,
-} from './supabase';
+import { createSupabaseProvider, getSupabaseOrganizations, getSupabaseProjects, verifySupabaseToken } from './supabase';
 
-// Re-export all providers
-export * from './github';
-export * from './netlify';
-export * from './supabase';
+// Re-export provider types
+export type { GitHubUser } from './github';
+export type { NetlifyUser } from './netlify';
 
 /**
  * Provider IDs that support OAuth
@@ -40,91 +34,64 @@ export function supportsOAuth(connectorId: string): connectorId is OAuthProvider
 export type ProviderUser = GitHubUser | NetlifyUser;
 
 /**
- * Get OAuth provider configuration by ID
- * Requires environment variables for client credentials
+ * Provider registry - maps provider IDs to their factory functions
  */
-export function getProviderConfig(
-  providerId: OAuthProviderId,
-  env: {
-    GITHUB_CLIENT_ID?: string;
-    GITHUB_CLIENT_SECRET?: string;
-    NETLIFY_CLIENT_ID?: string;
-    NETLIFY_CLIENT_SECRET?: string;
-    SUPABASE_CLIENT_ID?: string;
-    SUPABASE_CLIENT_SECRET?: string;
+const PROVIDER_REGISTRY = {
+  github: {
+    create: (env: CloudflareEnv) =>
+      env.GITHUB_CLIENT_ID ? createGitHubProvider(env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET) : null,
+    getUser: getGitHubUser,
+    verify: verifyGitHubToken,
   },
-): OAuthProviderConfig | null {
-  switch (providerId) {
-    case 'github':
-      if (!env.GITHUB_CLIENT_ID) {
-        return null;
-      }
-
-      return createGitHubProvider(env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET);
-
-    case 'netlify':
-      if (!env.NETLIFY_CLIENT_ID) {
-        return null;
-      }
-
-      return createNetlifyProvider(env.NETLIFY_CLIENT_ID, env.NETLIFY_CLIENT_SECRET);
-
-    case 'supabase':
-      if (!env.SUPABASE_CLIENT_ID) {
-        return null;
-      }
-
-      return createSupabaseProvider(env.SUPABASE_CLIENT_ID, env.SUPABASE_CLIENT_SECRET);
-
-    default:
-      return null;
-  }
-}
-
-/**
- * Fetch user info for a provider using access token
- */
-export async function getProviderUser(providerId: OAuthProviderId, accessToken: string): Promise<ProviderUser> {
-  switch (providerId) {
-    case 'github':
-      return getGitHubUser(accessToken);
-
-    case 'netlify':
-      return getNetlifyUser(accessToken);
-
-    case 'supabase': {
-      const orgs = await getSupabaseOrganizations(accessToken);
-
+  netlify: {
+    create: (env: CloudflareEnv) =>
+      env.NETLIFY_CLIENT_ID ? createNetlifyProvider(env.NETLIFY_CLIENT_ID, env.NETLIFY_CLIENT_SECRET) : null,
+    getUser: getNetlifyUser,
+    verify: verifyNetlifyToken,
+  },
+  supabase: {
+    create: (env: CloudflareEnv) =>
+      env.SUPABASE_CLIENT_ID ? createSupabaseProvider(env.SUPABASE_CLIENT_ID, env.SUPABASE_CLIENT_SECRET) : null,
+    getUser: async (token: string) => {
+      const orgs = await getSupabaseOrganizations(token);
       return {
         id: orgs[0]?.id || 'unknown',
         name: orgs[0]?.name || 'Supabase User',
         email: '',
         avatar_url: null,
       } as unknown as ProviderUser;
-    }
+    },
+    verify: verifySupabaseToken,
+  },
+} as const;
 
-    default:
-      throw new Error(`Unknown provider: ${providerId}`);
+/**
+ * Get OAuth provider configuration by ID
+ */
+export function getProviderConfig(providerId: OAuthProviderId, env: CloudflareEnv): OAuthProviderConfig | null {
+  const provider = PROVIDER_REGISTRY[providerId];
+  return provider?.create(env) ?? null;
+}
+
+/**
+ * Fetch user info for a provider using access token
+ */
+export async function getProviderUser(providerId: OAuthProviderId, accessToken: string): Promise<ProviderUser> {
+  const provider = PROVIDER_REGISTRY[providerId];
+
+  if (!provider) {
+    throw new Error(`Unknown provider: ${providerId}`);
   }
+
+  return provider.getUser(accessToken);
 }
 
 /**
  * Verify a token is still valid for a provider
  */
 export async function verifyProviderToken(providerId: OAuthProviderId, accessToken: string): Promise<boolean> {
-  switch (providerId) {
-    case 'github':
-      return verifyGitHubToken(accessToken);
-
-    case 'netlify':
-      return verifyNetlifyToken(accessToken);
-
-    case 'supabase':
-      return verifySupabaseToken(accessToken);
-
-    default:
-      return false;
-  }
+  const provider = PROVIDER_REGISTRY[providerId];
+  return provider?.verify(accessToken) ?? false;
 }
 
 /**
@@ -159,5 +126,5 @@ export const PROVIDER_DISPLAY_INFO: Record<
   },
 };
 
-// Export specific functions for use in routes
-export { getSupabaseOrganizations, getSupabaseProjects, refreshSupabaseToken };
+// Export Supabase-specific functions
+export { getSupabaseOrganizations, getSupabaseProjects };

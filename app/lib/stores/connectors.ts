@@ -474,6 +474,62 @@ export function getApiKeyConnectors(): ConnectorConfig[] {
  */
 
 /**
+ * Sync OAuth tokens to connector states.
+ * Handles both initial load and ongoing changes.
+ */
+function syncOAuthTokensToConnectors(): void {
+  const tokens = oauthTokensStore.get();
+  const current = connectorsStore.get();
+  let hasChanges = false;
+  const newState = { ...current };
+
+  // Sync connected OAuth tokens
+  for (const [providerId, token] of Object.entries(tokens)) {
+    const id = providerId as ConnectorId;
+
+    if (!CONNECTORS.find((c) => c.id === id)) {
+      continue;
+    }
+
+    if (token && isProviderConnected(providerId) && !current[id].isConnected) {
+      newState[id] = {
+        isConnected: true,
+        credentials: { accessToken: token.accessToken },
+        lastConnected: token.connectedAt,
+        isOAuth: true,
+        expiresAt: token.expiresAt,
+      };
+      hasChanges = true;
+
+      if (id === 'github') {
+        setGitToken(token.accessToken);
+      }
+    }
+  }
+
+  // Handle disconnected OAuth providers
+  for (const connector of CONNECTORS.filter((c) => c.authMethod === 'oauth')) {
+    if (current[connector.id].isConnected && current[connector.id].isOAuth && !tokens[connector.id]) {
+      newState[connector.id] = {
+        isConnected: false,
+        credentials: {},
+        isOAuth: true,
+      };
+      hasChanges = true;
+
+      if (connector.id === 'github') {
+        setGitToken(null);
+      }
+    }
+  }
+
+  if (hasChanges) {
+    connectorsStore.set(newState);
+    persistState(newState);
+  }
+}
+
+/**
  * Initialize OAuth integration.
  * Should be called on app startup.
  */
@@ -485,102 +541,11 @@ export function initializeOAuthIntegration(): void {
   // Initialize OAuth tokens from localStorage
   initializeOAuthTokens();
 
-  // Sync OAuth tokens with connector states
+  // Initial sync
   syncOAuthTokensToConnectors();
 
-  // Subscribe to OAuth tokens changes
-  oauthTokensStore.subscribe((tokens) => {
-    const current = connectorsStore.get();
-    let hasChanges = false;
-    const newState = { ...current };
-
-    // Check each OAuth provider
-    for (const [providerId, token] of Object.entries(tokens)) {
-      const id = providerId as ConnectorId;
-
-      if (!CONNECTORS.find((c) => c.id === id)) {
-        continue;
-      }
-
-      if (token && !current[id].isConnected) {
-        // Token exists but connector is disconnected - connect it
-        newState[id] = {
-          isConnected: true,
-          credentials: { accessToken: token.accessToken },
-          lastConnected: token.connectedAt,
-          isOAuth: true,
-          expiresAt: token.expiresAt,
-        };
-        hasChanges = true;
-
-        // Sync GitHub with git-settings
-        if (id === 'github') {
-          setGitToken(token.accessToken);
-        }
-      }
-    }
-
-    // Check for disconnected OAuth providers
-    for (const connector of CONNECTORS.filter((c) => c.authMethod === 'oauth')) {
-      if (current[connector.id].isConnected && current[connector.id].isOAuth && !tokens[connector.id]) {
-        // Connector is connected via OAuth but token is gone - disconnect
-        newState[connector.id] = {
-          isConnected: false,
-          credentials: {},
-          isOAuth: true,
-        };
-        hasChanges = true;
-
-        if (connector.id === 'github') {
-          setGitToken(null);
-        }
-      }
-    }
-
-    if (hasChanges) {
-      connectorsStore.set(newState);
-      persistState(newState);
-    }
-  });
-}
-
-/**
- * Sync OAuth tokens to connector states on startup.
- */
-function syncOAuthTokensToConnectors(): void {
-  const tokens = oauthTokensStore.get();
-  const current = connectorsStore.get();
-  let hasChanges = false;
-  const newState = { ...current };
-
-  for (const [providerId, token] of Object.entries(tokens)) {
-    const id = providerId as ConnectorId;
-
-    if (!CONNECTORS.find((c) => c.id === id)) {
-      continue;
-    }
-
-    if (token && isProviderConnected(providerId)) {
-      newState[id] = {
-        isConnected: true,
-        credentials: { accessToken: token.accessToken },
-        lastConnected: token.connectedAt,
-        isOAuth: true,
-        expiresAt: token.expiresAt,
-      };
-      hasChanges = true;
-
-      // Sync GitHub with git-settings
-      if (id === 'github') {
-        setGitToken(token.accessToken);
-      }
-    }
-  }
-
-  if (hasChanges) {
-    connectorsStore.set(newState);
-    persistState(newState);
-  }
+  // Subscribe to ongoing changes
+  oauthTokensStore.subscribe(() => syncOAuthTokensToConnectors());
 }
 
 // Initialize OAuth integration on module load (client-side only)

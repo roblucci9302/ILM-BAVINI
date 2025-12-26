@@ -10,19 +10,7 @@
 import { type LoaderFunctionArgs, redirect } from '@remix-run/cloudflare';
 import { generateCodeVerifier, generateCodeChallenge, generateState, buildAuthorizationUrl } from '~/lib/auth/oauth';
 import { supportsOAuth, getProviderConfig, type OAuthProviderId } from '~/lib/auth/providers';
-
-/**
- * Environment interface for Cloudflare
- * Core providers only: GitHub, Supabase, Netlify
- */
-interface CloudflareEnv {
-  GITHUB_CLIENT_ID?: string;
-  GITHUB_CLIENT_SECRET?: string;
-  NETLIFY_CLIENT_ID?: string;
-  NETLIFY_CLIENT_SECRET?: string;
-  SUPABASE_CLIENT_ID?: string;
-  SUPABASE_CLIENT_SECRET?: string;
-}
+import type { CloudflareEnv } from '~/lib/auth/env';
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const provider = params.provider;
