@@ -2,7 +2,7 @@
  * PGlite database schema for BAVINI chat persistence.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS chats (
@@ -23,6 +23,43 @@ export const CREATE_TABLES_SQL = `
   );
 `;
 
+/**
+ * Schema for checkpoints table (Time Travel feature).
+ * Stores snapshots of project state for restoration.
+ */
+export const CREATE_CHECKPOINTS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS checkpoints (
+    id TEXT PRIMARY KEY,
+    chat_id TEXT NOT NULL,
+
+    -- Saved data
+    files_snapshot JSONB NOT NULL,
+    messages_snapshot JSONB NOT NULL,
+    actions_snapshot JSONB,
+
+    -- Metadata
+    description TEXT,
+    trigger_type TEXT NOT NULL CHECK (trigger_type IN ('auto', 'manual', 'before_action')),
+    message_id TEXT,
+
+    -- Optimized storage
+    is_full_snapshot BOOLEAN DEFAULT true,
+    parent_checkpoint_id TEXT,
+    compressed BOOLEAN DEFAULT false,
+    size_bytes INTEGER,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_checkpoint_id) REFERENCES checkpoints(id) ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_checkpoints_chat ON checkpoints(chat_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_checkpoints_parent ON checkpoints(parent_checkpoint_id);
+  CREATE INDEX IF NOT EXISTS idx_checkpoints_trigger ON checkpoints(trigger_type);
+`;
+
 export const INSERT_SCHEMA_VERSION_SQL = `
   INSERT INTO schema_version (version)
   VALUES ($1)
@@ -32,3 +69,8 @@ export const INSERT_SCHEMA_VERSION_SQL = `
 export const GET_SCHEMA_VERSION_SQL = `
   SELECT MAX(version) as version FROM schema_version;
 `;
+
+/**
+ * Migration SQL for upgrading from v1 to v2 (adds checkpoints table).
+ */
+export const MIGRATE_V1_TO_V2_SQL = CREATE_CHECKPOINTS_TABLE_SQL;

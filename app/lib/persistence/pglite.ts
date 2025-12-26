@@ -5,13 +5,59 @@
 
 import { PGlite } from '@electric-sql/pglite';
 import { createScopedLogger } from '~/utils/logger';
-import { CREATE_TABLES_SQL, INSERT_SCHEMA_VERSION_SQL, SCHEMA_VERSION } from './schema';
+import {
+  CREATE_CHECKPOINTS_TABLE_SQL,
+  CREATE_TABLES_SQL,
+  GET_SCHEMA_VERSION_SQL,
+  INSERT_SCHEMA_VERSION_SQL,
+  SCHEMA_VERSION,
+} from './schema';
 
 const logger = createScopedLogger('PGlite');
 
 const PGLITE_DB_NAME = 'idb://bavini-chats';
 
 let pgliteInstance: PGlite | null = null;
+
+/**
+ * Get the current schema version from the database.
+ */
+async function getCurrentSchemaVersion(db: PGlite): Promise<number> {
+  try {
+    const result = await db.query<{ version: number | null }>(GET_SCHEMA_VERSION_SQL);
+    return result.rows[0]?.version ?? 0;
+  } catch {
+    // table doesn't exist yet
+    return 0;
+  }
+}
+
+/**
+ * Run schema migrations if needed.
+ */
+async function runMigrations(db: PGlite): Promise<void> {
+  const currentVersion = await getCurrentSchemaVersion(db);
+
+  if (currentVersion >= SCHEMA_VERSION) {
+    logger.debug(`Schema is up to date (v${currentVersion})`);
+    return;
+  }
+
+  logger.info(`Migrating schema from v${currentVersion} to v${SCHEMA_VERSION}...`);
+
+  // migration v0/v1 → v2: add checkpoints table
+  if (currentVersion < 2) {
+    logger.info('Running migration: adding checkpoints table...');
+    await db.exec(CREATE_CHECKPOINTS_TABLE_SQL);
+    await db.query(INSERT_SCHEMA_VERSION_SQL, [2]);
+    logger.info('Migration to v2 complete');
+  }
+
+  // future migrations can be added here:
+  // if (currentVersion < 3) { ... }
+
+  logger.info(`Schema migration complete (now v${SCHEMA_VERSION})`);
+}
 
 /**
  * Initialize PGlite database with schema.
@@ -30,11 +76,14 @@ export async function initPGlite(): Promise<PGlite> {
 
     await db.waitReady;
 
-    // create tables if they don't exist
+    // create base tables if they don't exist
     await db.exec(CREATE_TABLES_SQL);
 
-    // record schema version
-    await db.query(INSERT_SCHEMA_VERSION_SQL, [SCHEMA_VERSION]);
+    // record initial schema version if not present
+    await db.query(INSERT_SCHEMA_VERSION_SQL, [1]);
+
+    // run any pending migrations
+    await runMigrations(db);
 
     logger.info('PGlite database initialized successfully');
 
