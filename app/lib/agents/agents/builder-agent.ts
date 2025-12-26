@@ -1,0 +1,244 @@
+/**
+ * Builder Agent - Agent spécialisé dans le build, l'exécution et les dépendances
+ * Gère npm, les serveurs de dev, et les commandes shell
+ */
+
+import { BaseAgent } from '../core/base-agent';
+import {
+  SHELL_TOOLS,
+  createShellToolHandlers,
+  type ShellInterface,
+  type RunningProcess,
+} from '../tools/shell-tools';
+import { BUILDER_SYSTEM_PROMPT } from '../prompts/builder-prompt';
+import type { Task, TaskResult, ToolDefinition, Artifact } from '../types';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('BuilderAgent');
+
+// ============================================================================
+// BUILDER AGENT
+// ============================================================================
+
+/**
+ * Agent de build et exécution
+ */
+export class BuilderAgent extends BaseAgent {
+  private shell: ShellInterface | null = null;
+  private shellHandlers: ReturnType<typeof createShellToolHandlers> | null = null;
+  private executedCommands: Array<{
+    command: string;
+    success: boolean;
+    output: string;
+    timestamp: Date;
+  }> = [];
+
+  constructor() {
+    super({
+      name: 'builder',
+      description:
+        'Agent de build et exécution. Lance les commandes npm, les scripts shell, ' +
+        'démarre les serveurs de développement. Gère les dépendances.',
+      model: 'claude-sonnet-4-5-20250929',
+      tools: SHELL_TOOLS,
+      systemPrompt: BUILDER_SYSTEM_PROMPT,
+      maxTokens: 4096,
+      temperature: 0.1,
+    });
+  }
+
+  /**
+   * Implémentation du system prompt
+   */
+  getSystemPrompt(): string {
+    return BUILDER_SYSTEM_PROMPT;
+  }
+
+  /**
+   * Exécution principale de l'agent (appelée par run())
+   */
+  async execute(task: Task): Promise<TaskResult> {
+    // Vérifier que le shell est initialisé
+    if (!this.shell || !this.shellHandlers) {
+      return {
+        success: false,
+        output: 'Shell not initialized. Call setShell() first.',
+        errors: [
+          {
+            code: 'SHELL_NOT_INITIALIZED',
+            message: 'Shell interface not initialized',
+            recoverable: false,
+          },
+        ],
+      };
+    }
+
+    // Réinitialiser l'historique des commandes
+    this.executedCommands = [];
+
+    // Construire le prompt avec contexte
+    let prompt = task.prompt;
+
+    // Ajouter les processus en cours au contexte
+    const runningProcesses = this.shell.getRunningProcesses();
+
+    if (runningProcesses.length > 0) {
+      prompt += '\n\nProcessus actuellement en cours:\n';
+
+      for (const proc of runningProcesses) {
+        prompt += `- ${proc.command} (ID: ${proc.id}, Port: ${proc.port || 'N/A'})\n`;
+      }
+    }
+
+    // Exécuter la boucle d'agent
+    const result = await this.runAgentLoop(prompt);
+
+    // Ajouter les artefacts des commandes exécutées
+    if (result.success && this.executedCommands.length > 0) {
+      result.artifacts = result.artifacts || [];
+
+      for (const cmd of this.executedCommands) {
+        const artifact: Artifact = {
+          type: 'command',
+          content: cmd.output,
+          title: cmd.command,
+        };
+        result.artifacts.push(artifact);
+      }
+    }
+
+    // Ajouter les données des processus en cours
+    result.data = result.data || {};
+    result.data.runningProcesses = this.shell.getRunningProcesses();
+    result.data.commandHistory = this.executedCommands;
+
+    return result;
+  }
+
+  /**
+   * Initialiser l'interface shell
+   */
+  setShell(shell: ShellInterface): void {
+    this.shell = shell;
+    this.shellHandlers = createShellToolHandlers(shell);
+    this.log('info', 'Shell interface initialized for BuilderAgent');
+  }
+
+  /**
+   * Obtenir les processus en cours
+   */
+  getRunningProcesses(): RunningProcess[] {
+    if (!this.shell) {
+      return [];
+    }
+
+    return this.shell.getRunningProcesses();
+  }
+
+  /**
+   * Obtenir l'historique des commandes exécutées
+   */
+  getCommandHistory(): typeof this.executedCommands {
+    return [...this.executedCommands];
+  }
+
+  /**
+   * Handler pour l'exécution des outils
+   */
+  protected async executeToolHandler(
+    toolName: string,
+    input: Record<string, unknown>
+  ): Promise<unknown> {
+    if (!this.shellHandlers || !(toolName in this.shellHandlers)) {
+      throw new Error(`Unknown tool: ${toolName}`);
+    }
+
+    const handler = this.shellHandlers[toolName as keyof typeof this.shellHandlers];
+    const result = await handler(input);
+
+    // Tracker la commande exécutée
+    this.trackCommand(toolName, input, result);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Shell command failed');
+    }
+
+    return result.output;
+  }
+
+  /**
+   * Tracker les commandes exécutées
+   */
+  private trackCommand(
+    toolName: string,
+    input: Record<string, unknown>,
+    result: { success: boolean; output: unknown; error?: string }
+  ): void {
+    let command = toolName;
+
+    switch (toolName) {
+      case 'npm_command':
+        command = `pnpm ${input.command}${input.args ? ' ' + (input.args as string[]).join(' ') : ''}`;
+        break;
+
+      case 'shell_command':
+        command = input.command as string;
+        break;
+
+      case 'start_dev_server':
+        command = `pnpm run ${input.script || 'dev'}`;
+        break;
+
+      case 'install_dependencies':
+        command = `pnpm add ${(input.packages as string[]).join(' ')}${input.dev ? ' -D' : ''}`;
+        break;
+    }
+
+    this.executedCommands.push({
+      command,
+      success: result.success,
+      output: String(result.output || result.error || ''),
+      timestamp: new Date(),
+    });
+  }
+
+  /**
+   * Arrêter tous les processus en cours
+   */
+  async stopAllProcesses(): Promise<void> {
+    if (!this.shell) {
+      return;
+    }
+
+    const processes = this.shell.getRunningProcesses();
+
+    for (const proc of processes) {
+      await this.shell.kill(proc.id);
+      this.log('info', `Stopped process: ${proc.command}`);
+    }
+  }
+
+  /**
+   * Obtenir la liste des outils disponibles
+   */
+  getAvailableTools(): ToolDefinition[] {
+    return this.config.tools;
+  }
+}
+
+// ============================================================================
+// FACTORY
+// ============================================================================
+
+/**
+ * Créer une instance du Builder Agent
+ */
+export function createBuilderAgent(shell?: ShellInterface): BuilderAgent {
+  const agent = new BuilderAgent();
+
+  if (shell) {
+    agent.setShell(shell);
+  }
+
+  return agent;
+}

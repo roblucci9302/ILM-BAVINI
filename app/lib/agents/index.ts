@@ -1,0 +1,362 @@
+/**
+ * Point d'entrée principal du système de sous-agents BAVINI
+ * Exporte tous les composants nécessaires
+ */
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export * from './types';
+
+// ============================================================================
+// CORE
+// ============================================================================
+
+export { BaseAgent } from './core/base-agent';
+export { AgentRegistry, agentRegistry } from './core/agent-registry';
+export type { RegisteredAgent, RegistryStats } from './core/agent-registry';
+export { TaskQueue, createTaskQueue } from './core/task-queue';
+export type { TaskQueueConfig, QueueStats } from './core/task-queue';
+
+// ============================================================================
+// AGENTS
+// ============================================================================
+
+export { ExploreAgent, createExploreAgent } from './agents/explore-agent';
+export { Orchestrator, createOrchestrator } from './agents/orchestrator';
+export { CoderAgent, createCoderAgent } from './agents/coder-agent';
+export type { CoderFileSystem } from './agents/coder-agent';
+export { BuilderAgent, createBuilderAgent } from './agents/builder-agent';
+
+// ============================================================================
+// TOOLS - LECTURE
+// ============================================================================
+
+export {
+  READ_TOOLS,
+  ReadFileTool,
+  GrepTool,
+  GlobTool,
+  ListDirectoryTool,
+  createReadToolHandlers,
+} from './tools/read-tools';
+export type { FileSystem } from './tools/read-tools';
+
+// ============================================================================
+// TOOLS - ÉCRITURE
+// ============================================================================
+
+export {
+  WRITE_TOOLS,
+  WriteFileTool,
+  EditFileTool,
+  DeleteFileTool,
+  CreateDirectoryTool,
+  MoveFileTool,
+  createWriteToolHandlers,
+  createMockWritableFileSystem,
+} from './tools/write-tools';
+export type { WritableFileSystem } from './tools/write-tools';
+
+// ============================================================================
+// TOOLS - SHELL
+// ============================================================================
+
+export {
+  SHELL_TOOLS,
+  NpmCommandTool,
+  ShellCommandTool,
+  StartDevServerTool,
+  StopServerTool,
+  InstallDependenciesTool,
+  GetProcessStatusTool,
+  createShellToolHandlers,
+  createMockShell,
+} from './tools/shell-tools';
+export type { ShellInterface, ShellResult, RunningProcess } from './tools/shell-tools';
+
+// ============================================================================
+// PROMPTS
+// ============================================================================
+
+export { EXPLORE_SYSTEM_PROMPT } from './prompts/explore-prompt';
+export { ORCHESTRATOR_SYSTEM_PROMPT, AGENT_CAPABILITIES } from './prompts/orchestrator-prompt';
+export { CODER_SYSTEM_PROMPT } from './prompts/coder-prompt';
+export { BUILDER_SYSTEM_PROMPT } from './prompts/builder-prompt';
+
+// ============================================================================
+// SYSTÈME D'AGENTS COMPLET
+// ============================================================================
+
+import { AgentRegistry } from './core/agent-registry';
+import { TaskQueue } from './core/task-queue';
+import { createExploreAgent } from './agents/explore-agent';
+import { createOrchestrator } from './agents/orchestrator';
+import { createCoderAgent } from './agents/coder-agent';
+import { createBuilderAgent } from './agents/builder-agent';
+import type { FileSystem } from './tools/read-tools';
+import type { WritableFileSystem } from './tools/write-tools';
+import type { ShellInterface } from './tools/shell-tools';
+import type { Task, TaskResult, AgentEventCallback } from './types';
+import {
+  handleAgentEvent,
+  updateAgentStatus,
+  addAgentLog,
+  resetAgentStores,
+} from '../stores/agents';
+
+/**
+ * Type FileSystem complète (lecture + écriture)
+ * WritableFileSystem inclut toutes les méthodes de lecture et d'écriture
+ */
+export type FullFileSystem = WritableFileSystem;
+
+/**
+ * Configuration du système d'agents
+ */
+export interface AgentSystemConfig {
+  /** Clé API Anthropic */
+  apiKey: string;
+
+  /** Système de fichiers (WebContainer) - lecture seule */
+  fileSystem: FileSystem;
+
+  /** Système de fichiers avec écriture (optionnel, pour Coder Agent) */
+  writableFileSystem?: FullFileSystem;
+
+  /** Interface shell (optionnel, pour Builder Agent) */
+  shell?: ShellInterface;
+
+  /** Callback pour les événements (optionnel) */
+  onEvent?: AgentEventCallback;
+
+  /** Activer les logs détaillés */
+  verbose?: boolean;
+
+  /** Nombre max de tâches parallèles */
+  maxParallelTasks?: number;
+}
+
+/**
+ * Système d'agents BAVINI
+ * Classe principale pour gérer tous les agents
+ */
+export class AgentSystem {
+  private registry: AgentRegistry;
+  private taskQueue: TaskQueue | null = null;
+  private apiKey: string;
+  private fileSystem: FileSystem;
+  private writableFileSystem?: FullFileSystem;
+  private shell?: ShellInterface;
+  private eventCallback?: AgentEventCallback;
+  private maxParallelTasks: number;
+  private initialized = false;
+
+  constructor(config: AgentSystemConfig) {
+    this.registry = AgentRegistry.getInstance();
+    this.apiKey = config.apiKey;
+    this.fileSystem = config.fileSystem;
+    this.writableFileSystem = config.writableFileSystem;
+    this.shell = config.shell;
+    this.eventCallback = config.onEvent;
+    this.maxParallelTasks = config.maxParallelTasks ?? 3;
+
+    // Réinitialiser les stores
+    resetAgentStores();
+  }
+
+  /**
+   * Initialiser le système d'agents
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    // Créer et enregistrer l'Explore Agent
+    const exploreAgent = createExploreAgent(this.fileSystem);
+    this.registry.register(exploreAgent);
+
+    // Créer et enregistrer le Coder Agent (si FileSystem writable disponible)
+    if (this.writableFileSystem) {
+      const coderAgent = createCoderAgent(this.writableFileSystem);
+      this.registry.register(coderAgent);
+    }
+
+    // Créer et enregistrer le Builder Agent (si Shell disponible)
+    if (this.shell) {
+      const builderAgent = createBuilderAgent(this.shell);
+      this.registry.register(builderAgent);
+    }
+
+    // Créer et enregistrer l'Orchestrator
+    const orchestrator = createOrchestrator();
+    orchestrator.setApiKey(this.apiKey);
+    this.registry.register(orchestrator);
+
+    // Créer la task queue
+    this.taskQueue = new TaskQueue(this.registry, this.apiKey, {
+      maxParallel: this.maxParallelTasks,
+      onEvent: (event) => {
+        handleAgentEvent(event);
+
+        if (this.eventCallback) {
+          this.eventCallback(event);
+        }
+      },
+    });
+
+    // S'abonner aux événements du registry
+    this.registry.subscribe((event) => {
+      // Mettre à jour les stores
+      handleAgentEvent(event);
+
+      // Appeler le callback externe si fourni
+      if (this.eventCallback) {
+        this.eventCallback(event);
+      }
+    });
+
+    this.initialized = true;
+
+    addAgentLog('orchestrator', {
+      level: 'info',
+      message: 'Agent system initialized with ' + this.registry.getAll().size + ' agents',
+    });
+  }
+
+  /**
+   * Obtenir la task queue
+   */
+  getTaskQueue(): TaskQueue | null {
+    return this.taskQueue;
+  }
+
+  /**
+   * Exécuter une tâche via l'orchestrateur
+   */
+  async executeTask(prompt: string, context?: Record<string, unknown>): Promise<TaskResult> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const task: Task = {
+      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'user_request',
+      prompt,
+      context: context
+        ? {
+            additionalInfo: context,
+          }
+        : undefined,
+      status: 'pending',
+      createdAt: new Date(),
+    };
+
+    updateAgentStatus('orchestrator', 'thinking');
+
+    try {
+      const orchestrator = this.registry.get('orchestrator');
+
+      if (!orchestrator) {
+        throw new Error('Orchestrator not found');
+      }
+
+      const result = await orchestrator.run(task, this.apiKey);
+
+      return result;
+    } finally {
+      updateAgentStatus('orchestrator', 'idle');
+    }
+  }
+
+  /**
+   * Exécuter directement avec un agent spécifique
+   */
+  async executeWithAgent(
+    agentName: string,
+    prompt: string,
+    context?: Record<string, unknown>
+  ): Promise<TaskResult> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const agent = this.registry.get(agentName as any);
+
+    if (!agent) {
+      return {
+        success: false,
+        output: `Agent '${agentName}' non trouvé`,
+        errors: [
+          {
+            code: 'AGENT_NOT_FOUND',
+            message: `Agent ${agentName} not found`,
+            recoverable: false,
+          },
+        ],
+      };
+    }
+
+    const task: Task = {
+      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: agentName,
+      prompt,
+      context: context
+        ? {
+            additionalInfo: context,
+          }
+        : undefined,
+      status: 'pending',
+      createdAt: new Date(),
+    };
+
+    return agent.run(task, this.apiKey);
+  }
+
+  /**
+   * Obtenir le statut du système
+   */
+  getStatus(): {
+    initialized: boolean;
+    agents: Array<{
+      name: string;
+      status: string;
+      description: string;
+    }>;
+  } {
+    return {
+      initialized: this.initialized,
+      agents: this.registry.getAgentsInfo().map((a) => ({
+        name: a.name,
+        status: a.status,
+        description: a.description,
+      })),
+    };
+  }
+
+  /**
+   * Arrêter le système
+   */
+  async shutdown(): Promise<void> {
+    // Annuler toutes les tâches en cours
+    for (const agent of this.registry.getAll().values()) {
+      if (!agent.isAvailable()) {
+        agent.abort();
+      }
+    }
+
+    // Réinitialiser les stores
+    resetAgentStores();
+
+    this.initialized = false;
+  }
+}
+
+/**
+ * Créer une instance du système d'agents
+ */
+export function createAgentSystem(config: AgentSystemConfig): AgentSystem {
+  return new AgentSystem(config);
+}
