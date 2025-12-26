@@ -231,7 +231,8 @@ describe('CheckpointService integration', () => {
 
       const retrieved = await dbGetCheckpointById(db, checkpoint.id);
 
-      expect(retrieved?.filesSnapshot['/home/project/index.ts']?.content).toContain('éàü 中文 🎉');
+      const file = retrieved?.filesSnapshot['/home/project/index.ts'];
+      expect(file?.type === 'file' ? file.content : '').toContain('éàü 中文 🎉');
       expect(retrieved?.messagesSnapshot[0]?.content).toContain('🚀');
     });
 
