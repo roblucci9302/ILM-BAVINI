@@ -14,6 +14,7 @@ import { Slider, type SliderOptions } from '~/components/ui/Slider';
 import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import { useCheckpoints } from '~/lib/hooks/useCheckpoints';
+import { useAutoCheckpoint } from '~/lib/hooks/useAutoCheckpoint';
 import type { FileMap } from '~/lib/stores/files';
 import type { RestoreOptions } from '~/types/checkpoint';
 import { classNames } from '~/utils/classNames';
@@ -113,7 +114,27 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
     autoLoad: true,
   });
 
-  // Checkpoint handlers
+  // Auto-checkpoint on significant file changes
+  const handleAutoCheckpoint = useCallback(async (description: string) => {
+    if (!currentChatId) return;
+    try {
+      await createCheckpoint(description, 'auto');
+      logger.debug('Auto-checkpoint created');
+    } catch (error) {
+      logger.error('Failed to create auto-checkpoint:', error);
+    }
+  }, [currentChatId, createCheckpoint]);
+
+  // Initialize auto-checkpoint hook
+  const { resetBaseline } = useAutoCheckpoint({
+    onCreateCheckpoint: handleAutoCheckpoint,
+    enabled: !!currentChatId && !isStreaming,
+    minChangedFiles: 3,
+    minChangedBytes: 1024,
+    debounceMs: 10000, // 10 seconds after last change
+  });
+
+  // Reset baseline after manual checkpoint
   const handleCreateCheckpoint = useCallback(async () => {
     if (!currentChatId) {
       toast.error('Aucune conversation active');
@@ -123,11 +144,12 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
       const checkpoint = await createCheckpoint('Point de sauvegarde manuel', 'manual');
       if (checkpoint) {
         toast.success('Checkpoint créé');
+        resetBaseline(); // Reset auto-checkpoint baseline
       }
     } catch {
       toast.error('Erreur lors de la création');
     }
-  }, [currentChatId, createCheckpoint]);
+  }, [currentChatId, createCheckpoint, resetBaseline]);
 
   const handleSelectCheckpoint = useCallback(
     (checkpointId: string) => {
