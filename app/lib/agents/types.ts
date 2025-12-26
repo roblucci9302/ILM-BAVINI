@@ -44,7 +44,9 @@ export type AgentType =
   | 'coder'
   | 'builder'
   | 'tester'
-  | 'deployer';
+  | 'deployer'
+  | 'reviewer'
+  | 'fixer';
 
 /**
  * Type d'outil disponible
@@ -211,6 +213,15 @@ export interface TaskContext {
 
   /** Dossier de travail */
   workingDirectory?: string;
+
+  /** Erreurs à corriger (pour Fixer Agent) */
+  errors?: unknown[];
+
+  /** Issues de review (pour Fixer Agent) */
+  reviewIssues?: unknown[];
+
+  /** Artefacts de tâches précédentes */
+  artifacts?: unknown[];
 
   /** Informations supplémentaires */
   additionalInfo?: Record<string, unknown>;
@@ -589,4 +600,12 @@ export const AGENT_DESCRIPTIONS: Record<AgentType, string> = {
   deployer:
     'Agent de déploiement. Gère les opérations Git (commit, push, pull), ' +
     'crée des repos GitHub, des pull requests, et déploie les applications.',
+
+  reviewer:
+    'Agent de review de code. Analyse la qualité, la sécurité, et la performance du code. ' +
+    'Détecte les code smells, calcule la complexité, et suggère des améliorations.',
+
+  fixer:
+    'Agent de correction automatique. Corrige les erreurs de test, de compilation, ' +
+    'et les problèmes de sécurité identifiés par les autres agents.',
 };

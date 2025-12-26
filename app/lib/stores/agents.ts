@@ -28,6 +28,8 @@ export const agentStatusStore = map<Record<AgentType, AgentStatus>>({
   builder: 'idle',
   tester: 'idle',
   deployer: 'idle',
+  reviewer: 'idle',
+  fixer: 'idle',
 });
 
 /**
@@ -45,6 +47,8 @@ export const currentTasksStore = map<Record<AgentType, Task | null>>({
   builder: null,
   tester: null,
   deployer: null,
+  reviewer: null,
+  fixer: null,
 });
 
 // ============================================================================
@@ -61,6 +65,8 @@ export const agentLogsStore = map<Record<AgentType, LogEntry[]>>({
   builder: [],
   tester: [],
   deployer: [],
+  reviewer: [],
+  fixer: [],
 });
 
 /**
@@ -305,6 +311,8 @@ export function resetAgentStores(): void {
     builder: 'idle',
     tester: 'idle',
     deployer: 'idle',
+    reviewer: 'idle',
+    fixer: 'idle',
   });
 
   activeAgentsStore.set([]);
@@ -316,6 +324,8 @@ export function resetAgentStores(): void {
     builder: null,
     tester: null,
     deployer: null,
+    reviewer: null,
+    fixer: null,
   });
 
   agentLogsStore.set({
@@ -325,6 +335,8 @@ export function resetAgentStores(): void {
     builder: [],
     tester: [],
     deployer: [],
+    reviewer: [],
+    fixer: [],
   });
 
   systemLogsStore.set([]);

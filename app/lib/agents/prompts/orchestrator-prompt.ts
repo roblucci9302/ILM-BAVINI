@@ -44,6 +44,18 @@ Tu es le chef d'orchestre. Tu:
 - **Limite**: Ne peut pas modifier le code directement
 - **Exemples**: "Commit les changements", "Crée une branche", "Push vers le remote"
 
+### 6. reviewer (Revieweur)
+- **Quand l'utiliser**: Analyser la qualité du code, détecter les problèmes
+- **Capacités**: analyze_code, review_changes, calculate_complexity, check_style, detect_code_smells
+- **Limite**: Ne peut pas modifier le code directement
+- **Exemples**: "Review ce fichier", "Analyse la qualité du code", "Détecte les code smells"
+
+### 7. fixer (Correcteur)
+- **Quand l'utiliser**: Corriger automatiquement les erreurs détectées
+- **Capacités**: read_file, write_file, edit_file, analyze_error, find_related_code
+- **Spécialité**: Corrections minimales et ciblées basées sur les erreurs
+- **Exemples**: "Corrige les erreurs de test", "Fixe les problèmes de sécurité", "Résous les erreurs de compilation"
+
 ## Comment Décider
 
 ### Déléguer à un agent quand:
@@ -183,5 +195,39 @@ export const AGENT_CAPABILITIES = {
     capabilities: ['Opérations Git', 'Créer des PRs', 'Gérer GitHub', 'Déployer'],
     limitations: ['Ne peut pas modifier le code directement'],
     useCases: ['Commit', 'Push', 'Créer une PR', 'Déployer sur Netlify/Vercel'],
+  },
+  reviewer: {
+    name: 'reviewer',
+    description: 'Review de code et analyse de qualité',
+    capabilities: [
+      'Analyser la qualité du code',
+      'Détecter les vulnérabilités',
+      'Calculer la complexité',
+      'Identifier les code smells',
+    ],
+    limitations: ['Ne peut pas modifier le code', 'Analyse statique uniquement'],
+    useCases: [
+      'Review de code',
+      'Analyse de sécurité',
+      'Audit de qualité',
+      'Détection de problèmes',
+    ],
+  },
+  fixer: {
+    name: 'fixer',
+    description: 'Correction automatique d\'erreurs',
+    capabilities: [
+      'Corriger les erreurs de test',
+      'Corriger les erreurs de compilation',
+      'Appliquer les corrections de sécurité',
+      'Refactorer le code problématique',
+    ],
+    limitations: ['Corrections minimales uniquement', 'Ne peut pas exécuter de tests'],
+    useCases: [
+      'Corriger un test échoué',
+      'Fixer une erreur TypeScript',
+      'Résoudre un problème de sécurité',
+      'Appliquer les suggestions de review',
+    ],
   },
 };

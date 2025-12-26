@@ -30,6 +30,10 @@ export type { CoderFileSystem } from './agents/coder-agent';
 export { BuilderAgent, createBuilderAgent } from './agents/builder-agent';
 export { TesterAgent, createTesterAgent } from './agents/tester-agent';
 export { DeployerAgent, createDeployerAgent } from './agents/deployer-agent';
+export { ReviewerAgent, createReviewerAgent } from './agents/reviewer-agent';
+export type { ReviewReport } from './agents/reviewer-agent';
+export { FixerAgent, createFixerAgent } from './agents/fixer-agent';
+export type { FixableError, FixableErrorType, AppliedFix, FixResult } from './agents/fixer-agent';
 
 // ============================================================================
 // TOOLS - LECTURE
@@ -116,6 +120,32 @@ export {
 export type { GitInterface, GitBranch, GitCommit, GitFileStatus } from './tools/git-tools';
 
 // ============================================================================
+// TOOLS - REVIEW
+// ============================================================================
+
+export {
+  REVIEW_TOOLS,
+  AnalyzeCodeTool,
+  ReviewChangesTool,
+  CalculateComplexityTool,
+  CheckStyleTool,
+  DetectCodeSmellsTool,
+  createReviewToolHandlers,
+  createMockAnalyzer,
+} from './tools/review-tools';
+export type {
+  CodeAnalyzer,
+  AnalysisType,
+  IssueSeverity,
+  IssueType,
+  CodeIssue,
+  AnalysisResult,
+  ChangeReviewResult,
+  ComplexityResult,
+  CodeSmell,
+} from './tools/review-tools';
+
+// ============================================================================
 // UTILS
 // ============================================================================
 
@@ -130,6 +160,19 @@ export type { CheckpointState, CheckpointStorage, SaveOptions, ResumeOptions } f
 export { ErrorRecovery, createErrorRecovery } from './utils/error-recovery';
 export type { ErrorType, ErrorSeverity, RecoveryAction, ErrorAnalysis, RecoveryConfig } from './utils/error-recovery';
 
+export {
+  SwarmCoordinator,
+  createSwarmCoordinator,
+  PREDEFINED_RULES,
+} from './utils/swarm-coordinator';
+export type {
+  HandoffRule,
+  HandoffCondition,
+  HandoffResult,
+  SwarmChain,
+  SwarmConfig,
+} from './utils/swarm-coordinator';
+
 // ============================================================================
 // PROMPTS
 // ============================================================================
@@ -140,6 +183,8 @@ export { CODER_SYSTEM_PROMPT } from './prompts/coder-prompt';
 export { BUILDER_SYSTEM_PROMPT } from './prompts/builder-prompt';
 export { TESTER_SYSTEM_PROMPT } from './prompts/tester-prompt';
 export { DEPLOYER_SYSTEM_PROMPT } from './prompts/deployer-prompt';
+export { REVIEWER_SYSTEM_PROMPT } from './prompts/reviewer-prompt';
+export { FIXER_SYSTEM_PROMPT } from './prompts/fixer-prompt';
 
 // ============================================================================
 // SYSTÈME D'AGENTS COMPLET
@@ -153,7 +198,11 @@ import { createCoderAgent } from './agents/coder-agent';
 import { createBuilderAgent } from './agents/builder-agent';
 import { createTesterAgent } from './agents/tester-agent';
 import { createDeployerAgent } from './agents/deployer-agent';
+import { createReviewerAgent } from './agents/reviewer-agent';
+import { createFixerAgent } from './agents/fixer-agent';
 import type { FileSystem } from './tools/read-tools';
+import type { CodeAnalyzer } from './tools/review-tools';
+import { SwarmCoordinator, createSwarmCoordinator } from './utils/swarm-coordinator';
 import type { WritableFileSystem } from './tools/write-tools';
 import type { ShellInterface } from './tools/shell-tools';
 import type { TestRunner } from './tools/test-tools';
@@ -196,6 +245,9 @@ export interface AgentSystemConfig {
   /** Interface Git (optionnel, pour Deployer Agent) */
   git?: GitInterface;
 
+  /** Analyseur de code (optionnel, pour Reviewer Agent) */
+  analyzer?: CodeAnalyzer;
+
   /** Callback pour les événements (optionnel) */
   onEvent?: AgentEventCallback;
 
@@ -210,6 +262,9 @@ export interface AgentSystemConfig {
 
   /** Activer la récupération automatique d'erreurs */
   enableErrorRecovery?: boolean;
+
+  /** Activer le swarm coordinator avec les règles prédéfinies */
+  enableSwarm?: boolean;
 }
 
 /**
@@ -221,16 +276,19 @@ export class AgentSystem {
   private taskQueue: TaskQueue | null = null;
   private checkpointManager: CheckpointManager | null = null;
   private errorRecovery: ErrorRecovery | null = null;
+  private swarmCoordinator: SwarmCoordinator | null = null;
   private apiKey: string;
   private fileSystem: FileSystem;
   private writableFileSystem?: FullFileSystem;
   private shell?: ShellInterface;
   private testRunner?: TestRunner;
   private git?: GitInterface;
+  private analyzer?: CodeAnalyzer;
   private eventCallback?: AgentEventCallback;
   private maxParallelTasks: number;
   private enableCheckpoints: boolean;
   private enableErrorRecovery: boolean;
+  private enableSwarm: boolean;
   private initialized = false;
 
   constructor(config: AgentSystemConfig) {
@@ -241,10 +299,12 @@ export class AgentSystem {
     this.shell = config.shell;
     this.testRunner = config.testRunner;
     this.git = config.git;
+    this.analyzer = config.analyzer;
     this.eventCallback = config.onEvent;
     this.maxParallelTasks = config.maxParallelTasks ?? 3;
     this.enableCheckpoints = config.enableCheckpoints ?? false;
     this.enableErrorRecovery = config.enableErrorRecovery ?? true;
+    this.enableSwarm = config.enableSwarm ?? false;
 
     // Réinitialiser les stores
     resetAgentStores();
@@ -286,6 +346,18 @@ export class AgentSystem {
       this.registry.register(deployerAgent);
     }
 
+    // Créer et enregistrer le Reviewer Agent (si Analyzer disponible)
+    if (this.analyzer) {
+      const reviewerAgent = createReviewerAgent(this.analyzer, this.fileSystem);
+      this.registry.register(reviewerAgent);
+    }
+
+    // Créer et enregistrer le Fixer Agent (si FileSystem writable disponible)
+    if (this.writableFileSystem) {
+      const fixerAgent = createFixerAgent(this.writableFileSystem);
+      this.registry.register(fixerAgent);
+    }
+
     // Créer et enregistrer l'Orchestrator
     const orchestrator = createOrchestrator();
     orchestrator.setApiKey(this.apiKey);
@@ -324,6 +396,18 @@ export class AgentSystem {
       this.errorRecovery = createErrorRecovery(this.registry);
     }
 
+    // Créer le SwarmCoordinator si activé
+    if (this.enableSwarm) {
+      this.swarmCoordinator = createSwarmCoordinator(
+        this.registry,
+        this.apiKey,
+        {
+          eventCallback: this.eventCallback,
+          enablePredefinedRules: true,
+        }
+      );
+    }
+
     this.initialized = true;
 
     addAgentLog('orchestrator', {
@@ -351,6 +435,13 @@ export class AgentSystem {
    */
   getErrorRecovery(): ErrorRecovery | null {
     return this.errorRecovery;
+  }
+
+  /**
+   * Obtenir le swarm coordinator
+   */
+  getSwarmCoordinator(): SwarmCoordinator | null {
+    return this.swarmCoordinator;
   }
 
   /**
