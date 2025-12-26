@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
 import { computed } from 'nanostores';
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
   type OnChangeCallback as OnEditorChange,
@@ -12,11 +12,18 @@ import { IconButton } from '~/components/ui/IconButton';
 import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
 import { Slider, type SliderOptions } from '~/components/ui/Slider';
 import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
+import { chatId } from '~/lib/persistence/useChatHistory';
+import { useCheckpoints } from '~/lib/hooks/useCheckpoints';
+import type { FileMap } from '~/lib/stores/files';
+import type { RestoreOptions } from '~/types/checkpoint';
 import { classNames } from '~/utils/classNames';
 import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
 import { EditorPanel } from './EditorPanel';
 import { Preview } from './Preview';
+import { CheckpointButton } from './CheckpointButton';
+import { CheckpointTimeline, type TimelineCheckpoint } from './CheckpointTimeline';
+import { RestoreModal, type RestoreModalCheckpoint } from './RestoreModal';
 
 const logger = createScopedLogger('Workbench');
 
@@ -65,6 +72,118 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   const unsavedFiles = useStore(workbenchStore.unsavedFiles);
   const files = useStore(workbenchStore.files);
   const selectedView = useStore(workbenchStore.currentView);
+  const currentChatId = useStore(chatId);
+
+  // Checkpoint state
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [selectedCheckpoint, setSelectedCheckpoint] = useState<RestoreModalCheckpoint | null>(null);
+  const [showCheckpointTimeline, setShowCheckpointTimeline] = useState(false);
+
+  // Checkpoint callbacks
+  const getFilesSnapshot = useCallback((): FileMap => {
+    return workbenchStore.files.get();
+  }, []);
+
+  const getMessages = useCallback(() => {
+    return [];
+  }, []);
+
+  const onRestoreFiles = useCallback(async (restoredFiles: FileMap): Promise<void> => {
+    // Restore files with WebContainer synchronization
+    const result = await workbenchStore.restoreFromSnapshot(restoredFiles);
+    logger.info(`Restored ${result.filesWritten} files, deleted ${result.filesDeleted} files`);
+  }, []);
+
+  // Initialize checkpoints hook
+  const {
+    checkpoints,
+    checkpointCount,
+    isRestoring,
+    isLoading: isCheckpointLoading,
+    currentCheckpointId,
+    createCheckpoint,
+    restoreCheckpoint,
+    deleteCheckpoint,
+    formatForTimeline,
+  } = useCheckpoints({
+    chatId: currentChatId ?? '',
+    getFilesSnapshot,
+    getMessages,
+    onRestoreFiles,
+    autoLoad: true,
+  });
+
+  // Checkpoint handlers
+  const handleCreateCheckpoint = useCallback(async () => {
+    if (!currentChatId) {
+      toast.error('Aucune conversation active');
+      return;
+    }
+    try {
+      const checkpoint = await createCheckpoint('Point de sauvegarde manuel', 'manual');
+      if (checkpoint) {
+        toast.success('Checkpoint créé');
+      }
+    } catch {
+      toast.error('Erreur lors de la création');
+    }
+  }, [currentChatId, createCheckpoint]);
+
+  const handleSelectCheckpoint = useCallback(
+    (checkpointId: string) => {
+      const checkpoint = checkpoints.find((cp) => cp.id === checkpointId);
+      if (!checkpoint) return;
+
+      const timeline = formatForTimeline(checkpoint);
+      setSelectedCheckpoint({
+        id: checkpoint.id,
+        description: timeline.description,
+        time: timeline.time,
+        timeAgo: timeline.timeAgo,
+        type: timeline.type,
+        filesCount: Object.keys(checkpoint.filesSnapshot).length,
+        messagesCount: checkpoint.messagesSnapshot.length,
+        sizeLabel: timeline.sizeLabel,
+      });
+      setIsRestoreModalOpen(true);
+    },
+    [checkpoints, formatForTimeline],
+  );
+
+  const handleConfirmRestore = useCallback(
+    async (options: RestoreOptions) => {
+      if (!selectedCheckpoint) return;
+      try {
+        const result = await restoreCheckpoint(selectedCheckpoint.id, options);
+        if (result.success) {
+          toast.success(`Restauré: ${result.filesRestored} fichiers`);
+          setIsRestoreModalOpen(false);
+          setSelectedCheckpoint(null);
+        } else {
+          toast.error(`Échec: ${result.error}`);
+        }
+      } catch {
+        toast.error('Erreur lors de la restauration');
+      }
+    },
+    [selectedCheckpoint, restoreCheckpoint],
+  );
+
+  const handleDeleteCheckpoint = useCallback(
+    async (checkpointId: string) => {
+      try {
+        const deleted = await deleteCheckpoint(checkpointId);
+        if (deleted) {
+          toast.success('Checkpoint supprimé');
+        }
+      } catch {
+        toast.error('Erreur lors de la suppression');
+      }
+    },
+    [deleteCheckpoint],
+  );
+
+  const timelineCheckpoints: TimelineCheckpoint[] = checkpoints.map((cp) => formatForTimeline(cp));
 
   const setSelectedView = useCallback((view: WorkbenchViewType) => {
     workbenchStore.currentView.set(view);
@@ -103,8 +222,9 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   }, []);
 
   return (
-    chatStarted && (
-      <motion.div
+    chatStarted ? (
+      <>
+        <motion.div
         initial="closed"
         animate={showWorkbench ? 'open' : 'closed'}
         variants={workbenchVariants}
@@ -125,15 +245,52 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                 <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
                 <div className="ml-auto" />
                 {selectedView === 'code' && (
-                  <PanelHeaderButton
-                    className="mr-1 text-sm"
-                    onClick={() => {
-                      workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                    }}
-                  >
-                    <div className="i-ph:terminal" />
-                    Terminal
-                  </PanelHeaderButton>
+                  <>
+                    {currentChatId && (
+                      <div className="relative">
+                        <CheckpointButton
+                          onCreateCheckpoint={handleCreateCheckpoint}
+                          disabled={isRestoring}
+                          isLoading={isCheckpointLoading}
+                          checkpointCount={checkpointCount}
+                          className="mr-1 text-sm"
+                        />
+                        {showCheckpointTimeline && checkpointCount > 0 && (
+                          <div className="absolute top-full right-0 mt-1 w-72 bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor rounded-lg shadow-lg z-50 overflow-hidden">
+                            <div className="max-h-80 overflow-y-auto p-2">
+                              <CheckpointTimeline
+                                checkpoints={timelineCheckpoints}
+                                currentCheckpointId={currentCheckpointId}
+                                onSelectCheckpoint={handleSelectCheckpoint}
+                                onDeleteCheckpoint={handleDeleteCheckpoint}
+                                disabled={isRestoring}
+                                isLoading={isCheckpointLoading}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {checkpointCount > 0 && (
+                      <PanelHeaderButton
+                        className="mr-1 text-sm"
+                        onClick={() => setShowCheckpointTimeline(!showCheckpointTimeline)}
+                      >
+                        <div className="i-ph:clock-counter-clockwise" />
+                        Historique
+                        <span className="text-xs opacity-60">({checkpointCount})</span>
+                      </PanelHeaderButton>
+                    )}
+                    <PanelHeaderButton
+                      className="mr-1 text-sm"
+                      onClick={() => {
+                        workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
+                      }}
+                    >
+                      <div className="i-ph:terminal" />
+                      Terminal
+                    </PanelHeaderButton>
+                  </>
                 )}
                 <IconButton
                   icon="i-ph:x-circle"
@@ -187,7 +344,20 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
           </div>
         </div>
       </motion.div>
-    )
+
+      {/* Restore Modal */}
+      <RestoreModal
+        isOpen={isRestoreModalOpen}
+        checkpoint={selectedCheckpoint}
+        onConfirm={handleConfirmRestore}
+        onCancel={() => {
+          setIsRestoreModalOpen(false);
+          setSelectedCheckpoint(null);
+        }}
+        isLoading={isRestoring}
+      />
+      </>
+    ) : null
   );
 });
 

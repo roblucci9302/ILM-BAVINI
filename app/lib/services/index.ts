@@ -16,7 +16,11 @@ export * as netlify from './netlify';
 // Supabase - Database, Auth & Storage
 export * as supabase from './supabase';
 
+// Checkpoints - Time Travel feature
+export * as checkpoints from './checkpoints';
+
 // Re-export client classes for direct import
 export { GitHubClient, createGitHubClient } from './github';
 export { NetlifyClient, createNetlifyClient } from './netlify';
 export { SupabaseClient, createSupabaseClient } from './supabase';
+export { CheckpointService, createCheckpointService } from './checkpoints';

@@ -195,6 +195,82 @@ export class FilesStore {
       return '';
     }
   }
+
+  /**
+   * Restore files from a checkpoint snapshot.
+   * Syncs the WebContainer filesystem to match the snapshot.
+   */
+  async restoreFromSnapshot(snapshot: FileMap): Promise<{ filesWritten: number; filesDeleted: number }> {
+    const webcontainer = await this.#webcontainer;
+    const currentFiles = this.files.get();
+
+    let filesWritten = 0;
+    let filesDeleted = 0;
+
+    // Find files to write (new or modified)
+    for (const [path, entry] of Object.entries(snapshot)) {
+      if (entry?.type !== 'file') continue;
+
+      const currentFile = currentFiles[path];
+      const needsWrite = !currentFile ||
+        currentFile.type !== 'file' ||
+        currentFile.content !== entry.content;
+
+      if (needsWrite) {
+        try {
+          const relativePath = nodePath.relative(webcontainer.workdir, path);
+
+          if (relativePath) {
+            // Ensure parent directory exists
+            const parentDir = nodePath.dirname(relativePath);
+
+            if (parentDir && parentDir !== '.') {
+              try {
+                await webcontainer.fs.mkdir(parentDir, { recursive: true });
+              } catch {
+                // Directory might already exist
+              }
+            }
+
+            await webcontainer.fs.writeFile(relativePath, entry.content);
+            filesWritten++;
+          }
+        } catch (error) {
+          logger.error(`Failed to restore file ${path}:`, error);
+        }
+      }
+    }
+
+    // Find files to delete (in current but not in snapshot)
+    for (const [path, entry] of Object.entries(currentFiles)) {
+      if (entry?.type !== 'file') continue;
+
+      // Skip if file exists in snapshot
+      if (snapshot[path]?.type === 'file') continue;
+
+      // Skip excluded paths
+      if (path.includes('/node_modules/') || path.includes('/.git/')) continue;
+
+      try {
+        const relativePath = nodePath.relative(webcontainer.workdir, path);
+
+        if (relativePath) {
+          await webcontainer.fs.rm(relativePath);
+          filesDeleted++;
+        }
+      } catch (error) {
+        // File might not exist
+        logger.debug(`Could not delete ${path}:`, error);
+      }
+    }
+
+    // Update the local file map
+    this.files.set(snapshot);
+
+    logger.info(`Snapshot restored: ${filesWritten} written, ${filesDeleted} deleted`);
+
+    return { filesWritten, filesDeleted };
+  }
 }
 
 function isBinaryFile(buffer: Uint8Array | undefined) {

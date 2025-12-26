@@ -210,6 +210,22 @@ export class WorkbenchStore {
     this.#filesStore.resetFileModifications();
   }
 
+  /**
+   * Restore files from a checkpoint snapshot.
+   * This syncs the WebContainer filesystem with the snapshot.
+   */
+  async restoreFromSnapshot(snapshot: FileMap): Promise<{ filesWritten: number; filesDeleted: number }> {
+    const result = await this.#filesStore.restoreFromSnapshot(snapshot);
+
+    // Update editor documents to reflect the restored files
+    this.setDocuments(snapshot);
+
+    // Clear unsaved files since we've just restored
+    this.unsavedFiles.set(new Set<string>());
+
+    return result;
+  }
+
   abortAllActions() {
     const artifacts = this.artifacts.get();
 
