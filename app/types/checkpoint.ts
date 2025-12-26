@@ -137,8 +137,8 @@ export const DEFAULT_CHECKPOINT_CONFIG: CheckpointConfig = {
   autoCheckpointThrottleMs: 60000, // 1 minute
   excludedFiles: ['.env', '.env.local', '.env.production', 'credentials.json', '.git'],
   preserveManualOnCleanup: true,
-  enableCompression: false,
-  compressionThreshold: 1024 * 1024, // 1MB
+  enableCompression: true, // Enabled by default for better performance
+  compressionThreshold: 100 * 1024, // 100KB - compress larger snapshots
 };
 
 /**

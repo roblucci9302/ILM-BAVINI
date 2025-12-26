@@ -89,8 +89,9 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   }, []);
 
   const onRestoreFiles = useCallback(async (restoredFiles: FileMap): Promise<void> => {
-    // Update the files store directly
-    workbenchStore.files.set(restoredFiles);
+    // Restore files with WebContainer synchronization
+    const result = await workbenchStore.restoreFromSnapshot(restoredFiles);
+    logger.info(`Restored ${result.filesWritten} files, deleted ${result.filesDeleted} files`);
   }, []);
 
   // Initialize checkpoints hook

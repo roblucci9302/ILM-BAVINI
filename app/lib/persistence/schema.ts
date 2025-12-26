@@ -2,7 +2,7 @@
  * PGlite database schema for BAVINI chat persistence.
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS chats (
@@ -32,10 +32,10 @@ export const CREATE_CHECKPOINTS_TABLE_SQL = `
     id TEXT PRIMARY KEY,
     chat_id TEXT NOT NULL,
 
-    -- Saved data
-    files_snapshot JSONB NOT NULL,
-    messages_snapshot JSONB NOT NULL,
-    actions_snapshot JSONB,
+    -- Saved data (TEXT to support both JSON and compressed formats)
+    files_snapshot TEXT NOT NULL,
+    messages_snapshot TEXT NOT NULL,
+    actions_snapshot TEXT,
 
     -- Metadata
     description TEXT,
@@ -74,3 +74,14 @@ export const GET_SCHEMA_VERSION_SQL = `
  * Migration SQL for upgrading from v1 to v2 (adds checkpoints table).
  */
 export const MIGRATE_V1_TO_V2_SQL = CREATE_CHECKPOINTS_TABLE_SQL;
+
+/**
+ * Migration SQL for upgrading from v2 to v3.
+ * Changes snapshot columns from JSONB to TEXT to support compression.
+ */
+export const MIGRATE_V2_TO_V3_SQL = `
+  -- Drop and recreate checkpoints table with TEXT columns
+  -- This is safe because checkpoints are transient and can be recreated
+  DROP TABLE IF EXISTS checkpoints;
+  ${CREATE_CHECKPOINTS_TABLE_SQL}
+`;

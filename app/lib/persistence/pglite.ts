@@ -10,6 +10,7 @@ import {
   CREATE_TABLES_SQL,
   GET_SCHEMA_VERSION_SQL,
   INSERT_SCHEMA_VERSION_SQL,
+  MIGRATE_V2_TO_V3_SQL,
   SCHEMA_VERSION,
 } from './schema';
 
@@ -45,16 +46,20 @@ async function runMigrations(db: PGlite): Promise<void> {
 
   logger.info(`Migrating schema from v${currentVersion} to v${SCHEMA_VERSION}...`);
 
-  // migration v0/v1 → v2: add checkpoints table
-  if (currentVersion < 2) {
-    logger.info('Running migration: adding checkpoints table...');
-    await db.exec(CREATE_CHECKPOINTS_TABLE_SQL);
-    await db.query(INSERT_SCHEMA_VERSION_SQL, [2]);
-    logger.info('Migration to v2 complete');
-  }
+  let schemaVersion = currentVersion;
 
-  // future migrations can be added here:
-  // if (currentVersion < 3) { ... }
+  // migration v2 → v3: change snapshot columns from JSONB to TEXT for compression
+  // Also handles fresh installs (v0/v1 → v3) by creating the checkpoints table
+  if (schemaVersion < 3) {
+    logger.info('Running migration: creating/updating checkpoints table for compression...');
+
+    // Drop old table if exists (from v2) and recreate with TEXT columns
+    await db.query('DROP TABLE IF EXISTS checkpoints');
+    await db.exec(CREATE_CHECKPOINTS_TABLE_SQL);
+    await db.query(INSERT_SCHEMA_VERSION_SQL, [3]);
+    schemaVersion = 3;
+    logger.info('Migration to v3 complete');
+  }
 
   logger.info(`Schema migration complete (now v${SCHEMA_VERSION})`);
 }

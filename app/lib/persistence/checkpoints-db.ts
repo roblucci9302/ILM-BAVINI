@@ -8,6 +8,8 @@ import type { Message } from 'ai';
 import type { FileMap } from '~/lib/stores/files';
 import type { ActionState } from '~/lib/runtime/action-runner';
 import type { Checkpoint, CheckpointInput, CheckpointTriggerType } from '~/types/checkpoint';
+import { DEFAULT_CHECKPOINT_CONFIG } from '~/types/checkpoint';
+import { compressSnapshot, decompressSnapshot, isCompressed } from './checkpoint-compression';
 import { createScopedLogger } from '~/utils/logger';
 
 // Re-export types for backward compatibility
@@ -44,9 +46,9 @@ export function generateCheckpointId(): string {
 }
 
 /**
- * Convert a database row to a Checkpoint object.
+ * Convert a database row to a Checkpoint object (sync version for simple cases).
  */
-function rowToCheckpoint(row: CheckpointRow): Checkpoint {
+function rowToCheckpointSync(row: CheckpointRow): Checkpoint {
   return {
     id: row.id,
     chatId: row.chat_id,
@@ -73,6 +75,46 @@ function rowToCheckpoint(row: CheckpointRow): Checkpoint {
 }
 
 /**
+ * Convert a database row to a Checkpoint object with decompression support.
+ */
+async function rowToCheckpoint(row: CheckpointRow): Promise<Checkpoint> {
+  const filesStr = typeof row.files_snapshot === 'string' ? row.files_snapshot : JSON.stringify(row.files_snapshot);
+  const messagesStr = typeof row.messages_snapshot === 'string' ? row.messages_snapshot : JSON.stringify(row.messages_snapshot);
+  const actionsStr = row.actions_snapshot
+    ? (typeof row.actions_snapshot === 'string' ? row.actions_snapshot : JSON.stringify(row.actions_snapshot))
+    : null;
+
+  // Check if data is compressed and decompress if needed
+  if (row.compressed && (isCompressed(filesStr) || isCompressed(messagesStr))) {
+    try {
+      const snapshot = await decompressSnapshot(filesStr, messagesStr, actionsStr);
+
+      return {
+        id: row.id,
+        chatId: row.chat_id,
+        filesSnapshot: snapshot.filesSnapshot,
+        messagesSnapshot: snapshot.messagesSnapshot,
+        actionsSnapshot: snapshot.actionsSnapshot,
+        description: row.description ?? undefined,
+        triggerType: row.trigger_type,
+        messageId: row.message_id ?? undefined,
+        isFullSnapshot: row.is_full_snapshot,
+        parentCheckpointId: row.parent_checkpoint_id ?? undefined,
+        compressed: row.compressed,
+        sizeBytes: row.size_bytes ?? undefined,
+        createdAt: row.created_at,
+      };
+    } catch (error) {
+      logger.error(`Failed to decompress checkpoint ${row.id}:`, error);
+      // Fall back to sync version
+      return rowToCheckpointSync(row);
+    }
+  }
+
+  return rowToCheckpointSync(row);
+}
+
+/**
  * Calculate the size of a checkpoint in bytes.
  */
 function calculateCheckpointSize(input: CheckpointInput): number {
@@ -84,17 +126,74 @@ function calculateCheckpointSize(input: CheckpointInput): number {
 }
 
 /**
+ * Options for checkpoint creation.
+ */
+export interface CreateCheckpointOptions {
+  /** Enable compression for this checkpoint */
+  enableCompression?: boolean;
+
+  /** Compression threshold in bytes */
+  compressionThreshold?: number;
+}
+
+/**
  * Create a new checkpoint.
  */
 export async function createCheckpoint(
   db: PGlite,
   input: CheckpointInput,
+  options: CreateCheckpointOptions = {},
 ): Promise<Checkpoint> {
+  const {
+    enableCompression = DEFAULT_CHECKPOINT_CONFIG.enableCompression,
+    compressionThreshold = DEFAULT_CHECKPOINT_CONFIG.compressionThreshold,
+  } = options;
+
   const id = generateCheckpointId();
   const now = new Date().toISOString();
-  const sizeBytes = calculateCheckpointSize(input);
+  const originalSize = calculateCheckpointSize(input);
 
-  logger.debug(`Creating checkpoint ${id} for chat ${input.chatId}`);
+  logger.debug(`Creating checkpoint ${id} for chat ${input.chatId} (${originalSize} bytes)`);
+
+  // Compress if enabled and above threshold
+  let filesData: string;
+  let messagesData: string;
+  let actionsData: string | null;
+  let isCompressed = false;
+  let storedSize = originalSize;
+
+  if (enableCompression && originalSize >= compressionThreshold) {
+    try {
+      const compressed = await compressSnapshot(
+        {
+          filesSnapshot: input.filesSnapshot,
+          messagesSnapshot: input.messagesSnapshot,
+          actionsSnapshot: input.actionsSnapshot,
+        },
+        compressionThreshold,
+      );
+
+      filesData = compressed.files;
+      messagesData = compressed.messages;
+      actionsData = compressed.actions;
+      isCompressed = compressed.compressed;
+      storedSize = compressed.compressedSize;
+
+      if (isCompressed) {
+        const savings = ((1 - storedSize / originalSize) * 100).toFixed(1);
+        logger.info(`Checkpoint ${id} compressed: ${originalSize} -> ${storedSize} bytes (${savings}% saved)`);
+      }
+    } catch (error) {
+      logger.warn(`Compression failed for checkpoint ${id}, storing uncompressed:`, error);
+      filesData = JSON.stringify(input.filesSnapshot);
+      messagesData = JSON.stringify(input.messagesSnapshot);
+      actionsData = input.actionsSnapshot ? JSON.stringify(input.actionsSnapshot) : null;
+    }
+  } else {
+    filesData = JSON.stringify(input.filesSnapshot);
+    messagesData = JSON.stringify(input.messagesSnapshot);
+    actionsData = input.actionsSnapshot ? JSON.stringify(input.actionsSnapshot) : null;
+  }
 
   const result = await db.query<CheckpointRow>(
     `INSERT INTO checkpoints (
@@ -106,23 +205,23 @@ export async function createCheckpoint(
     [
       id,
       input.chatId,
-      JSON.stringify(input.filesSnapshot),
-      JSON.stringify(input.messagesSnapshot),
-      input.actionsSnapshot ? JSON.stringify(input.actionsSnapshot) : null,
+      filesData,
+      messagesData,
+      actionsData,
       input.description ?? null,
       input.triggerType,
       input.messageId ?? null,
       !input.parentCheckpointId, // is_full_snapshot if no parent
       input.parentCheckpointId ?? null,
-      input.compressed ?? false,
-      sizeBytes,
+      isCompressed,
+      storedSize,
       now,
     ],
   );
 
-  const checkpoint = rowToCheckpoint(result.rows[0]);
+  const checkpoint = await rowToCheckpoint(result.rows[0]);
 
-  logger.info(`Checkpoint ${id} created (${sizeBytes} bytes)`);
+  logger.info(`Checkpoint ${id} created (${storedSize} bytes${isCompressed ? ', compressed' : ''})`);
 
   return checkpoint;
 }
@@ -142,7 +241,7 @@ export async function getCheckpointsByChat(
   const params = limit ? [chatId, limit] : [chatId];
   const result = await db.query<CheckpointRow>(query, params);
 
-  return result.rows.map(rowToCheckpoint);
+  return Promise.all(result.rows.map(rowToCheckpoint));
 }
 
 /**
@@ -157,7 +256,7 @@ export async function getCheckpointById(
     [id],
   );
 
-  return result.rows[0] ? rowToCheckpoint(result.rows[0]) : null;
+  return result.rows[0] ? await rowToCheckpoint(result.rows[0]) : null;
 }
 
 /**
@@ -172,7 +271,7 @@ export async function getLatestCheckpoint(
     [chatId],
   );
 
-  return result.rows[0] ? rowToCheckpoint(result.rows[0]) : null;
+  return result.rows[0] ? await rowToCheckpoint(result.rows[0]) : null;
 }
 
 /**
@@ -188,7 +287,7 @@ export async function getCheckpointsByTrigger(
     [chatId, triggerType],
   );
 
-  return result.rows.map(rowToCheckpoint);
+  return Promise.all(result.rows.map(rowToCheckpoint));
 }
 
 /**
@@ -354,5 +453,5 @@ export async function getCheckpointsByTimeRange(
     [chatId, startTime.toISOString(), endTime.toISOString()],
   );
 
-  return result.rows.map(rowToCheckpoint);
+  return Promise.all(result.rows.map(rowToCheckpoint));
 }
