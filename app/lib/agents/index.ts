@@ -28,6 +28,8 @@ export { Orchestrator, createOrchestrator } from './agents/orchestrator';
 export { CoderAgent, createCoderAgent } from './agents/coder-agent';
 export type { CoderFileSystem } from './agents/coder-agent';
 export { BuilderAgent, createBuilderAgent } from './agents/builder-agent';
+export { TesterAgent, createTesterAgent } from './agents/tester-agent';
+export { DeployerAgent, createDeployerAgent } from './agents/deployer-agent';
 
 // ============================================================================
 // TOOLS - LECTURE
@@ -77,6 +79,58 @@ export {
 export type { ShellInterface, ShellResult, RunningProcess } from './tools/shell-tools';
 
 // ============================================================================
+// TOOLS - TEST
+// ============================================================================
+
+export {
+  TEST_TOOLS,
+  RunTestsTool,
+  AnalyzeTestResultsTool,
+  CoverageReportTool,
+  RunSingleTestTool,
+  ListTestsTool,
+  createTestToolHandlers,
+  createMockTestRunner,
+} from './tools/test-tools';
+export type { TestRunner, TestResult, TestSuiteResult, CoverageReport } from './tools/test-tools';
+
+// ============================================================================
+// TOOLS - GIT
+// ============================================================================
+
+export {
+  GIT_TOOLS,
+  GitInitTool,
+  GitCloneTool,
+  GitStatusTool,
+  GitAddTool,
+  GitCommitTool,
+  GitPushTool,
+  GitPullTool,
+  GitBranchTool,
+  GitLogTool,
+  GitDiffTool,
+  createGitToolHandlers,
+  createMockGit,
+} from './tools/git-tools';
+export type { GitInterface, GitBranch, GitCommit, GitFileStatus } from './tools/git-tools';
+
+// ============================================================================
+// UTILS
+// ============================================================================
+
+export {
+  CheckpointManager,
+  InMemoryCheckpointStorage,
+  createCheckpointManager,
+  createCheckpointManagerWithStorage,
+} from './utils/checkpoint-manager';
+export type { CheckpointState, CheckpointStorage, SaveOptions, ResumeOptions } from './utils/checkpoint-manager';
+
+export { ErrorRecovery, createErrorRecovery } from './utils/error-recovery';
+export type { ErrorType, ErrorSeverity, RecoveryAction, ErrorAnalysis, RecoveryConfig } from './utils/error-recovery';
+
+// ============================================================================
 // PROMPTS
 // ============================================================================
 
@@ -84,6 +138,8 @@ export { EXPLORE_SYSTEM_PROMPT } from './prompts/explore-prompt';
 export { ORCHESTRATOR_SYSTEM_PROMPT, AGENT_CAPABILITIES } from './prompts/orchestrator-prompt';
 export { CODER_SYSTEM_PROMPT } from './prompts/coder-prompt';
 export { BUILDER_SYSTEM_PROMPT } from './prompts/builder-prompt';
+export { TESTER_SYSTEM_PROMPT } from './prompts/tester-prompt';
+export { DEPLOYER_SYSTEM_PROMPT } from './prompts/deployer-prompt';
 
 // ============================================================================
 // SYSTÈME D'AGENTS COMPLET
@@ -95,9 +151,13 @@ import { createExploreAgent } from './agents/explore-agent';
 import { createOrchestrator } from './agents/orchestrator';
 import { createCoderAgent } from './agents/coder-agent';
 import { createBuilderAgent } from './agents/builder-agent';
+import { createTesterAgent } from './agents/tester-agent';
+import { createDeployerAgent } from './agents/deployer-agent';
 import type { FileSystem } from './tools/read-tools';
 import type { WritableFileSystem } from './tools/write-tools';
 import type { ShellInterface } from './tools/shell-tools';
+import type { TestRunner } from './tools/test-tools';
+import type { GitInterface } from './tools/git-tools';
 import type { Task, TaskResult, AgentEventCallback } from './types';
 import {
   handleAgentEvent,
@@ -105,6 +165,8 @@ import {
   addAgentLog,
   resetAgentStores,
 } from '../stores/agents';
+import { CheckpointManager, createCheckpointManager } from './utils/checkpoint-manager';
+import { ErrorRecovery, createErrorRecovery } from './utils/error-recovery';
 
 /**
  * Type FileSystem complète (lecture + écriture)
@@ -128,6 +190,12 @@ export interface AgentSystemConfig {
   /** Interface shell (optionnel, pour Builder Agent) */
   shell?: ShellInterface;
 
+  /** Runner de tests (optionnel, pour Tester Agent) */
+  testRunner?: TestRunner;
+
+  /** Interface Git (optionnel, pour Deployer Agent) */
+  git?: GitInterface;
+
   /** Callback pour les événements (optionnel) */
   onEvent?: AgentEventCallback;
 
@@ -136,6 +204,12 @@ export interface AgentSystemConfig {
 
   /** Nombre max de tâches parallèles */
   maxParallelTasks?: number;
+
+  /** Activer les checkpoints automatiques */
+  enableCheckpoints?: boolean;
+
+  /** Activer la récupération automatique d'erreurs */
+  enableErrorRecovery?: boolean;
 }
 
 /**
@@ -145,12 +219,18 @@ export interface AgentSystemConfig {
 export class AgentSystem {
   private registry: AgentRegistry;
   private taskQueue: TaskQueue | null = null;
+  private checkpointManager: CheckpointManager | null = null;
+  private errorRecovery: ErrorRecovery | null = null;
   private apiKey: string;
   private fileSystem: FileSystem;
   private writableFileSystem?: FullFileSystem;
   private shell?: ShellInterface;
+  private testRunner?: TestRunner;
+  private git?: GitInterface;
   private eventCallback?: AgentEventCallback;
   private maxParallelTasks: number;
+  private enableCheckpoints: boolean;
+  private enableErrorRecovery: boolean;
   private initialized = false;
 
   constructor(config: AgentSystemConfig) {
@@ -159,8 +239,12 @@ export class AgentSystem {
     this.fileSystem = config.fileSystem;
     this.writableFileSystem = config.writableFileSystem;
     this.shell = config.shell;
+    this.testRunner = config.testRunner;
+    this.git = config.git;
     this.eventCallback = config.onEvent;
     this.maxParallelTasks = config.maxParallelTasks ?? 3;
+    this.enableCheckpoints = config.enableCheckpoints ?? false;
+    this.enableErrorRecovery = config.enableErrorRecovery ?? true;
 
     // Réinitialiser les stores
     resetAgentStores();
@@ -188,6 +272,18 @@ export class AgentSystem {
     if (this.shell) {
       const builderAgent = createBuilderAgent(this.shell);
       this.registry.register(builderAgent);
+    }
+
+    // Créer et enregistrer le Tester Agent (si TestRunner disponible)
+    if (this.testRunner) {
+      const testerAgent = createTesterAgent(this.testRunner);
+      this.registry.register(testerAgent);
+    }
+
+    // Créer et enregistrer le Deployer Agent (si Git disponible)
+    if (this.git) {
+      const deployerAgent = createDeployerAgent(this.git);
+      this.registry.register(deployerAgent);
     }
 
     // Créer et enregistrer l'Orchestrator
@@ -218,6 +314,16 @@ export class AgentSystem {
       }
     });
 
+    // Créer le CheckpointManager si activé
+    if (this.enableCheckpoints) {
+      this.checkpointManager = createCheckpointManager();
+    }
+
+    // Créer l'ErrorRecovery si activé
+    if (this.enableErrorRecovery) {
+      this.errorRecovery = createErrorRecovery(this.registry);
+    }
+
     this.initialized = true;
 
     addAgentLog('orchestrator', {
@@ -231,6 +337,20 @@ export class AgentSystem {
    */
   getTaskQueue(): TaskQueue | null {
     return this.taskQueue;
+  }
+
+  /**
+   * Obtenir le checkpoint manager
+   */
+  getCheckpointManager(): CheckpointManager | null {
+    return this.checkpointManager;
+  }
+
+  /**
+   * Obtenir l'error recovery
+   */
+  getErrorRecovery(): ErrorRecovery | null {
+    return this.errorRecovery;
   }
 
   /**
