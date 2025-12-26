@@ -45,9 +45,12 @@ describe('connectors store', () => {
       const connectorIds = CONNECTORS.map((c) => c.id);
 
       expect(connectorIds).toContain('supabase');
-      expect(connectorIds).toContain('stripe');
       expect(connectorIds).toContain('github');
-      expect(connectorIds).toContain('notion');
+      expect(connectorIds).toContain('netlify');
+    });
+
+    it('should have exactly 3 core connectors', () => {
+      expect(CONNECTORS.length).toBe(3);
     });
 
     it('should have valid fields for each connector', () => {
@@ -80,10 +83,10 @@ describe('connectors store', () => {
 
     it('should preserve other connectors state', () => {
       connectConnector('supabase', { url: 'https://test.supabase.co' });
-      connectConnector('stripe', { publishableKey: 'pk_test' });
+      connectConnector('netlify', { accessToken: 'token' });
 
       expect(getConnectorState('supabase').isConnected).toBe(true);
-      expect(getConnectorState('stripe').isConnected).toBe(true);
+      expect(getConnectorState('netlify').isConnected).toBe(true);
     });
   });
 
@@ -168,46 +171,20 @@ describe('connectors store', () => {
     });
   });
 
-  describe('OAuth Authentication Functions (Phase 2 - Extended)', () => {
+  describe('OAuth Authentication Functions', () => {
     describe('isOAuthConnector', () => {
       it('should return true for all OAuth connectors', () => {
         expect(isOAuthConnector('github')).toBe(true);
-        expect(isOAuthConnector('figma')).toBe(true);
-        expect(isOAuthConnector('notion')).toBe(true);
-        expect(isOAuthConnector('linear')).toBe(true);
         expect(isOAuthConnector('netlify')).toBe(true);
-        expect(isOAuthConnector('miro')).toBe(true);
         expect(isOAuthConnector('supabase')).toBe(true);
-        expect(isOAuthConnector('atlassian')).toBe(true);
-        expect(isOAuthConnector('shopify')).toBe(true);
-      });
-
-      it('should return false for API key connectors', () => {
-        expect(isOAuthConnector('stripe')).toBe(false);
-        expect(isOAuthConnector('elevenlabs')).toBe(false);
-        expect(isOAuthConnector('perplexity')).toBe(false);
-        expect(isOAuthConnector('firecrawl')).toBe(false);
-        expect(isOAuthConnector('n8n')).toBe(false);
       });
     });
 
     describe('getAuthMethod', () => {
       it('should return oauth for OAuth connectors', () => {
         expect(getAuthMethod('github')).toBe('oauth');
-        expect(getAuthMethod('figma')).toBe('oauth');
-        expect(getAuthMethod('notion')).toBe('oauth');
-        expect(getAuthMethod('linear')).toBe('oauth');
         expect(getAuthMethod('supabase')).toBe('oauth');
         expect(getAuthMethod('netlify')).toBe('oauth');
-        expect(getAuthMethod('miro')).toBe('oauth');
-        expect(getAuthMethod('atlassian')).toBe('oauth');
-        expect(getAuthMethod('shopify')).toBe('oauth');
-      });
-
-      it('should return api_key for connectors without explicit authMethod', () => {
-        expect(getAuthMethod('stripe')).toBe('api_key');
-        expect(getAuthMethod('elevenlabs')).toBe('api_key');
-        expect(getAuthMethod('n8n')).toBe('api_key');
       });
     });
 
@@ -215,7 +192,7 @@ describe('connectors store', () => {
       it('should return only OAuth connectors', () => {
         const oauthConnectors = getOAuthConnectors();
 
-        expect(oauthConnectors.length).toBe(9);
+        expect(oauthConnectors.length).toBe(3);
         expect(oauthConnectors.every((c) => c.authMethod === 'oauth')).toBe(true);
       });
 
@@ -223,53 +200,16 @@ describe('connectors store', () => {
         const oauthIds = getOAuthConnectors().map((c) => c.id);
 
         expect(oauthIds).toContain('github');
-        expect(oauthIds).toContain('figma');
-        expect(oauthIds).toContain('notion');
-        expect(oauthIds).toContain('linear');
         expect(oauthIds).toContain('netlify');
-        expect(oauthIds).toContain('miro');
         expect(oauthIds).toContain('supabase');
-        expect(oauthIds).toContain('atlassian');
-        expect(oauthIds).toContain('shopify');
-      });
-
-      it('should not include API key connectors', () => {
-        const oauthIds = getOAuthConnectors().map((c) => c.id);
-
-        expect(oauthIds).not.toContain('stripe');
-        expect(oauthIds).not.toContain('elevenlabs');
       });
     });
 
     describe('getApiKeyConnectors', () => {
-      it('should return only API key connectors', () => {
+      it('should return empty array when all connectors use OAuth', () => {
         const apiKeyConnectors = getApiKeyConnectors();
 
-        // Should not include OAuth connectors
-        expect(apiKeyConnectors.every((c) => c.authMethod !== 'oauth')).toBe(true);
-      });
-
-      it('should include Stripe and ElevenLabs', () => {
-        const apiKeyIds = getApiKeyConnectors().map((c) => c.id);
-
-        expect(apiKeyIds).toContain('stripe');
-        expect(apiKeyIds).toContain('elevenlabs');
-      });
-
-      it('should not include OAuth connectors', () => {
-        const apiKeyIds = getApiKeyConnectors().map((c) => c.id);
-
-        expect(apiKeyIds).not.toContain('github');
-        expect(apiKeyIds).not.toContain('figma');
-        expect(apiKeyIds).not.toContain('notion');
-      });
-
-      it('should have correct count', () => {
-        const apiKeyConnectors = getApiKeyConnectors();
-        const totalConnectors = CONNECTORS.length;
-        const oauthConnectors = getOAuthConnectors();
-
-        expect(apiKeyConnectors.length).toBe(totalConnectors - oauthConnectors.length);
+        expect(apiKeyConnectors.length).toBe(0);
       });
     });
 
@@ -284,45 +224,19 @@ describe('connectors store', () => {
     });
 
     describe('ConnectorConfig authMethod field', () => {
-      it('should have authMethod defined for OAuth connectors', () => {
+      it('should have authMethod defined for all connectors', () => {
         const github = CONNECTORS.find((c) => c.id === 'github');
-        const figma = CONNECTORS.find((c) => c.id === 'figma');
-        const notion = CONNECTORS.find((c) => c.id === 'notion');
-        const linear = CONNECTORS.find((c) => c.id === 'linear');
         const supabase = CONNECTORS.find((c) => c.id === 'supabase');
         const netlify = CONNECTORS.find((c) => c.id === 'netlify');
-        const miro = CONNECTORS.find((c) => c.id === 'miro');
-        const atlassian = CONNECTORS.find((c) => c.id === 'atlassian');
-        const shopify = CONNECTORS.find((c) => c.id === 'shopify');
 
         expect(github?.authMethod).toBe('oauth');
-        expect(figma?.authMethod).toBe('oauth');
-        expect(notion?.authMethod).toBe('oauth');
-        expect(linear?.authMethod).toBe('oauth');
         expect(supabase?.authMethod).toBe('oauth');
         expect(netlify?.authMethod).toBe('oauth');
-        expect(miro?.authMethod).toBe('oauth');
-        expect(atlassian?.authMethod).toBe('oauth');
-        expect(shopify?.authMethod).toBe('oauth');
-      });
-
-      it('should have authMethod undefined or api_key for non-OAuth connectors', () => {
-        const stripe = CONNECTORS.find((c) => c.id === 'stripe');
-        const elevenlabs = CONNECTORS.find((c) => c.id === 'elevenlabs');
-        const perplexity = CONNECTORS.find((c) => c.id === 'perplexity');
-        const firecrawl = CONNECTORS.find((c) => c.id === 'firecrawl');
-        const n8n = CONNECTORS.find((c) => c.id === 'n8n');
-
-        expect(stripe?.authMethod).toBeUndefined();
-        expect(elevenlabs?.authMethod).toBeUndefined();
-        expect(perplexity?.authMethod).toBeUndefined();
-        expect(firecrawl?.authMethod).toBeUndefined();
-        expect(n8n?.authMethod).toBeUndefined();
       });
     });
   });
 
-  describe('GitHub-gitSettings sync (Phase 3A)', () => {
+  describe('GitHub-gitSettings sync', () => {
     it('should sync GitHub token to git-settings when connecting', () => {
       connectConnector('github', { token: 'ghp_test_token_123' });
 

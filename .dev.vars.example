@@ -8,14 +8,14 @@
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 
-# Figma OAuth App
-# Create at: https://www.figma.com/developers/apps
-# Callback URL: http://localhost:5173/api/auth/callback
-FIGMA_CLIENT_ID=your_figma_client_id
-FIGMA_CLIENT_SECRET=your_figma_client_secret
-
-# Notion Integration (Public)
-# Create at: https://www.notion.so/my-integrations
+# Netlify OAuth App
+# Create at: https://app.netlify.com/user/applications
 # Redirect URI: http://localhost:5173/api/auth/callback
-NOTION_CLIENT_ID=your_notion_client_id
-NOTION_CLIENT_SECRET=your_notion_client_secret
+NETLIFY_CLIENT_ID=your_netlify_client_id
+NETLIFY_CLIENT_SECRET=your_netlify_client_secret
+
+# Supabase OAuth
+# Configure at: https://supabase.com/dashboard
+# Redirect URL: http://localhost:5173/api/auth/callback
+SUPABASE_CLIENT_ID=your_supabase_client_id
+SUPABASE_CLIENT_SECRET=your_supabase_client_secret

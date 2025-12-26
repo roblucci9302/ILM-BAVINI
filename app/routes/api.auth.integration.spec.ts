@@ -6,6 +6,8 @@
  * - PKCE code_verifier/code_challenge pairs
  * - Token exchange simulation
  * - Error handling
+ *
+ * Core providers only: GitHub, Supabase, Netlify
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -124,29 +126,19 @@ describe('OAuth Integration Tests', () => {
   });
 
   describe('Provider Support', () => {
-    it('should support expected OAuth providers', () => {
+    it('should support core OAuth providers', () => {
       expect(supportsOAuth('github')).toBe(true);
-      expect(supportsOAuth('figma')).toBe(true);
-      expect(supportsOAuth('notion')).toBe(true);
-      expect(supportsOAuth('linear')).toBe(true);
       expect(supportsOAuth('netlify')).toBe(true);
-      expect(supportsOAuth('miro')).toBe(true);
       expect(supportsOAuth('supabase')).toBe(true);
-      expect(supportsOAuth('atlassian')).toBe(true);
-      expect(supportsOAuth('shopify')).toBe(true);
     });
 
-    it('should not support non-OAuth connectors', () => {
-      expect(supportsOAuth('stripe')).toBe(false);
-      expect(supportsOAuth('elevenlabs')).toBe(false);
-      expect(supportsOAuth('perplexity')).toBe(false);
-      expect(supportsOAuth('firecrawl')).toBe(false);
-      expect(supportsOAuth('n8n')).toBe(false);
+    it('should not support unknown providers', () => {
       expect(supportsOAuth('unknown')).toBe(false);
+      expect(supportsOAuth('invalid')).toBe(false);
     });
 
-    it('should have exactly 9 OAuth providers', () => {
-      expect(OAUTH_PROVIDER_IDS.length).toBe(9);
+    it('should have exactly 3 OAuth providers', () => {
+      expect(OAUTH_PROVIDER_IDS.length).toBe(3);
     });
   });
 
@@ -241,7 +233,7 @@ describe('OAuth Integration Tests', () => {
   });
 
   describe('Cross-Provider Compatibility', () => {
-    const providers = ['github', 'figma', 'notion'] as const;
+    const providers = ['github', 'netlify', 'supabase'] as const;
 
     providers.forEach((provider) => {
       it(`should generate valid PKCE parameters for ${provider}`, async () => {

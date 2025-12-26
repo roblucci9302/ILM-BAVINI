@@ -16,26 +16,8 @@ describe('ConnectorIcon', () => {
       expect(container.querySelector('svg')).toBeInTheDocument();
     });
 
-    it('should render stripe icon', () => {
-      const { container } = render(<ConnectorIcon icon="stripe" />);
-
-      expect(container.querySelector('svg')).toBeInTheDocument();
-    });
-
-    it('should render notion icon', () => {
-      const { container } = render(<ConnectorIcon icon="notion" />);
-
-      expect(container.querySelector('svg')).toBeInTheDocument();
-    });
-
-    it('should render figma icon', () => {
-      const { container } = render(<ConnectorIcon icon="figma" />);
-
-      expect(container.querySelector('svg')).toBeInTheDocument();
-    });
-
-    it('should render linear icon', () => {
-      const { container } = render(<ConnectorIcon icon="linear" />);
+    it('should render netlify icon', () => {
+      const { container } = render(<ConnectorIcon icon="netlify" />);
 
       expect(container.querySelector('svg')).toBeInTheDocument();
     });
@@ -75,22 +57,7 @@ describe('ConnectorIcon', () => {
   });
 
   describe('all connector icons', () => {
-    const connectorIds = [
-      'supabase',
-      'stripe',
-      'shopify',
-      'elevenlabs',
-      'perplexity',
-      'firecrawl',
-      'netlify',
-      'figma',
-      'github',
-      'atlassian',
-      'linear',
-      'miro',
-      'n8n',
-      'notion',
-    ];
+    const connectorIds = ['supabase', 'netlify', 'github'];
 
     it.each(connectorIds)('should render %s icon without error', (iconId) => {
       const { container } = render(<ConnectorIcon icon={iconId} />);

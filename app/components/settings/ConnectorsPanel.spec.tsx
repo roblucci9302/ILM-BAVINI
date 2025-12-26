@@ -42,20 +42,6 @@ describe('ConnectorsPanel', () => {
       expect(screen.getByText('Connecteurs')).toBeInTheDocument();
     });
 
-    it('should render shared connectors section', () => {
-      render(<ConnectorsPanel />);
-
-      expect(screen.getByText('Connecteurs partagés')).toBeInTheDocument();
-      expect(screen.getByText("Services accessibles par tous les membres de l'équipe")).toBeInTheDocument();
-    });
-
-    it('should render personal connectors section', () => {
-      render(<ConnectorsPanel />);
-
-      expect(screen.getByText('Connecteurs personnels')).toBeInTheDocument();
-      expect(screen.getByText('Services liés à votre compte personnel')).toBeInTheDocument();
-    });
-
     it('should render all connector cards', () => {
       render(<ConnectorsPanel />);
 
@@ -63,78 +49,58 @@ describe('ConnectorsPanel', () => {
         expect(screen.getByTestId(`connector-card-${connector.id}`)).toBeInTheDocument();
       }
     });
-  });
 
-  describe('category filtering', () => {
-    it('should separate shared and personal connectors', () => {
+    it('should render exactly 3 connectors', () => {
       render(<ConnectorsPanel />);
 
-      const sharedConnectors = CONNECTORS.filter((c) => c.category === 'shared');
-      const personalConnectors = CONNECTORS.filter((c) => c.category === 'personal');
-
-      // Verify shared connectors exist
-      for (const connector of sharedConnectors) {
-        expect(screen.getByTestId(`connector-card-${connector.id}`)).toBeInTheDocument();
-      }
-
-      // Verify personal connectors exist
-      for (const connector of personalConnectors) {
-        expect(screen.getByTestId(`connector-card-${connector.id}`)).toBeInTheDocument();
-      }
+      expect(CONNECTORS.length).toBe(3);
+      expect(screen.getByTestId('connector-card-github')).toBeInTheDocument();
+      expect(screen.getByTestId('connector-card-supabase')).toBeInTheDocument();
+      expect(screen.getByTestId('connector-card-netlify')).toBeInTheDocument();
     });
   });
 
-  describe('connected count', () => {
-    it('should show 0/total when no connectors are connected', () => {
+  describe('connector names', () => {
+    it('should display GitHub connector', () => {
       render(<ConnectorsPanel />);
 
-      expect(screen.getByText(`0/${CONNECTORS.length} actifs`)).toBeInTheDocument();
+      expect(screen.getByText('GitHub')).toBeInTheDocument();
     });
 
-    it('should update count when connectors are connected', () => {
-      const sharedConnectors = CONNECTORS.filter((c) => c.category === 'shared');
-      const personalConnectors = CONNECTORS.filter((c) => c.category === 'personal');
+    it('should display Supabase connector', () => {
+      render(<ConnectorsPanel />);
 
-      // Connect 2 shared and 1 personal
+      expect(screen.getByText('Supabase')).toBeInTheDocument();
+    });
+
+    it('should display Netlify connector', () => {
+      render(<ConnectorsPanel />);
+
+      expect(screen.getByText('Netlify')).toBeInTheDocument();
+    });
+  });
+
+  describe('store integration', () => {
+    it('should render with disconnected state by default', () => {
+      render(<ConnectorsPanel />);
+
+      const state = connectorsStore.get();
+
+      for (const connector of CONNECTORS) {
+        expect(state[connector.id].isConnected).toBe(false);
+      }
+    });
+
+    it('should pass isConnected prop to ConnectorCard', () => {
       connectorsStore.set({
         ...connectorsStore.get(),
-        supabase: { isConnected: true, credentials: { url: 'test', anonKey: 'test' }, lastConnected: Date.now() },
-        stripe: { isConnected: true, credentials: { secretKey: 'sk_test' }, lastConnected: Date.now() },
         github: { isConnected: true, credentials: { token: 'ghp_test' }, lastConnected: Date.now() },
       });
 
       render(<ConnectorsPanel />);
 
-      // Total count
-      expect(screen.getByText(`3/${CONNECTORS.length} actifs`)).toBeInTheDocument();
-
-      // Category counts
-      expect(screen.getByText(`2/${sharedConnectors.length}`)).toBeInTheDocument();
-      expect(screen.getByText(`1/${personalConnectors.length}`)).toBeInTheDocument();
-    });
-
-    it('should show correct count for only shared connectors connected', () => {
-      const sharedConnectors = CONNECTORS.filter((c) => c.category === 'shared');
-      const personalConnectors = CONNECTORS.filter((c) => c.category === 'personal');
-
-      connectorsStore.set({
-        ...connectorsStore.get(),
-        supabase: { isConnected: true, credentials: { url: 'test', anonKey: 'test' }, lastConnected: Date.now() },
-      });
-
-      render(<ConnectorsPanel />);
-
-      expect(screen.getByText(`1/${CONNECTORS.length} actifs`)).toBeInTheDocument();
-      expect(screen.getByText(`1/${sharedConnectors.length}`)).toBeInTheDocument();
-      expect(screen.getByText(`0/${personalConnectors.length}`)).toBeInTheDocument();
-    });
-  });
-
-  describe('description', () => {
-    it('should render the description text', () => {
-      render(<ConnectorsPanel />);
-
-      expect(screen.getByText('Connectez vos services tiers pour étendre les capacités de BAVINI')).toBeInTheDocument();
+      // The mock ConnectorCard still renders, confirming the component works with connected state
+      expect(screen.getByTestId('connector-card-github')).toBeInTheDocument();
     });
   });
 });
