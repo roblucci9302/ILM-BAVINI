@@ -11,10 +11,10 @@ pages_build_output_dir = "./build/client"
 # Required for OAuth authentication:
 # - GITHUB_CLIENT_ID: GitHub OAuth App Client ID
 # - GITHUB_CLIENT_SECRET: GitHub OAuth App Client Secret
-# - FIGMA_CLIENT_ID: Figma OAuth App Client ID
-# - FIGMA_CLIENT_SECRET: Figma OAuth App Client Secret
-# - NOTION_CLIENT_ID: Notion Integration Client ID
-# - NOTION_CLIENT_SECRET: Notion Integration Client Secret
+# - NETLIFY_CLIENT_ID: Netlify OAuth App Client ID
+# - NETLIFY_CLIENT_SECRET: Netlify OAuth App Client Secret
+# - SUPABASE_CLIENT_ID: Supabase OAuth Client ID
+# - SUPABASE_CLIENT_SECRET: Supabase OAuth Client Secret
 #
 # Set secrets with:
 #   wrangler secret put GITHUB_CLIENT_ID

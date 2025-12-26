@@ -9,18 +9,19 @@
 
 import { type LoaderFunctionArgs, redirect } from '@remix-run/cloudflare';
 import { validateState, isStateExpired, exchangeCodeForTokens } from '~/lib/auth/oauth';
-import { getProviderConfig, exchangeNotionCode, type OAuthProviderId } from '~/lib/auth/providers';
+import { getProviderConfig, type OAuthProviderId } from '~/lib/auth/providers';
 
 /**
  * Environment interface for Cloudflare
+ * Core providers only: GitHub, Supabase, Netlify
  */
 interface CloudflareEnv {
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
-  FIGMA_CLIENT_ID?: string;
-  FIGMA_CLIENT_SECRET?: string;
-  NOTION_CLIENT_ID?: string;
-  NOTION_CLIENT_SECRET?: string;
+  NETLIFY_CLIENT_ID?: string;
+  NETLIFY_CLIENT_SECRET?: string;
+  SUPABASE_CLIENT_ID?: string;
+  SUPABASE_CLIENT_SECRET?: string;
 }
 
 /**
@@ -111,23 +112,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   }
 
   try {
-    let tokenResponse;
-
-    // Notion requires special handling with Basic Auth
-    if (provider === 'notion' && config.clientSecret) {
-      tokenResponse = await exchangeNotionCode(config.clientId, config.clientSecret, code, storedState.redirectUri);
-
-      // Convert Notion response to standard format
-      tokenResponse = {
-        access_token: tokenResponse.access_token,
-        token_type: tokenResponse.token_type,
-
-        // Notion tokens don't expire
-      };
-    } else {
-      // Standard OAuth token exchange
-      tokenResponse = await exchangeCodeForTokens(config, code, storedState.redirectUri, storedState.codeVerifier);
-    }
+    // Standard OAuth token exchange for all providers
+    const tokenResponse = await exchangeCodeForTokens(config, code, storedState.redirectUri, storedState.codeVerifier);
 
     /*
      * Create a response that will pass the token to the client

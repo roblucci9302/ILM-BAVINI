@@ -9,18 +9,19 @@
 
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { refreshAccessToken } from '~/lib/auth/oauth';
-import { getProviderConfig, refreshFigmaToken, type OAuthProviderId } from '~/lib/auth/providers';
+import { getProviderConfig, type OAuthProviderId } from '~/lib/auth/providers';
 
 /**
  * Environment interface for Cloudflare
+ * Core providers only: GitHub, Supabase, Netlify
  */
 interface CloudflareEnv {
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
-  FIGMA_CLIENT_ID?: string;
-  FIGMA_CLIENT_SECRET?: string;
-  NOTION_CLIENT_ID?: string;
-  NOTION_CLIENT_SECRET?: string;
+  NETLIFY_CLIENT_ID?: string;
+  NETLIFY_CLIENT_SECRET?: string;
+  SUPABASE_CLIENT_ID?: string;
+  SUPABASE_CLIENT_SECRET?: string;
 }
 
 /**
@@ -74,36 +75,16 @@ export async function action({ request, context }: ActionFunctionArgs) {
   }
 
   try {
-    let tokenResponse;
-
-    // Figma has a different refresh endpoint
-    if (provider === 'figma' && config.clientSecret) {
-      const figmaResponse = await refreshFigmaToken(config.clientId, config.clientSecret, refreshToken);
-
-      tokenResponse = {
-        access_token: figmaResponse.access_token,
-        token_type: 'Bearer',
-        expires_in: figmaResponse.expires_in,
-      };
-    } else if (provider === 'notion') {
-      // Notion tokens don't expire and can't be refreshed
-      return new Response(JSON.stringify({ error: "Les tokens Notion n'expirent pas" }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } else if (provider === 'github') {
-      /*
-       * GitHub OAuth tokens don't expire (only OAuth Apps, not GitHub Apps)
-       * For GitHub Apps with expiring tokens, you would need to use the refresh flow
-       */
+    // GitHub OAuth tokens don't expire (only OAuth Apps, not GitHub Apps)
+    if (provider === 'github') {
       return new Response(JSON.stringify({ error: "Les tokens GitHub OAuth n'expirent pas" }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
-    } else {
-      // Standard OAuth refresh
-      tokenResponse = await refreshAccessToken(config, refreshToken);
     }
+
+    // Standard OAuth refresh for Netlify and Supabase
+    const tokenResponse = await refreshAccessToken(config, refreshToken);
 
     return new Response(
       JSON.stringify({

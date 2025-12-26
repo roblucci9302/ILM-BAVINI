@@ -13,14 +13,15 @@ import { supportsOAuth, getProviderConfig, type OAuthProviderId } from '~/lib/au
 
 /**
  * Environment interface for Cloudflare
+ * Core providers only: GitHub, Supabase, Netlify
  */
 interface CloudflareEnv {
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
-  FIGMA_CLIENT_ID?: string;
-  FIGMA_CLIENT_SECRET?: string;
-  NOTION_CLIENT_ID?: string;
-  NOTION_CLIENT_SECRET?: string;
+  NETLIFY_CLIENT_ID?: string;
+  NETLIFY_CLIENT_SECRET?: string;
+  SUPABASE_CLIENT_ID?: string;
+  SUPABASE_CLIENT_SECRET?: string;
 }
 
 export async function loader({ params, request, context }: LoaderFunctionArgs) {

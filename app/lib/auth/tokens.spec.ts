@@ -80,9 +80,9 @@ describe('OAuth Token Management', () => {
         token_type: 'Bearer',
       };
 
-      storeToken('notion', tokenResponse);
+      storeToken('supabase', tokenResponse);
 
-      const stored = getToken('notion');
+      const stored = getToken('supabase');
 
       expect(stored?.expiresAt).toBeUndefined();
     });
@@ -132,9 +132,9 @@ describe('OAuth Token Management', () => {
     });
 
     it('should return false for token without expiration', () => {
-      storeToken('notion', { access_token: 'token', token_type: 'Bearer' });
+      storeToken('supabase', { access_token: 'token', token_type: 'Bearer' });
 
-      expect(isTokenExpired('notion')).toBe(false);
+      expect(isTokenExpired('supabase')).toBe(false);
     });
 
     it('should return false for non-expired token', () => {
@@ -190,9 +190,9 @@ describe('OAuth Token Management', () => {
     });
 
     it('should return true for valid non-expiring token', () => {
-      storeToken('notion', { access_token: 'token', token_type: 'Bearer' });
+      storeToken('supabase', { access_token: 'token', token_type: 'Bearer' });
 
-      expect(isProviderConnected('notion')).toBe(true);
+      expect(isProviderConnected('supabase')).toBe(true);
     });
 
     it('should return true for non-expired token', () => {
@@ -206,7 +206,7 @@ describe('OAuth Token Management', () => {
     });
 
     it('should return true for expired token with refresh token', () => {
-      oauthTokensStore.setKey('figma', {
+      oauthTokensStore.setKey('netlify', {
         accessToken: 'expired',
         refreshToken: 'refresh_available',
         tokenType: 'Bearer',
@@ -214,7 +214,7 @@ describe('OAuth Token Management', () => {
         connectedAt: Date.now() - 3600000,
       });
 
-      expect(isProviderConnected('figma')).toBe(true);
+      expect(isProviderConnected('netlify')).toBe(true);
     });
 
     it('should return false for expired token without refresh token', () => {
@@ -242,12 +242,12 @@ describe('OAuth Token Management', () => {
 
     it('should preserve other providers', () => {
       storeToken('github', { access_token: 'github_token', token_type: 'Bearer' });
-      storeToken('notion', { access_token: 'notion_token', token_type: 'Bearer' });
+      storeToken('supabase', { access_token: 'supabase_token', token_type: 'Bearer' });
 
       removeToken('github');
 
       expect(getToken('github')).toBeUndefined();
-      expect(getToken('notion')).toBeDefined();
+      expect(getToken('supabase')).toBeDefined();
     });
 
     it('should update localStorage', () => {
@@ -283,7 +283,7 @@ describe('OAuth Token Management', () => {
 
       it('should persist to sessionStorage', () => {
         storePendingState('state456', {
-          provider: 'figma',
+          provider: 'netlify',
           state: 'state456',
           redirectUri: 'https://callback.com',
         });
@@ -301,7 +301,7 @@ describe('OAuth Token Management', () => {
     describe('consumePendingState', () => {
       it('should return and remove pending state', () => {
         storePendingState('state789', {
-          provider: 'notion',
+          provider: 'supabase',
           state: 'state789',
           redirectUri: 'https://callback.com',
         });
@@ -309,7 +309,7 @@ describe('OAuth Token Management', () => {
         const consumed = consumePendingState('state789');
 
         expect(consumed).toBeDefined();
-        expect(consumed?.provider).toBe('notion');
+        expect(consumed?.provider).toBe('supabase');
 
         // Should be removed
         expect(pendingOAuthStates.get().state789).toBeUndefined();
@@ -331,7 +331,7 @@ describe('OAuth Token Management', () => {
 
         // Manually add an expired state
         pendingOAuthStates.setKey('expired', {
-          provider: 'figma',
+          provider: 'netlify',
           state: 'expired',
           redirectUri: 'https://callback.com',
           createdAt: Date.now() - 15 * 60 * 1000, // 15 minutes ago
@@ -354,17 +354,17 @@ describe('OAuth Token Management', () => {
 
     it('should return connected provider IDs', () => {
       storeToken('github', { access_token: 'token1', token_type: 'Bearer' });
-      storeToken('notion', { access_token: 'token2', token_type: 'Bearer' });
+      storeToken('supabase', { access_token: 'token2', token_type: 'Bearer' });
 
       const connected = getConnectedProviders();
 
       expect(connected).toContain('github');
-      expect(connected).toContain('notion');
+      expect(connected).toContain('supabase');
       expect(connected.length).toBe(2);
     });
 
     it('should not include expired providers without refresh token', () => {
-      storeToken('notion', { access_token: 'valid', token_type: 'Bearer' });
+      storeToken('supabase', { access_token: 'valid', token_type: 'Bearer' });
       oauthTokensStore.setKey('github', {
         accessToken: 'expired',
         tokenType: 'Bearer',
@@ -374,7 +374,7 @@ describe('OAuth Token Management', () => {
 
       const connected = getConnectedProviders();
 
-      expect(connected).toContain('notion');
+      expect(connected).toContain('supabase');
       expect(connected).not.toContain('github');
     });
   });
@@ -382,8 +382,8 @@ describe('OAuth Token Management', () => {
   describe('clearAllTokens', () => {
     it('should clear all tokens and states', () => {
       storeToken('github', { access_token: 'token1', token_type: 'Bearer' });
-      storeToken('notion', { access_token: 'token2', token_type: 'Bearer' });
-      storePendingState('state', { provider: 'figma', state: 'state', redirectUri: 'https://cb.com' });
+      storeToken('supabase', { access_token: 'token2', token_type: 'Bearer' });
+      storePendingState('state', { provider: 'netlify', state: 'state', redirectUri: 'https://cb.com' });
 
       clearAllTokens();
 
@@ -460,7 +460,7 @@ describe('Token Edge Cases', () => {
   });
 
   it('should handle concurrent provider operations', () => {
-    const providers = ['github', 'figma', 'notion'];
+    const providers = ['github', 'supabase', 'netlify'];
 
     providers.forEach((provider, i) => {
       storeToken(provider, { access_token: `token_${i}`, token_type: 'Bearer' });
