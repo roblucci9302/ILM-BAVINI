@@ -17,9 +17,9 @@ vi.mock('~/lib/git/file-sync', () => ({
   syncToWebContainer: vi.fn().mockResolvedValue({ files: 5, folders: 2, errors: [] }),
 }));
 
-// mock git-settings
-vi.mock('~/lib/stores/git-settings', () => ({
-  getGitToken: vi.fn().mockReturnValue(null),
+// mock auth tokens
+vi.mock('~/lib/auth/tokens', () => ({
+  getAccessToken: vi.fn().mockReturnValue(null),
 }));
 
 // mock pyodide
