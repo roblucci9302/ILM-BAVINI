@@ -9,6 +9,7 @@ import { classNames } from '~/utils/classNames';
 import { AnimatedPlaceholder } from './AnimatedPlaceholder';
 import { Messages } from './Messages.client';
 import { SendButton } from './SendButton.client';
+import { TemplatePills } from './TemplatePills';
 
 import styles from './BaseChat.module.scss';
 
@@ -102,13 +103,18 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         <div ref={scrollRef} className="flex overflow-y-auto w-full h-full">
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
-              <div id="intro" className="mt-[26vh] max-w-chat mx-auto">
+              <div id="intro" className="mt-[20vh] max-w-chat mx-auto">
                 <h1 className="text-5xl text-center font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-accent-600 dark:from-white dark:via-white dark:to-accent-300 bg-clip-text text-transparent mb-2">
                   Vous imaginez, on réalise
                 </h1>
-                <p className="mb-4 text-center text-gray-600 dark:text-gray-300">
+                <p className="mb-6 text-center text-gray-600 dark:text-gray-300">
                   Décrivez votre projet app, website et BAVINI le crée pour vous.
                 </p>
+                <TemplatePills
+                  onSelectTemplate={(prompt) => {
+                    sendMessage?.({} as React.UIEvent, prompt);
+                  }}
+                />
               </div>
             )}
             <div
