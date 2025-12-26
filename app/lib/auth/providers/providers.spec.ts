@@ -9,54 +9,31 @@ import {
   type OAuthProviderId,
 } from './index';
 import { createGitHubProvider, getGitHubUser, verifyGitHubToken, DEFAULT_GITHUB_SCOPES } from './github';
-import { createFigmaProvider, getFigmaUser, verifyFigmaToken } from './figma';
-import { createNotionProvider, verifyNotionToken, parseNotionUser, type NotionTokenResponse } from './notion';
-import { createLinearProvider, getLinearUser, verifyLinearToken, DEFAULT_LINEAR_SCOPES } from './linear';
 import { createNetlifyProvider, getNetlifyUser, verifyNetlifyToken } from './netlify';
-import { createMiroProvider, getMiroUser, verifyMiroToken, DEFAULT_MIRO_SCOPES } from './miro';
 import { createSupabaseProvider, verifySupabaseToken, DEFAULT_SUPABASE_SCOPES } from './supabase';
-import { createAtlassianProvider, getAtlassianUser, verifyAtlassianToken, DEFAULT_ATLASSIAN_SCOPES } from './atlassian';
-import { createShopifyProvider, verifyShopifyToken, DEFAULT_SHOPIFY_SCOPES } from './shopify';
 
 describe('OAuth Providers Registry', () => {
   describe('OAUTH_PROVIDER_IDS', () => {
     it('should include all supported providers', () => {
       expect(OAUTH_PROVIDER_IDS).toContain('github');
-      expect(OAUTH_PROVIDER_IDS).toContain('figma');
-      expect(OAUTH_PROVIDER_IDS).toContain('notion');
-      expect(OAUTH_PROVIDER_IDS).toContain('linear');
       expect(OAUTH_PROVIDER_IDS).toContain('netlify');
-      expect(OAUTH_PROVIDER_IDS).toContain('miro');
       expect(OAUTH_PROVIDER_IDS).toContain('supabase');
-      expect(OAUTH_PROVIDER_IDS).toContain('atlassian');
-      expect(OAUTH_PROVIDER_IDS).toContain('shopify');
     });
 
-    it('should be a constant tuple with 9 providers', () => {
+    it('should be a constant tuple with 3 providers', () => {
       expect(Array.isArray(OAUTH_PROVIDER_IDS)).toBe(true);
-      expect(OAUTH_PROVIDER_IDS.length).toBe(9);
+      expect(OAUTH_PROVIDER_IDS.length).toBe(3);
     });
   });
 
   describe('supportsOAuth', () => {
     it('should return true for supported providers', () => {
       expect(supportsOAuth('github')).toBe(true);
-      expect(supportsOAuth('figma')).toBe(true);
-      expect(supportsOAuth('notion')).toBe(true);
-      expect(supportsOAuth('linear')).toBe(true);
       expect(supportsOAuth('netlify')).toBe(true);
-      expect(supportsOAuth('miro')).toBe(true);
       expect(supportsOAuth('supabase')).toBe(true);
-      expect(supportsOAuth('atlassian')).toBe(true);
-      expect(supportsOAuth('shopify')).toBe(true);
     });
 
     it('should return false for unsupported providers', () => {
-      expect(supportsOAuth('stripe')).toBe(false);
-      expect(supportsOAuth('elevenlabs')).toBe(false);
-      expect(supportsOAuth('perplexity')).toBe(false);
-      expect(supportsOAuth('firecrawl')).toBe(false);
-      expect(supportsOAuth('n8n')).toBe(false);
       expect(supportsOAuth('unknown')).toBe(false);
     });
 
@@ -89,14 +66,8 @@ describe('OAuth Providers Registry', () => {
 
     it('should have correct provider names', () => {
       expect(PROVIDER_DISPLAY_INFO.github.name).toBe('GitHub');
-      expect(PROVIDER_DISPLAY_INFO.figma.name).toBe('Figma');
-      expect(PROVIDER_DISPLAY_INFO.notion.name).toBe('Notion');
-      expect(PROVIDER_DISPLAY_INFO.linear.name).toBe('Linear');
       expect(PROVIDER_DISPLAY_INFO.netlify.name).toBe('Netlify');
-      expect(PROVIDER_DISPLAY_INFO.miro.name).toBe('Miro');
       expect(PROVIDER_DISPLAY_INFO.supabase.name).toBe('Supabase');
-      expect(PROVIDER_DISPLAY_INFO.atlassian.name).toBe('Atlassian');
-      expect(PROVIDER_DISPLAY_INFO.shopify.name).toBe('Shopify');
     });
   });
 
@@ -128,24 +99,12 @@ describe('OAuth Providers Registry', () => {
 
     it('should return correct config for each provider', () => {
       const githubConfig = getProviderConfig('github', { GITHUB_CLIENT_ID: 'gh_id' });
-      const figmaConfig = getProviderConfig('figma', { FIGMA_CLIENT_ID: 'figma_id' });
-      const notionConfig = getProviderConfig('notion', { NOTION_CLIENT_ID: 'notion_id' });
-      const linearConfig = getProviderConfig('linear', { LINEAR_CLIENT_ID: 'linear_id' });
       const netlifyConfig = getProviderConfig('netlify', { NETLIFY_CLIENT_ID: 'netlify_id' });
-      const miroConfig = getProviderConfig('miro', { MIRO_CLIENT_ID: 'miro_id' });
       const supabaseConfig = getProviderConfig('supabase', { SUPABASE_CLIENT_ID: 'supabase_id' });
-      const atlassianConfig = getProviderConfig('atlassian', { ATLASSIAN_CLIENT_ID: 'atlassian_id' });
-      const shopifyConfig = getProviderConfig('shopify', { SHOPIFY_CLIENT_ID: 'shopify_id' });
 
       expect(githubConfig?.name).toBe('GitHub');
-      expect(figmaConfig?.name).toBe('Figma');
-      expect(notionConfig?.name).toBe('Notion');
-      expect(linearConfig?.name).toBe('Linear');
       expect(netlifyConfig?.name).toBe('Netlify');
-      expect(miroConfig?.name).toBe('Miro');
       expect(supabaseConfig?.name).toBe('Supabase');
-      expect(atlassianConfig?.name).toBe('Atlassian');
-      expect(shopifyConfig?.name).toBe('Shopify');
     });
   });
 });
@@ -246,29 +205,17 @@ describe('GitHub Provider', () => {
   });
 });
 
-describe('Figma Provider', () => {
-  describe('createFigmaProvider', () => {
+describe('Netlify Provider', () => {
+  describe('createNetlifyProvider', () => {
     it('should create provider with correct URLs', () => {
-      const provider = createFigmaProvider('client_id', 'client_secret');
+      const provider = createNetlifyProvider('client_id', 'client_secret');
 
-      expect(provider.authorizationUrl).toBe('https://www.figma.com/oauth');
-      expect(provider.tokenUrl).toBe('https://www.figma.com/api/oauth/token');
-    });
-
-    it('should set usePKCE to false', () => {
-      const provider = createFigmaProvider('client_id');
-
-      expect(provider.usePKCE).toBe(false);
-    });
-
-    it('should include file_read scope', () => {
-      const provider = createFigmaProvider('client_id');
-
-      expect(provider.scopes).toContain('file_read');
+      expect(provider.authorizationUrl).toBe('https://app.netlify.com/authorize');
+      expect(provider.tokenUrl).toBe('https://api.netlify.com/oauth/token');
     });
   });
 
-  describe('getFigmaUser', () => {
+  describe('getNetlifyUser', () => {
     beforeEach(() => {
       vi.restoreAllMocks();
     });
@@ -278,35 +225,20 @@ describe('Figma Provider', () => {
         ok: true,
         json: async () => ({
           id: 'user123',
-          email: 'test@figma.com',
-          handle: 'testuser',
-          img_url: 'https://img.url',
+          email: 'test@netlify.com',
+          full_name: 'Test User',
+          avatar_url: 'https://avatar.url',
         }),
       } as Response);
 
-      const user = await getFigmaUser('test_token');
+      const user = await getNetlifyUser('test_token');
 
       expect(user.id).toBe('user123');
-      expect(user.email).toBe('test@figma.com');
-    });
-
-    it('should call correct endpoint', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({
-        ok: true,
-        json: async () => ({}),
-      } as Response);
-
-      await getFigmaUser('token');
-
-      expect(fetch).toHaveBeenCalledWith('https://api.figma.com/v1/me', {
-        headers: {
-          Authorization: 'Bearer token',
-        },
-      });
+      expect(user.email).toBe('test@netlify.com');
     });
   });
 
-  describe('verifyFigmaToken', () => {
+  describe('verifyNetlifyToken', () => {
     beforeEach(() => {
       vi.restoreAllMocks();
     });
@@ -314,120 +246,51 @@ describe('Figma Provider', () => {
     it('should return true for valid token', async () => {
       vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response);
 
-      expect(await verifyFigmaToken('valid')).toBe(true);
+      expect(await verifyNetlifyToken('valid')).toBe(true);
     });
 
     it('should return false for invalid token', async () => {
       vi.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
-      expect(await verifyFigmaToken('invalid')).toBe(false);
+      expect(await verifyNetlifyToken('invalid')).toBe(false);
     });
   });
 });
 
-describe('Notion Provider', () => {
-  describe('createNotionProvider', () => {
+describe('Supabase Provider', () => {
+  describe('createSupabaseProvider', () => {
     it('should create provider with correct URLs', () => {
-      const provider = createNotionProvider('client_id', 'client_secret');
+      const provider = createSupabaseProvider('client_id', 'client_secret');
 
-      expect(provider.authorizationUrl).toBe('https://api.notion.com/v1/oauth/authorize');
-      expect(provider.tokenUrl).toBe('https://api.notion.com/v1/oauth/token');
+      expect(provider.authorizationUrl).toBe('https://api.supabase.com/v1/oauth/authorize');
+      expect(provider.tokenUrl).toBe('https://api.supabase.com/v1/oauth/token');
     });
 
-    it('should set usePKCE to false', () => {
-      const provider = createNotionProvider('client_id');
+    it('should include default scopes', () => {
+      const provider = createSupabaseProvider('client_id');
 
-      expect(provider.usePKCE).toBe(false);
-    });
-
-    it('should have empty scopes', () => {
-      const provider = createNotionProvider('client_id');
-
-      expect(provider.scopes).toEqual([]);
+      expect(provider.scopes).toEqual(DEFAULT_SUPABASE_SCOPES);
     });
   });
 
-  describe('parseNotionUser', () => {
-    it('should parse user from token response', () => {
-      const tokenResponse: NotionTokenResponse = {
-        access_token: 'token',
-        token_type: 'Bearer',
-        bot_id: 'bot123',
-        workspace_id: 'ws123',
-        workspace_name: 'My Workspace',
-        workspace_icon: 'https://icon.url',
-        owner: {
-          type: 'user',
-          user: {
-            id: 'user123',
-            name: 'Test User',
-            avatar_url: 'https://avatar.url',
-            type: 'person',
-            person: {
-              email: 'test@notion.com',
-            },
-          },
-        },
-        duplicated_template_id: null,
-      };
-
-      const user = parseNotionUser(tokenResponse);
-
-      expect(user.id).toBe('user123');
-      expect(user.name).toBe('Test User');
-      expect(user.email).toBe('test@notion.com');
-      expect(user.workspace_id).toBe('ws123');
-    });
-
-    it('should handle workspace owner type', () => {
-      const tokenResponse: NotionTokenResponse = {
-        access_token: 'token',
-        token_type: 'Bearer',
-        bot_id: 'bot123',
-        workspace_id: 'ws123',
-        workspace_name: 'Workspace Name',
-        workspace_icon: null,
-        owner: {
-          type: 'workspace',
-        },
-        duplicated_template_id: null,
-      };
-
-      const user = parseNotionUser(tokenResponse);
-
-      expect(user.id).toBe('bot123');
-      expect(user.name).toBe('Workspace Name');
-    });
-  });
-
-  describe('verifyNotionToken', () => {
+  describe('verifySupabaseToken', () => {
     beforeEach(() => {
       vi.restoreAllMocks();
     });
 
-    it('should call correct endpoint with Notion-Version header', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response);
-
-      await verifyNotionToken('token');
-
-      expect(fetch).toHaveBeenCalledWith('https://api.notion.com/v1/users/me', {
-        headers: {
-          Authorization: 'Bearer token',
-          'Notion-Version': '2022-06-28',
-        },
-      });
-    });
-
     it('should return true for valid token', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response);
+      vi.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ([]),
+      } as Response);
 
-      expect(await verifyNotionToken('valid')).toBe(true);
+      expect(await verifySupabaseToken('valid')).toBe(true);
     });
 
     it('should return false for invalid token', async () => {
       vi.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
-      expect(await verifyNotionToken('invalid')).toBe(false);
+      expect(await verifySupabaseToken('invalid')).toBe(false);
     });
   });
 });
@@ -453,20 +316,20 @@ describe('Provider User Fetching', () => {
     expect(user).toHaveProperty('login', 'ghuser');
   });
 
-  it('should fetch Figma user through getProviderUser', async () => {
+  it('should fetch Netlify user through getProviderUser', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        id: 'figma123',
-        handle: 'figmauser',
-        email: 'figma@example.com',
-        img_url: 'https://figma.avatar',
+        id: 'netlify123',
+        email: 'netlify@example.com',
+        full_name: 'Netlify User',
+        avatar_url: 'https://netlify.avatar',
       }),
     } as Response);
 
-    const user = await getProviderUser('figma', 'token');
+    const user = await getProviderUser('netlify', 'token');
 
-    expect(user).toHaveProperty('handle', 'figmauser');
+    expect(user).toHaveProperty('email', 'netlify@example.com');
   });
 
   it('should throw for unknown provider', async () => {
@@ -480,11 +343,11 @@ describe('Provider Token Verification', () => {
   });
 
   it('should verify tokens through verifyProviderToken', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response);
+    vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ([]) } as Response);
 
     expect(await verifyProviderToken('github', 'token')).toBe(true);
-    expect(await verifyProviderToken('figma', 'token')).toBe(true);
-    expect(await verifyProviderToken('notion', 'token')).toBe(true);
+    expect(await verifyProviderToken('netlify', 'token')).toBe(true);
+    expect(await verifyProviderToken('supabase', 'token')).toBe(true);
   });
 
   it('should return false for unknown provider', async () => {

@@ -19,25 +19,8 @@ import {
   type OAuthProviderId,
 } from '~/lib/auth';
 
-// Connector types
-export type ConnectorId =
-  // Shared connectors
-  | 'supabase'
-  | 'stripe'
-  | 'shopify'
-  | 'elevenlabs'
-  | 'perplexity'
-  | 'firecrawl'
-  | 'netlify'
-  | 'figma'
-
-  // Personal connectors
-  | 'github'
-  | 'atlassian'
-  | 'linear'
-  | 'miro'
-  | 'n8n'
-  | 'notion';
+// Connector types - Simplified to core services only
+export type ConnectorId = 'github' | 'supabase' | 'netlify';
 
 export type ConnectorCategory = 'shared' | 'personal';
 
@@ -90,7 +73,7 @@ export type ConnectorsState = Record<ConnectorId, ConnectorState>;
 
 const kConnectorsStorage = 'bavini_connectors';
 
-// Connector configurations
+// Connector configurations - Core services only
 export const CONNECTORS: ConnectorConfig[] = [
   // Shared connectors
   {
@@ -107,64 +90,6 @@ export const CONNECTORS: ConnectorConfig[] = [
     ],
   },
   {
-    id: 'stripe',
-    name: 'Stripe',
-    description: 'Paiements et abonnements',
-    category: 'shared',
-    icon: 'stripe',
-    docsUrl: 'https://stripe.com/docs',
-    fields: [
-      { key: 'publishableKey', label: 'Clé publique', type: 'text', placeholder: 'pk_test_...', required: true },
-      { key: 'secretKey', label: 'Clé secrète', type: 'password', placeholder: 'sk_test_...', required: true },
-    ],
-  },
-  {
-    id: 'shopify',
-    name: 'Shopify',
-    description: 'E-commerce et boutique en ligne',
-    category: 'shared',
-    icon: 'shopify',
-    docsUrl: 'https://shopify.dev/docs',
-    authMethod: 'oauth',
-    fields: [
-      {
-        key: 'storeDomain',
-        label: 'Domaine de la boutique',
-        type: 'text',
-        placeholder: 'my-store.myshopify.com',
-        required: true,
-      },
-      { key: 'accessToken', label: "Token d'accès", type: 'password', required: true },
-    ],
-  },
-  {
-    id: 'elevenlabs',
-    name: 'ElevenLabs',
-    description: 'Synthèse vocale IA',
-    category: 'shared',
-    icon: 'elevenlabs',
-    docsUrl: 'https://docs.elevenlabs.io',
-    fields: [{ key: 'apiKey', label: 'Clé API', type: 'password', placeholder: 'sk_...', required: true }],
-  },
-  {
-    id: 'perplexity',
-    name: 'Perplexity',
-    description: 'Recherche IA conversationnelle',
-    category: 'shared',
-    icon: 'perplexity',
-    docsUrl: 'https://docs.perplexity.ai',
-    fields: [{ key: 'apiKey', label: 'Clé API', type: 'password', placeholder: 'pplx-...', required: true }],
-  },
-  {
-    id: 'firecrawl',
-    name: 'Firecrawl',
-    description: 'Web scraping et extraction de données',
-    category: 'shared',
-    icon: 'firecrawl',
-    docsUrl: 'https://docs.firecrawl.dev',
-    fields: [{ key: 'apiKey', label: 'Clé API', type: 'password', placeholder: 'fc-...', required: true }],
-  },
-  {
     id: 'netlify',
     name: 'Netlify',
     description: 'Déploiement et hébergement',
@@ -176,16 +101,6 @@ export const CONNECTORS: ConnectorConfig[] = [
       { key: 'accessToken', label: "Token d'accès", type: 'password', required: true },
       { key: 'siteId', label: 'ID du site', type: 'text', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
     ],
-  },
-  {
-    id: 'figma',
-    name: 'Figma',
-    description: 'Design et prototypage',
-    category: 'shared',
-    icon: 'figma',
-    docsUrl: 'https://www.figma.com/developers/api',
-    authMethod: 'oauth',
-    fields: [{ key: 'accessToken', label: "Token d'accès personnel", type: 'password', required: true }],
   },
 
   // Personal connectors
@@ -199,82 +114,6 @@ export const CONNECTORS: ConnectorConfig[] = [
     authMethod: 'oauth',
     fields: [
       { key: 'token', label: "Token d'accès personnel", type: 'password', placeholder: 'ghp_...', required: true },
-    ],
-  },
-  {
-    id: 'atlassian',
-    name: 'Atlassian',
-    description: 'Jira, Confluence et gestion de projet',
-    category: 'personal',
-    icon: 'atlassian',
-    docsUrl: 'https://developer.atlassian.com',
-    authMethod: 'oauth',
-    fields: [
-      {
-        key: 'domain',
-        label: 'Domaine Atlassian',
-        type: 'text',
-        placeholder: 'your-domain.atlassian.net',
-        required: true,
-      },
-      { key: 'email', label: 'Email', type: 'text', required: true },
-      { key: 'apiToken', label: 'Token API', type: 'password', required: true },
-    ],
-  },
-  {
-    id: 'linear',
-    name: 'Linear',
-    description: 'Gestion de projet et issues',
-    category: 'personal',
-    icon: 'linear',
-    docsUrl: 'https://developers.linear.app',
-    authMethod: 'oauth',
-    fields: [{ key: 'apiKey', label: 'Clé API', type: 'password', required: true }],
-  },
-  {
-    id: 'miro',
-    name: 'Miro',
-    description: 'Tableaux blancs collaboratifs',
-    category: 'personal',
-    icon: 'miro',
-    docsUrl: 'https://developers.miro.com',
-    authMethod: 'oauth',
-    fields: [{ key: 'accessToken', label: "Token d'accès", type: 'password', required: true }],
-  },
-  {
-    id: 'n8n',
-    name: 'n8n',
-    description: 'Automatisation de workflows',
-    category: 'personal',
-    icon: 'n8n',
-    docsUrl: 'https://docs.n8n.io',
-    fields: [
-      {
-        key: 'instanceUrl',
-        label: "URL de l'instance",
-        type: 'url',
-        placeholder: 'https://your-n8n.example.com',
-        required: true,
-      },
-      { key: 'apiKey', label: 'Clé API', type: 'password', placeholder: 'n8n_api_...', required: true },
-    ],
-  },
-  {
-    id: 'notion',
-    name: 'Notion',
-    description: 'Notes et base de connaissances',
-    category: 'personal',
-    icon: 'notion',
-    docsUrl: 'https://developers.notion.com',
-    authMethod: 'oauth',
-    fields: [
-      {
-        key: 'integrationToken',
-        label: "Token d'intégration",
-        type: 'password',
-        placeholder: 'secret_...',
-        required: true,
-      },
     ],
   },
 ];
@@ -303,10 +142,16 @@ function initStore(): ConnectorsState {
       let state = defaultState;
 
       if (persisted) {
-        const parsed = JSON.parse(persisted) as ConnectorsState;
+        const parsed = JSON.parse(persisted) as Partial<ConnectorsState>;
 
-        // merge with default to handle new connectors
-        state = { ...defaultState, ...parsed };
+        // merge with default to handle new connectors, only keep valid connector IDs
+        const validIds = CONNECTORS.map((c) => c.id);
+
+        for (const id of validIds) {
+          if (parsed[id]) {
+            state[id] = parsed[id];
+          }
+        }
       }
 
       // sync with existing git token from git-settings
