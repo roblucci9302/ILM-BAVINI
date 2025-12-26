@@ -474,15 +474,15 @@ export abstract class BaseAgent {
 
       if (msg.toolCalls && msg.toolCalls.length > 0) {
         // Message assistant avec appels d'outils
-        const content: Anthropic.ContentBlock[] = [];
+        const content: Anthropic.ContentBlockParam[] = [];
 
         if (msg.content) {
-          content.push({ type: 'text', text: msg.content });
+          content.push({ type: 'text' as const, text: msg.content });
         }
 
         for (const tc of msg.toolCalls) {
           content.push({
-            type: 'tool_use',
+            type: 'tool_use' as const,
             id: tc.id,
             name: tc.name,
             input: tc.input,
@@ -516,7 +516,7 @@ export abstract class BaseAgent {
    */
   private parseResponse(response: Anthropic.Message): {
     text: string;
-    toolCalls: ToolCall[] | null;
+    toolCalls: ToolCall[] | undefined;
   } {
     let text = '';
     const toolCalls: ToolCall[] = [];
@@ -535,7 +535,7 @@ export abstract class BaseAgent {
 
     return {
       text,
-      toolCalls: toolCalls.length > 0 ? toolCalls : null,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     };
   }
 

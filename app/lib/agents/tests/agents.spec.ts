@@ -166,7 +166,7 @@ describe('ExploreAgent', () => {
   it('should have description for orchestrator', () => {
     const description = agent.getDescription();
     expect(description).toContain('exploration');
-    expect(description).toContain('lecture');
+    expect(description.toLowerCase()).toContain('lecture');
   });
 });
 

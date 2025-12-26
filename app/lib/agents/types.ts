@@ -131,9 +131,11 @@ export interface ToolInputSchema {
  */
 export interface ToolPropertySchema {
   type: 'string' | 'number' | 'boolean' | 'array' | 'object';
-  description: string;
+  description?: string;
   enum?: string[];
   items?: ToolPropertySchema;
+  properties?: Record<string, ToolPropertySchema>;
+  required?: string[];
   default?: unknown;
 }
 
