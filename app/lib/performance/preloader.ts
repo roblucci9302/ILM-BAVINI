@@ -24,7 +24,10 @@ interface PreloadConfig {
  */
 export const preloadModules: PreloadConfig = {
   // Preload after the page is idle (typically 2-3 seconds after load)
+  // Three.js is loaded here since ColorBends is deferred by 500ms
   afterIdle: [
+    // Three.js for background animation (deferred, so preload early)
+    () => import('three'),
     // Shiki for syntax highlighting
     () => import('shiki'),
     // React Markdown for message rendering
@@ -52,8 +55,7 @@ export const preloadModules: PreloadConfig = {
 
   // Preload when user starts typing (likely to send a message soon)
   onTypingStart: [
-    // Three.js for background animation
-    () => import('three'),
+    // Reserved for future modules
   ],
 };
 
