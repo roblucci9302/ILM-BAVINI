@@ -25,5 +25,12 @@ export type { TypeGeneratorOptions, GeneratedTypes } from './generators/TypeGene
 export { RLSGenerator, createRLSGenerator } from './generators/RLSGenerator';
 export type { RLSGeneratorOptions, RLSGenerationResult, TableRLSConfig } from './generators/RLSGenerator';
 
+export { MigrationGenerator, createMigrationGenerator } from './generators/MigrationGenerator';
+export type { MigrationGeneratorOptions, MigrationResult, DiffOptions } from './generators/MigrationGenerator';
+
+// Executors
+export { SandboxExecutor, createSandboxExecutor } from './SandboxExecutor';
+export type { SandboxExecutorOptions, SandboxContext, ExecutionResult } from './SandboxExecutor';
+
 // Managers
 export { RollbackManager, createRollbackManager } from './RollbackManager';
