@@ -347,6 +347,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingH
         showChat={showChat}
         chatStarted={chatStarted}
         isStreaming={isLoading}
+        isLoadingHistory={isLoadingHistory}
         enhancingPrompt={enhancingPrompt}
         promptEnhanced={promptEnhanced}
         selectedFiles={selectedFiles}

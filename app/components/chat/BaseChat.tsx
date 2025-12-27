@@ -1,5 +1,5 @@
 import type { Message } from 'ai';
-import React, { type RefCallback, useRef, useCallback } from 'react';
+import React, { type RefCallback, useRef, useCallback, useState, useEffect } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { LazyColorBendsWrapper as ColorBends } from '~/components/ui/ColorBends.lazy';
 import { Menu } from '~/components/sidebar/Menu.client';
@@ -31,6 +31,7 @@ interface BaseChatProps {
   showChat?: boolean;
   chatStarted?: boolean;
   isStreaming?: boolean;
+  isLoadingHistory?: boolean;
   messages?: Message[];
   enhancingPrompt?: boolean;
   promptEnhanced?: boolean;
@@ -64,6 +65,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       showChat = true,
       chatStarted = false,
       isStreaming = false,
+      isLoadingHistory = false,
       enhancingPrompt = false,
       promptEnhanced = false,
       messages,
@@ -80,6 +82,22 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const hasPreloadedOnFirstMessage = useRef(false);
+
+    // Defer ColorBends loading by 500ms to prioritize UI
+    const [showColorBends, setShowColorBends] = useState(false);
+
+    useEffect(() => {
+      if (chatStarted) {
+        // Don't show ColorBends if chat already started
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        setShowColorBends(true);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }, [chatStarted]);
 
     // Trigger preload when user focuses on textarea (about to type)
     const handleTextareaFocus = useCallback(() => {
@@ -108,18 +126,22 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         )}
         data-chat-visible={showChat}
       >
-        {/* ColorBends animated background - only on welcome screen */}
+        {/* ColorBends animated background - only on welcome screen, deferred by 500ms */}
         {!chatStarted && (
           <ClientOnly fallback={<div className={classNames('absolute inset-0', styles.welcomeGradient)} />}>
-            {() => (
-              <ColorBends
-                className="absolute inset-0 z-0"
-                speed={0.15}
-                noise={0.08}
-                mouseInfluence={0.5}
-                parallax={0.3}
-              />
-            )}
+            {() =>
+              showColorBends ? (
+                <ColorBends
+                  className="absolute inset-0 z-0"
+                  speed={0.15}
+                  noise={0.08}
+                  mouseInfluence={0.5}
+                  parallax={0.3}
+                />
+              ) : (
+                <div className={classNames('absolute inset-0', styles.welcomeGradient)} />
+              )
+            }
           </ClientOnly>
         )}
         <ClientOnly>{() => <Menu />}</ClientOnly>
@@ -147,14 +169,32 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             >
               <ClientOnly>
                 {() => {
-                  return chatStarted ? (
+                  if (!chatStarted) return null;
+
+                  // Show loading skeleton while history is loading
+                  if (isLoadingHistory) {
+                    return (
+                      <div className="flex flex-col w-full flex-1 max-w-chat px-4 pb-6 mx-auto z-1">
+                        <div className="flex items-center justify-center h-full">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-3xl" />
+                            <span className="text-bolt-elements-textSecondary text-sm">
+                              Chargement de la conversation...
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
                     <Messages
                       ref={messageRef}
                       className="flex flex-col w-full flex-1 max-w-chat px-4 pb-6 mx-auto z-1"
                       messages={messages}
                       isStreaming={isStreaming}
                     />
-                  ) : null;
+                  );
                 }}
               </ClientOnly>
               <div
