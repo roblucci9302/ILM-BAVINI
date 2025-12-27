@@ -190,15 +190,23 @@ export interface ChatResponseSections {
  */
 export interface AgentModeResponse {
   /** Type de réponse */
-  type: 'execution';
+  type: 'execution' | 'plan' | 'response';
+  /** Statut de l'exécution */
+  status?: 'awaiting_approval' | 'no_action' | 'completed' | 'failed';
   /** Plan d'exécution */
-  executionPlan: ExecutionPlan;
+  plan?: ExecutionPlan;
   /** Résultats des actions */
-  results: ActionResult[];
+  results?: ActionResult[];
+  /** Message de réponse */
+  message?: string;
   /** Résumé de l'exécution */
-  summary: string;
+  summary?: string;
   /** Erreurs rencontrées */
-  errors: ExecutionError[];
+  errors?: ExecutionError[];
+  /** Suggestions */
+  suggestions?: string[];
+  /** Peut-on exécuter le plan */
+  canExecute?: boolean;
 }
 
 // =============================================================================
@@ -210,19 +218,19 @@ export interface AgentModeResponse {
  */
 export interface ExecutionPlan {
   /** ID unique du plan */
-  id: string;
+  id?: string;
   /** Description du plan */
-  description: string;
+  description?: string;
   /** Actions à exécuter */
   actions: ProposedAction[];
   /** Ordre d'exécution */
-  executionOrder: string[];
+  executionOrder?: string[];
   /** Dépendances entre actions */
-  dependencies: ActionDependency[];
+  dependencies?: ActionDependency[] | Array<{ from: string; to: string }>;
   /** Estimations */
   estimates: PlanEstimates;
   /** Le plan nécessite-t-il validation ? */
-  requiresApproval: boolean;
+  requiresApproval?: boolean;
 }
 
 /**
@@ -281,10 +289,22 @@ export interface ModifyFileDetails {
 }
 
 export interface FileChange {
-  startLine: number;
-  endLine: number;
-  oldContent: string;
-  newContent: string;
+  /** Type de changement */
+  type: 'insert' | 'replace' | 'delete';
+  /** Ligne de début (1-indexed) */
+  startLine?: number;
+  /** Ligne de fin (1-indexed) */
+  endLine?: number;
+  /** Ancien contenu (pour replace/delete) */
+  oldContent?: string;
+  /** Nouveau contenu (pour insert/replace) */
+  newContent?: string;
+  /** Contenu à insérer/remplacer */
+  content: string;
+  /** Position d'insertion (pour insert) */
+  position?: number;
+  /** Pattern à rechercher (pour replace/delete) */
+  search?: string | RegExp;
 }
 
 export interface DeleteFileDetails {
@@ -295,20 +315,35 @@ export interface DeleteFileDetails {
 export interface RunCommandDetails {
   type: 'run_command';
   command: string;
+  /** Répertoire de travail */
+  cwd?: string;
+  /** Alias pour cwd */
   workingDirectory?: string;
 }
 
 export interface InstallPackageDetails {
   type: 'install_package';
+  /** Nom du package */
   packageName: string;
+  /** Alias pour packageName */
+  name?: string;
+  /** Version spécifique */
   version?: string;
+  /** Dépendance de développement */
   isDev: boolean;
+  /** Gestionnaire de packages */
+  packageManager?: 'npm' | 'pnpm' | 'yarn';
 }
 
 export interface GitOperationDetails {
   type: 'git_operation';
-  operation: 'commit' | 'push' | 'pull' | 'branch' | 'merge';
+  operation: 'commit' | 'push' | 'pull' | 'branch' | 'merge' | 'checkout';
+  /** Paramètres de l'opération */
   params: Record<string, string>;
+  /** Branche cible */
+  branch?: string;
+  /** Message de commit */
+  message?: string;
 }
 
 export interface DeployDetails {
@@ -329,14 +364,22 @@ export interface ActionDependency {
  * Estimations du plan
  */
 export interface PlanEstimates {
+  /** Durée estimée */
+  duration: string;
+  /** Nombre de fichiers affectés */
+  filesAffected: number;
+  /** Lignes de code modifiées */
+  linesChanged: number;
+  /** Niveau de risque */
+  risk: 'low' | 'medium' | 'high';
   /** Nombre total d'actions */
-  totalActions: number;
+  totalActions?: number;
   /** Fichiers à créer */
-  filesToCreate: number;
+  filesToCreate?: number;
   /** Fichiers à modifier */
-  filesToModify: number;
+  filesToModify?: number;
   /** Commandes à exécuter */
-  commandsToRun: number;
+  commandsToRun?: number;
 }
 
 // =============================================================================
@@ -362,23 +405,49 @@ export interface ActionResult {
 }
 
 /**
+ * Type de rollback
+ */
+export type RollbackType = 'delete' | 'restore' | 'create' | 'uninstall';
+
+/**
  * Données pour annuler une action
  */
 export interface RollbackData {
   actionId: string;
-  type: ActionType;
-  data: unknown;
+  type: RollbackType;
+  data: RollbackFileData | RollbackPackageData;
+}
+
+/**
+ * Données de rollback pour les fichiers
+ */
+export interface RollbackFileData {
+  path: string;
+  content?: string;
+}
+
+/**
+ * Données de rollback pour les packages
+ */
+export interface RollbackPackageData {
+  name: string;
+  packageManager?: 'npm' | 'pnpm' | 'yarn';
 }
 
 /**
  * Erreur d'exécution
  */
 export interface ExecutionError {
-  actionId: string;
+  /** ID de l'action (optionnel pour erreurs générales) */
+  actionId?: string;
+  /** Code d'erreur */
   code: string;
+  /** Message d'erreur */
   message: string;
+  /** Stack trace */
   stack?: string;
-  recoverable: boolean;
+  /** L'erreur est-elle récupérable */
+  recoverable?: boolean;
 }
 
 // =============================================================================

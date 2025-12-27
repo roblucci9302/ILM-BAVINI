@@ -2,6 +2,7 @@ import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 import { CHAT_MODE_SYSTEM_PROMPT } from '~/lib/.server/agents/ChatModeAgent';
+import { AGENT_MODE_SYSTEM_PROMPT } from '~/lib/.server/agents/AgentModeAgent';
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
 You are BAVINI, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
@@ -891,10 +892,11 @@ export const CONTINUE_PROMPT = stripIndents`
 `;
 
 // =============================================================================
-// Chat Mode System Prompt (Read-Only Analysis Mode)
+// Mode-Specific System Prompts
 // =============================================================================
 
 export { CHAT_MODE_SYSTEM_PROMPT };
+export { AGENT_MODE_SYSTEM_PROMPT };
 
 /**
  * Retourne le prompt système approprié selon le mode
@@ -906,6 +908,7 @@ export function getSystemPromptForMode(mode: AgentModeType, cwd?: string): strin
     case 'chat':
       return CHAT_MODE_SYSTEM_PROMPT;
     case 'agent':
+      return AGENT_MODE_SYSTEM_PROMPT;
     case 'auto':
     default:
       return getSystemPrompt(cwd);

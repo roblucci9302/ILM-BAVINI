@@ -93,3 +93,32 @@ export {
   ChatModeAgent,
   CHAT_MODE_SYSTEM_PROMPT,
 } from './ChatModeAgent';
+
+// =============================================================================
+// Agent Mode Agent
+// =============================================================================
+
+export {
+  AgentModeAgent,
+  AGENT_MODE_SYSTEM_PROMPT,
+} from './AgentModeAgent';
+
+export type {
+  ExecutionStatus,
+  AgentExecutionResponse,
+  ExecutionSummary,
+} from './AgentModeAgent';
+
+// =============================================================================
+// Action Executor
+// =============================================================================
+
+export {
+  ActionExecutor,
+  createActionExecutor,
+} from './ActionExecutor';
+
+export type {
+  ExecutionResult,
+  ExecutionOptions,
+} from './ActionExecutor';
