@@ -1,11 +1,16 @@
 import type { Message } from 'ai';
-import React, { type RefCallback } from 'react';
+import React, { type RefCallback, useRef, useCallback } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
-import ColorBends from '~/components/ui/ColorBends';
+import { LazyColorBendsWrapper as ColorBends } from '~/components/ui/ColorBends.lazy';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { IconButton } from '~/components/ui/IconButton';
 import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
+import {
+  preloadOnTypingStart,
+  preloadOnFirstMessage,
+  preloadOnWorkbenchInteraction,
+} from '~/lib/performance';
 import { AnimatedPlaceholder } from './AnimatedPlaceholder';
 import { Messages } from './Messages.client';
 import { SendButton } from './SendButton.client';
@@ -74,6 +79,24 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     ref,
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
+    const hasPreloadedOnFirstMessage = useRef(false);
+
+    // Trigger preload when user focuses on textarea (about to type)
+    const handleTextareaFocus = useCallback(() => {
+      preloadOnTypingStart();
+    }, []);
+
+    // Wrap sendMessage to trigger preload on first message
+    const handleSendMessage = useCallback(
+      (event: React.UIEvent, messageInput?: string) => {
+        if (!hasPreloadedOnFirstMessage.current) {
+          hasPreloadedOnFirstMessage.current = true;
+          preloadOnFirstMessage();
+        }
+        sendMessage?.(event, messageInput);
+      },
+      [sendMessage],
+    );
 
     return (
       <div
@@ -112,7 +135,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </p>
                 <TemplatePills
                   onSelectTemplate={(prompt) => {
-                    sendMessage?.({} as React.UIEvent, prompt);
+                    handleSendMessage({} as React.UIEvent, prompt);
                   }}
                 />
               </div>
@@ -176,6 +199,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     <textarea
                       ref={textareaRef}
                       className={`w-full pl-4 pt-4 pr-12 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent`}
+                      onFocus={handleTextareaFocus}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                           if (event.shiftKey) {
@@ -184,7 +208,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
                           event.preventDefault();
 
-                          sendMessage?.(event);
+                          handleSendMessage(event);
                         }
                       }}
                       value={input}
@@ -210,7 +234,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                             return;
                           }
 
-                          sendMessage?.(event);
+                          handleSendMessage(event);
                         }}
                       />
                     )}
@@ -266,7 +290,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       <button
                         key={index}
                         onClick={(event) => {
-                          sendMessage?.(event, examplePrompt.text);
+                          handleSendMessage(event, examplePrompt.text);
                         }}
                         className="group flex items-center w-full gap-2 justify-center bg-transparent text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-theme"
                       >
@@ -279,7 +303,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               </div>
             )}
           </div>
-          <ClientOnly>{() => <Workbench chatStarted={chatStarted} isStreaming={isStreaming} />}</ClientOnly>
+          <ClientOnly>
+            {() => (
+              <div onMouseEnter={preloadOnWorkbenchInteraction}>
+                <Workbench chatStarted={chatStarted} isStreaming={isStreaming} />
+              </div>
+            )}
+          </ClientOnly>
         </div>
       </div>
     );

@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import {
   type OnChangeCallback as OnEditorChange,
   type OnScrollCallback as OnEditorScroll,
-} from '~/components/editor/codemirror/CodeMirrorEditor';
+} from '~/components/editor/codemirror';
 import { ErrorBoundary, MinimalErrorFallback } from '~/components/ui/ErrorBoundary';
 import { IconButton } from '~/components/ui/IconButton';
 import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';

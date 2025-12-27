@@ -9,7 +9,13 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig((config) => {
   return {
     build: {
-      target: 'esnext',
+      target: 'esnext', // Modern browsers (code uses top-level await)
+      chunkSizeWarningLimit: 500, // Warn if chunk > 500KB
+      // Note: Code splitting is handled via React.lazy() wrappers in:
+      // - app/components/editor/codemirror/index.tsx (CodeMirror)
+      // - app/components/ui/ColorBends.lazy.tsx (Three.js)
+      // - app/components/chat/CodeBlock.lazy.tsx (Shiki)
+      // Vite will automatically create separate chunks for these lazy-loaded modules
     },
     optimizeDeps: {
       exclude: ['@electric-sql/pglite', 'pyodide'],
