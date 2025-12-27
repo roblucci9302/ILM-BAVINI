@@ -30,7 +30,8 @@ src/
 │   └── useProfile.ts      # Hook profil utilisateur
 ├── lib/
 │   ├── supabase.ts        # Client Supabase
-│   └── database.types.ts  # Types générés
+│   ├── database.types.ts  # Types générés
+│   └── validation.ts      # Schémas Zod
 ├── pages/
 │   ├── Home.tsx           # Page d'accueil
 │   ├── Dashboard.tsx      # Tableau de bord (protégé)
@@ -117,8 +118,8 @@ npm run preview
 # Tests
 npm run test
 
-# Tests avec UI
-npm run test:ui
+# Tests en mode watch
+npm run test:watch
 
 # Linting
 npm run lint

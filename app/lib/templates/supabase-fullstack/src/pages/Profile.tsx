@@ -2,7 +2,7 @@
  * Page de profil utilisateur
  */
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Loader2, Save, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -15,11 +15,11 @@ export function Profile() {
   const [error, setError] = useState<string | null>(null);
 
   // Mettre à jour le nom quand le profil est chargé
-  useState(() => {
+  useEffect(() => {
     if (profile?.full_name) {
       setFullName(profile.full_name);
     }
-  });
+  }, [profile?.full_name]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

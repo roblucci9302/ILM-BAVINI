@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { loginSchema, formatZodErrors } from '@/lib/validation';
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -13,10 +14,19 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+
+    // Validation Zod
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      setFieldErrors(formatZodErrors(result.error));
+      return;
+    }
 
     try {
       await signIn(email, password);
@@ -68,10 +78,15 @@ export function LoginForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className={`appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm ${
+                    fieldErrors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Adresse email"
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
@@ -89,10 +104,15 @@ export function LoginForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className={`appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm ${
+                    fieldErrors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Mot de passe"
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
           </div>
 

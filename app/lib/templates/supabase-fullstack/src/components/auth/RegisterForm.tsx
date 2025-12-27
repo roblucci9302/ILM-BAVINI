@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Mail, Lock, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { registerSchema, formatZodErrors } from '@/lib/validation';
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -15,19 +16,18 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
 
-    if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
+    // Validation Zod
+    const result = registerSchema.safeParse({ email, password, confirmPassword, fullName });
+    if (!result.success) {
+      setFieldErrors(formatZodErrors(result.error));
       return;
     }
 
@@ -125,10 +125,15 @@ export function RegisterForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`appearance-none relative block w-full px-3 py-2 pl-10 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    fieldErrors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Adresse email"
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -147,10 +152,15 @@ export function RegisterForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`appearance-none relative block w-full px-3 py-2 pl-10 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    fieldErrors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Mot de passe (8 caractères min.)"
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div>
@@ -169,10 +179,15 @@ export function RegisterForm() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`appearance-none relative block w-full px-3 py-2 pl-10 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    fieldErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Confirmer le mot de passe"
                 />
               </div>
+              {fieldErrors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
           </div>
 
