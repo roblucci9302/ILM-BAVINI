@@ -227,6 +227,9 @@ function bad(x) {
             performance: 90,
             maintainability: 90,
             structure: 90,
+            accessibility: 100,
+            responsive: 100,
+            uxPatterns: 100,
           },
           level: 'excellent' as const,
           action: 'approve' as const,
@@ -242,6 +245,9 @@ function bad(x) {
           filesWithAny: 0,
           filesWithErrorHandling: 1,
           largeFiles: 0,
+          accessibility: { imagesWithoutAlt: 0, buttonsWithoutLabel: 0, inputsWithoutLabels: 0, interactiveWithoutAria: 0, linksWithoutText: 0, contrastIssues: 0, score: 100 },
+          responsive: { usesBreakpoints: true, responsiveClasses: 20, flexibleLayouts: 10, hasMobileNav: true, responsiveImages: 5, adaptiveGrids: 3, score: 100 },
+          uxPatterns: { loadingStates: 5, errorStates: 3, emptyStates: 2, userFeedback: 3, animations: 5, focusManagement: 5, score: 100 },
         },
       };
 
@@ -262,6 +268,9 @@ function bad(x) {
             performance: 80,
             maintainability: 60,
             structure: 50,
+            accessibility: 60,
+            responsive: 50,
+            uxPatterns: 50,
           },
           level: 'acceptable' as const,
           action: 'suggest' as const,
@@ -285,6 +294,9 @@ function bad(x) {
           filesWithAny: 0,
           filesWithErrorHandling: 0,
           largeFiles: 0,
+          accessibility: { imagesWithoutAlt: 1, buttonsWithoutLabel: 1, inputsWithoutLabels: 0, interactiveWithoutAria: 0, linksWithoutText: 0, contrastIssues: 0, score: 60 },
+          responsive: { usesBreakpoints: false, responsiveClasses: 5, flexibleLayouts: 2, hasMobileNav: false, responsiveImages: 0, adaptiveGrids: 0, score: 50 },
+          uxPatterns: { loadingStates: 0, errorStates: 0, emptyStates: 0, userFeedback: 0, animations: 0, focusManagement: 0, score: 50 },
         },
       };
 

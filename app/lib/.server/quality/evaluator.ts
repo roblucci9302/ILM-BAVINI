@@ -11,9 +11,15 @@ import {
   type QualityLevel,
   type QualityAction,
   type QualityThresholds,
+  type QualityCategories,
   DEFAULT_THRESHOLDS,
   CATEGORY_WEIGHTS,
 } from './types';
+import {
+  AccessibilityEvaluator,
+  ResponsiveEvaluator,
+  UXPatternsEvaluator,
+} from './evaluators';
 
 /**
  * Représentation d'un fichier extrait du code généré
@@ -25,13 +31,19 @@ interface ExtractedFile {
 }
 
 /**
- * Classe principale d'évaluation de qualité
+ * Classe principale d'évaluation de qualité (Enhanced)
  */
 export class QualityEvaluator {
   private thresholds: QualityThresholds;
+  private accessibilityEvaluator: AccessibilityEvaluator;
+  private responsiveEvaluator: ResponsiveEvaluator;
+  private uxPatternsEvaluator: UXPatternsEvaluator;
 
   constructor(thresholds: QualityThresholds = DEFAULT_THRESHOLDS) {
     this.thresholds = thresholds;
+    this.accessibilityEvaluator = new AccessibilityEvaluator();
+    this.responsiveEvaluator = new ResponsiveEvaluator();
+    this.uxPatternsEvaluator = new UXPatternsEvaluator();
   }
 
   /**
@@ -91,7 +103,7 @@ export class QualityEvaluator {
   }
 
   /**
-   * Collecter les métriques sur les fichiers
+   * Collecter les métriques sur les fichiers (Enhanced)
    */
   private collectMetrics(files: ExtractedFile[]): QualityMetrics {
     let totalLines = 0;
@@ -131,6 +143,11 @@ export class QualityEvaluator {
       }
     }
 
+    // Évaluer les nouvelles catégories avec les évaluateurs spécialisés
+    const accessibilityResult = this.accessibilityEvaluator.evaluate(files);
+    const responsiveResult = this.responsiveEvaluator.evaluate(files);
+    const uxPatternsResult = this.uxPatternsEvaluator.evaluate(files);
+
     return {
       filesAnalyzed: files.length,
       totalLines,
@@ -139,14 +156,26 @@ export class QualityEvaluator {
       filesWithAny,
       filesWithErrorHandling,
       largeFiles,
+      accessibility: accessibilityResult.metrics,
+      responsive: responsiveResult.metrics,
+      uxPatterns: uxPatternsResult.metrics,
     };
   }
 
   /**
-   * Détecter les problèmes de qualité
+   * Détecter les problèmes de qualité (Enhanced)
    */
   private detectIssues(files: ExtractedFile[], metrics: QualityMetrics): QualityIssue[] {
     const issues: QualityIssue[] = [];
+
+    // Ajouter les issues des évaluateurs spécialisés
+    const accessibilityResult = this.accessibilityEvaluator.evaluate(files);
+    const responsiveResult = this.responsiveEvaluator.evaluate(files);
+    const uxPatternsResult = this.uxPatternsEvaluator.evaluate(files);
+
+    issues.push(...accessibilityResult.issues);
+    issues.push(...responsiveResult.issues);
+    issues.push(...uxPatternsResult.issues);
 
     // Vérification TypeScript
     const jsFiles = files.filter(
@@ -294,22 +323,29 @@ export class QualityEvaluator {
   }
 
   /**
-   * Calculer le score de qualité
+   * Calculer le score de qualité (Enhanced)
    */
   private calculateScore(metrics: QualityMetrics, issues: QualityIssue[]): QualityScore {
     // Score de base par catégorie (100 points)
-    const categoryScores: QualityScore['categories'] = {
+    const categoryScores: QualityCategories = {
       typescript: 100,
       testing: 100,
       security: 100,
       performance: 100,
       maintainability: 100,
       structure: 100,
+      // Nouvelles catégories - initialisées à partir des métriques
+      accessibility: metrics.accessibility.score,
+      responsive: metrics.responsive.score,
+      uxPatterns: metrics.uxPatterns.score,
     };
 
-    // Appliquer les impacts des issues
+    // Appliquer les impacts des issues (catégories legacy)
     for (const issue of issues) {
-      categoryScores[issue.category] = Math.max(0, categoryScores[issue.category] + issue.impact);
+      // Ne pas réappliquer les impacts pour les nouvelles catégories (déjà dans le score)
+      if (!['accessibility', 'responsive', 'uxPatterns'].includes(issue.category)) {
+        categoryScores[issue.category] = Math.max(0, categoryScores[issue.category] + issue.impact);
+      }
     }
 
     // Bonus TypeScript si tout est en TS
@@ -325,7 +361,7 @@ export class QualityEvaluator {
     // Calculer le score global pondéré
     let overall = 0;
     for (const [category, weight] of Object.entries(CATEGORY_WEIGHTS)) {
-      overall += categoryScores[category as keyof typeof categoryScores] * weight;
+      overall += categoryScores[category as keyof QualityCategories] * weight;
     }
     overall = Math.round(Math.max(0, Math.min(100, overall)));
 
@@ -411,14 +447,17 @@ export class QualityEvaluator {
       byCategory.set(issue.category, list);
     }
 
-    // Ajouter les suggestions par ordre de priorité
-    const priorityOrder: Array<keyof QualityScore['categories']> = [
+    // Ajouter les suggestions par ordre de priorité (Enhanced)
+    const priorityOrder: Array<keyof QualityCategories> = [
       'security',
       'typescript',
       'testing',
+      'accessibility',
       'maintainability',
-      'structure',
       'performance',
+      'responsive',
+      'uxPatterns',
+      'structure',
     ];
 
     for (const category of priorityOrder) {
