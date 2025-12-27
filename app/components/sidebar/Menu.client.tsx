@@ -6,7 +6,7 @@ import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
 import { SettingsModal } from '~/components/settings';
 import { openSettingsModal, connectorsStore } from '~/lib/stores/connectors';
-import { db, deleteById, getAll, chatId, type ChatHistoryItem } from '~/lib/persistence';
+import { getDatabase, deleteById, getAll, chatId, type ChatHistoryItem } from '~/lib/persistence';
 import { cubicEasingFn } from '~/utils/easings';
 import { logger } from '~/utils/logger';
 import { HistoryItem } from './HistoryItem';
@@ -43,7 +43,9 @@ export function Menu() {
   const connectors = useStore(connectorsStore);
   const isGitHubConnected = connectors.github?.isConnected ?? false;
 
-  const loadEntries = useCallback(() => {
+  const loadEntries = useCallback(async () => {
+    const db = await getDatabase();
+
     if (db) {
       getAll(db)
         .then((list) => list.filter((item) => item.urlId && item.description))
@@ -52,8 +54,10 @@ export function Menu() {
     }
   }, []);
 
-  const deleteItem = useCallback((event: React.UIEvent, item: ChatHistoryItem) => {
+  const deleteItem = useCallback(async (event: React.UIEvent, item: ChatHistoryItem) => {
     event.preventDefault();
+
+    const db = await getDatabase();
 
     if (db) {
       deleteById(db, item.id)
@@ -70,7 +74,7 @@ export function Menu() {
           logger.error(error);
         });
     }
-  }, []);
+  }, [loadEntries]);
 
   const closeDialog = () => {
     setDialogContent(null);

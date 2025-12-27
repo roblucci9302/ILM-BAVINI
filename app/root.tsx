@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import reactToastifyStyles from 'react-toastify/dist/ReactToastify.css?url';
 import globalStyles from './styles/index.scss?url';
 import xtermStyles from '@xterm/xterm/css/xterm.css?url';
+import fontsStyles from './styles/fonts.css?url';
 
 import 'virtual:uno.css';
 
@@ -19,23 +20,18 @@ export const links: LinksFunction = () => [
     href: '/favicon.svg',
     type: 'image/svg+xml',
   },
-  { rel: 'stylesheet', href: reactToastifyStyles },
-  { rel: 'stylesheet', href: tailwindReset },
-  { rel: 'stylesheet', href: globalStyles },
-  { rel: 'stylesheet', href: xtermStyles },
-  {
-    rel: 'preconnect',
-    href: 'https://fonts.googleapis.com',
-  },
+  // Preconnect to Google Fonts CDN (fallback for local fonts)
   {
     rel: 'preconnect',
     href: 'https://fonts.gstatic.com',
     crossOrigin: 'anonymous',
   },
-  {
-    rel: 'stylesheet',
-    href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-  },
+  // Font styles with local + CDN fallback
+  { rel: 'stylesheet', href: fontsStyles },
+  { rel: 'stylesheet', href: reactToastifyStyles },
+  { rel: 'stylesheet', href: tailwindReset },
+  { rel: 'stylesheet', href: globalStyles },
+  { rel: 'stylesheet', href: xtermStyles },
 ];
 
 const inlineThemeCode = stripIndents`
