@@ -33,7 +33,12 @@ export function Chat() {
           logger.error('Chat error boundary caught error:', error);
         }}
       >
-        {ready && <ChatImpl initialMessages={initialMessages} storeMessageHistory={storeMessageHistory} />}
+        {/* Always render ChatImpl - it handles its own loading state */}
+        <ChatImpl
+          initialMessages={initialMessages}
+          storeMessageHistory={storeMessageHistory}
+          isLoadingHistory={!ready}
+        />
       </ErrorBoundary>
       <ToastContainer
         closeButton={({ closeToast }) => {
@@ -69,6 +74,7 @@ export function Chat() {
 interface ChatProps {
   initialMessages: Message[];
   storeMessageHistory: (messages: Message[]) => Promise<void>;
+  isLoadingHistory?: boolean;
 }
 
 interface FilePreview {
@@ -89,7 +95,7 @@ const fileToDataURL = (file: File): Promise<string> => {
   });
 };
 
-export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProps) => {
+export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingHistory = false }: ChatProps) => {
   useShortcuts();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -119,9 +125,14 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
+  // Update chatStarted when initialMessages changes (e.g., after loading from DB)
   useEffect(() => {
+    if (initialMessages.length > 0 && !chatStarted) {
+      setChatStarted(true);
+    }
+
     chatStore.setKey('started', initialMessages.length > 0);
-  }, []);
+  }, [initialMessages]);
 
   useEffect(() => {
     parseMessages(messages, isLoading);

@@ -1,10 +1,10 @@
 import { useLoaderData, useNavigate } from '@remix-run/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { atom } from 'nanostores';
 import type { Message } from 'ai';
 import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
+import { getMessages, getNextId, getUrlId, openDatabase, setMessages, type Database } from './db';
 
 export interface ChatHistoryItem {
   id: string;
@@ -16,7 +16,48 @@ export interface ChatHistoryItem {
 
 const persistenceEnabled = !import.meta.env.VITE_DISABLE_PERSISTENCE;
 
-export const db = persistenceEnabled ? await openDatabase() : undefined;
+// Database instance - initialized lazily, not at module load
+let dbInstance: Database | undefined;
+let dbInitPromise: Promise<Database | undefined> | null = null;
+
+/**
+ * Lazy database initialization with timeout
+ * Returns the database instance or undefined if init fails/times out
+ */
+export async function getDatabase(): Promise<Database | undefined> {
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  if (!persistenceEnabled) {
+    return undefined;
+  }
+
+  // If already initializing, wait for that promise
+  if (dbInitPromise) {
+    return dbInitPromise;
+  }
+
+  // Start initialization with timeout
+  dbInitPromise = Promise.race([
+    openDatabase(),
+    new Promise<undefined>((resolve) => {
+      // 5 second timeout for database init
+      setTimeout(() => {
+        console.warn('[DB] Database initialization timed out after 5s');
+        resolve(undefined);
+      }, 5000);
+    }),
+  ]).then((db) => {
+    dbInstance = db;
+    return db;
+  }).catch((error) => {
+    console.error('[DB] Database initialization failed:', error);
+    return undefined;
+  });
+
+  return dbInitPromise;
+}
 
 export const chatId = atom<string | undefined>(undefined);
 export const description = atom<string | undefined>(undefined);
@@ -27,43 +68,73 @@ export function useChatHistory() {
 
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
   const [ready, setReady] = useState<boolean>(false);
+  const [dbReady, setDbReady] = useState<boolean>(false);
   const [urlId, setUrlId] = useState<string | undefined>();
+  const dbRef = useRef<Database | undefined>(undefined);
 
+  // Initialize database lazily
   useEffect(() => {
-    if (!db) {
-      setReady(true);
+    let cancelled = false;
 
-      if (persistenceEnabled) {
-        toast.error(`La sauvegarde des conversations n'est pas disponible`);
+    getDatabase().then((db) => {
+      if (cancelled) return;
+
+      dbRef.current = db;
+      setDbReady(true);
+
+      if (!db) {
+        // Database not available, but we can still use the app
+        setReady(true);
+
+        if (persistenceEnabled) {
+          toast.error(`La sauvegarde des conversations n'est pas disponible`);
+        }
+
+        return;
       }
 
-      return;
-    }
+      // If we have a chat ID in URL, load messages
+      if (mixedId) {
+        getMessages(db, mixedId)
+          .then((storedMessages) => {
+            if (cancelled) return;
 
-    if (mixedId) {
-      getMessages(db, mixedId)
-        .then((storedMessages) => {
-          if (storedMessages && storedMessages.messages.length > 0) {
-            setInitialMessages(storedMessages.messages);
-            setUrlId(storedMessages.urlId);
-            description.set(storedMessages.description);
-            chatId.set(storedMessages.id);
-          } else {
-            navigate(`/`, { replace: true });
-          }
+            if (storedMessages && storedMessages.messages.length > 0) {
+              setInitialMessages(storedMessages.messages);
+              setUrlId(storedMessages.urlId);
+              description.set(storedMessages.description);
+              chatId.set(storedMessages.id);
+            } else {
+              navigate(`/`, { replace: true });
+            }
 
-          setReady(true);
-        })
-        .catch((error) => {
-          toast.error(error.message);
-        });
-    }
-  }, []);
+            setReady(true);
+          })
+          .catch((error) => {
+            if (cancelled) return;
+            console.error('[DB] Failed to load messages:', error);
+            toast.error('Erreur lors du chargement de la conversation');
+            setReady(true); // Still set ready so UI can render
+          });
+      } else {
+        // No mixedId, ready immediately
+        setReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mixedId, navigate]);
 
   return {
+    // Ready immediately if no mixedId, otherwise wait for DB + messages
     ready: !mixedId || ready,
     initialMessages,
+    dbReady,
     storeMessageHistory: async (messages: Message[]) => {
+      const db = dbRef.current;
+
       if (!db || messages.length === 0) {
         return;
       }
@@ -71,10 +142,10 @@ export function useChatHistory() {
       const { firstArtifact } = workbenchStore;
 
       if (!urlId && firstArtifact?.id) {
-        const urlId = await getUrlId(db, firstArtifact.id);
+        const newUrlId = await getUrlId(db, firstArtifact.id);
 
-        navigateChat(urlId);
-        setUrlId(urlId);
+        navigateChat(newUrlId);
+        setUrlId(newUrlId);
       }
 
       if (!description.get() && firstArtifact?.title) {
