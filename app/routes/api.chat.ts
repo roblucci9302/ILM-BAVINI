@@ -5,8 +5,73 @@ import { streamText, type Messages, type StreamingOptions } from '~/lib/.server/
 import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 import { evaluateQuality, type QualityReport } from '~/lib/.server/quality';
 import { createScopedLogger } from '~/utils/logger';
+import { ChatModeAgent, type ChatMode, classifyIntent } from '~/lib/.server/agents';
+import type { AgentContext, ProjectFile } from '~/lib/.server/agents';
 
 const logger = createScopedLogger('api.chat');
+
+/**
+ * Détermine le mode à utiliser basé sur le message utilisateur
+ */
+function determineMode(requestedMode: ChatMode, lastUserMessage: string): ChatMode {
+  if (requestedMode !== 'auto') {
+    return requestedMode;
+  }
+
+  // Auto-détection basée sur l'intention
+  const intent = classifyIntent(lastUserMessage);
+  return intent.recommendedMode as ChatMode;
+}
+
+/**
+ * Extrait le dernier message utilisateur des messages
+ */
+function getLastUserMessage(messages: Messages): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role === 'user' && msg.content) {
+      return msg.content;
+    }
+  }
+  return '';
+}
+
+/**
+ * Traite en mode Chat (analyse sans modification)
+ */
+async function handleChatMode(
+  messages: Messages,
+  context: AgentContext | undefined
+): Promise<Response> {
+  const agent = new ChatModeAgent();
+
+  if (context) {
+    agent.setContext(context);
+  }
+
+  const lastMessage = getLastUserMessage(messages);
+
+  try {
+    const response = await agent.process(lastMessage);
+
+    // Formater la réponse en JSON pour le client
+    return new Response(JSON.stringify({
+      mode: 'chat',
+      ...response,
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    logger.error('ChatModeAgent error:', error);
+    throw new Response(null, {
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+  }
+}
 
 /**
  * Vérifie si le contenu contient du code généré (boltAction avec des fichiers)
@@ -63,9 +128,28 @@ export async function action(args: ActionFunctionArgs) {
   return chatAction(args);
 }
 
-async function chatAction({ context, request }: ActionFunctionArgs) {
-  const { messages } = await request.json<{ messages: Messages }>();
+interface ChatRequestBody {
+  messages: Messages;
+  mode?: ChatMode;
+  context?: AgentContext;
+}
 
+async function chatAction({ context, request }: ActionFunctionArgs) {
+  const body = await request.json<ChatRequestBody>();
+  const { messages, mode: requestedMode = 'auto', context: agentContext } = body;
+
+  // Déterminer le mode effectif
+  const lastUserMessage = getLastUserMessage(messages);
+  const effectiveMode = determineMode(requestedMode, lastUserMessage);
+
+  logger.debug(`Chat mode: requested=${requestedMode}, effective=${effectiveMode}`);
+
+  // Router vers le bon handler selon le mode
+  if (effectiveMode === 'chat') {
+    return handleChatMode(messages, agentContext);
+  }
+
+  // Mode 'agent' - comportement existant avec streaming
   const stream = new SwitchableStream();
 
   // Compteur pour éviter les boucles infinies d'amélioration
