@@ -10,6 +10,27 @@ export * from './types';
 
 // Validators
 export { SQLValidator, createSQLValidator } from './validators/SQLValidator';
+export { NLPValidator, createNLPValidator } from './validators/NLPValidator';
+export type { NLPValidatorOptions, TypeInference } from './validators/NLPValidator';
+export { RLSValidator, createRLSValidator } from './validators/RLSValidator';
+export type { RLSValidatorOptions, RLSValidationResult, PolicyAnalysis } from './validators/RLSValidator';
+
+// Generators
+export { SchemaGenerator, createSchemaGenerator } from './generators/SchemaGenerator';
+export type { SchemaGeneratorOptions, GenerationResult, EntityExtractionResult } from './generators/SchemaGenerator';
+
+export { TypeGenerator, createTypeGenerator } from './generators/TypeGenerator';
+export type { TypeGeneratorOptions, GeneratedTypes } from './generators/TypeGenerator';
+
+export { RLSGenerator, createRLSGenerator } from './generators/RLSGenerator';
+export type { RLSGeneratorOptions, RLSGenerationResult, TableRLSConfig } from './generators/RLSGenerator';
+
+export { MigrationGenerator, createMigrationGenerator } from './generators/MigrationGenerator';
+export type { MigrationGeneratorOptions, MigrationResult, DiffOptions } from './generators/MigrationGenerator';
+
+// Executors
+export { SandboxExecutor, createSandboxExecutor } from './SandboxExecutor';
+export type { SandboxExecutorOptions, SandboxContext, ExecutionResult } from './SandboxExecutor';
 
 // Managers
 export { RollbackManager, createRollbackManager } from './RollbackManager';
