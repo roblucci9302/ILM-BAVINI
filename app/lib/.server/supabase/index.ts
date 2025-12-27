@@ -10,6 +10,15 @@ export * from './types';
 
 // Validators
 export { SQLValidator, createSQLValidator } from './validators/SQLValidator';
+export { NLPValidator, createNLPValidator } from './validators/NLPValidator';
+export type { NLPValidatorOptions, TypeInference } from './validators/NLPValidator';
+
+// Generators
+export { SchemaGenerator, createSchemaGenerator } from './generators/SchemaGenerator';
+export type { SchemaGeneratorOptions, GenerationResult, EntityExtractionResult } from './generators/SchemaGenerator';
+
+export { TypeGenerator, createTypeGenerator } from './generators/TypeGenerator';
+export type { TypeGeneratorOptions, GeneratedTypes } from './generators/TypeGenerator';
 
 // Managers
 export { RollbackManager, createRollbackManager } from './RollbackManager';
