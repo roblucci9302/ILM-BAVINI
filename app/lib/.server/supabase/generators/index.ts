@@ -7,3 +7,6 @@ export type { SchemaGeneratorOptions, GenerationResult, EntityExtractionResult }
 
 export { TypeGenerator, createTypeGenerator } from './TypeGenerator';
 export type { TypeGeneratorOptions, GeneratedTypes } from './TypeGenerator';
+
+export { RLSGenerator, createRLSGenerator } from './RLSGenerator';
+export type { RLSGeneratorOptions, RLSGenerationResult, TableRLSConfig } from './RLSGenerator';
