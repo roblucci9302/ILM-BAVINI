@@ -34,3 +34,12 @@ export type { SandboxExecutorOptions, SandboxContext, ExecutionResult } from './
 
 // Managers
 export { RollbackManager, createRollbackManager } from './RollbackManager';
+export { ReviewManager, createReviewManager, REVIEW_MESSAGE_TEMPLATES } from './ReviewManager';
+export type { ReviewManagerOptions, ReviewDecision, PendingReview } from './ReviewManager';
+
+// Logging and Metrics
+export { AuditLogger, createAuditLogger } from './AuditLogger';
+export type { AuditLoggerOptions, AuditOperation, AuditInput, AuditResult, AuditSecurity, AuditExportOptions } from './AuditLogger';
+
+export { MetricsCollector, createMetricsCollector } from './MetricsCollector';
+export type { MetricsCollectorOptions, MetricsPeriod, PerformanceMetrics, OperationMetrics, TrendData, HealthStatus } from './MetricsCollector';
