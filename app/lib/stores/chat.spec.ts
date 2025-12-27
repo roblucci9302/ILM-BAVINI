@@ -8,6 +8,9 @@ describe('chatStore', () => {
       started: false,
       aborted: false,
       showChat: true,
+      mode: 'auto',
+      pendingActions: [],
+      awaitingAgentApproval: false,
     });
   });
 
@@ -51,6 +54,9 @@ describe('chatStore', () => {
         started: true,
         aborted: false,
         showChat: true,
+        mode: 'auto',
+        pendingActions: [],
+        awaitingAgentApproval: false,
       });
     });
   });
@@ -61,12 +67,18 @@ describe('chatStore', () => {
         started: true,
         aborted: true,
         showChat: false,
+        mode: 'agent',
+        pendingActions: [],
+        awaitingAgentApproval: true,
       });
 
       expect(chatStore.get()).toEqual({
         started: true,
         aborted: true,
         showChat: false,
+        mode: 'agent',
+        pendingActions: [],
+        awaitingAgentApproval: true,
       });
     });
   });

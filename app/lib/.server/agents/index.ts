@@ -13,6 +13,7 @@ export type {
   // Agent Capabilities & Mode
   AgentCapability,
   AgentMode,
+  AgentMode as ChatMode,  // Alias pour compatibilité avec stores/chat.ts
 
   // Intent Classification
   IntentType,
@@ -83,3 +84,12 @@ export {
   classifyIntent,
   extractEntities,
 } from './intent-classifier';
+
+// =============================================================================
+// Chat Mode Agent
+// =============================================================================
+
+export {
+  ChatModeAgent,
+  CHAT_MODE_SYSTEM_PROMPT,
+} from './ChatModeAgent';

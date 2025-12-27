@@ -888,3 +888,27 @@ export const CONTINUE_PROMPT = stripIndents`
   Continue your prior response. IMPORTANT: Immediately begin from where you left off without any interruptions.
   Do not repeat any content, including artifact and action tags.
 `;
+
+// =============================================================================
+// Chat Mode System Prompt (Read-Only Analysis Mode)
+// =============================================================================
+
+export { CHAT_MODE_SYSTEM_PROMPT } from '~/lib/.server/agents/ChatModeAgent';
+
+/**
+ * Retourne le prompt système approprié selon le mode
+ */
+export type AgentModeType = 'chat' | 'agent' | 'auto';
+
+export function getSystemPromptForMode(mode: AgentModeType, cwd?: string): string {
+  switch (mode) {
+    case 'chat':
+      // Import dynamique pour éviter les dépendances circulaires
+      const { CHAT_MODE_SYSTEM_PROMPT: chatPrompt } = require('~/lib/.server/agents/ChatModeAgent');
+      return chatPrompt;
+    case 'agent':
+    case 'auto':
+    default:
+      return getSystemPrompt(cwd);
+  }
+}
