@@ -4,7 +4,7 @@ import type { BundledLanguage } from 'shiki';
 import { createScopedLogger } from '~/utils/logger';
 import { rehypePlugins, remarkPlugins, allowedHTMLElements } from '~/utils/markdown';
 import { Artifact } from './Artifact';
-import { CodeBlock } from './CodeBlock';
+import { CodeBlock } from './CodeBlock.lazy';
 
 import styles from './Markdown.module.scss';
 
