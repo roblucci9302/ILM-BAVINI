@@ -305,7 +305,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           </div>
           <ClientOnly>
             {() => (
-              <div onMouseEnter={preloadOnWorkbenchInteraction}>
+              <div className="flex-shrink-0" onMouseEnter={preloadOnWorkbenchInteraction}>
                 <Workbench chatStarted={chatStarted} isStreaming={isStreaming} />
               </div>
             )}

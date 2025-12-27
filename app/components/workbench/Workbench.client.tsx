@@ -250,7 +250,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
         initial="closed"
         animate={showWorkbench ? 'open' : 'closed'}
         variants={workbenchVariants}
-        className="z-workbench"
+        className="z-workbench flex-shrink-0"
       >
         <div
           className={classNames(
