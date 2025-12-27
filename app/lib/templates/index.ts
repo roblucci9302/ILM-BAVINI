@@ -10,6 +10,12 @@ export interface ProjectTemplate {
   icon: string;
   color: string;
   prompt: string;
+  /** Chemin vers le dossier template (pour les templates avec fichiers pré-existants) */
+  templateDir?: string;
+  /** Tags pour filtrer les templates */
+  tags?: string[];
+  /** Indique si c'est un template full-stack avec backend */
+  isFullStack?: boolean;
 }
 
 /**
@@ -56,6 +62,25 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     icon: '🔌',
     color: 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30',
     prompt: 'Crée une API REST avec Express et TypeScript. Inclure un endpoint /health, la structure MVC, et des tests avec Vitest et Supertest.',
+    tags: ['api', 'backend'],
+  },
+  {
+    id: 'supabase-fullstack',
+    name: 'Supabase Full-Stack',
+    description: 'React + Supabase (Auth, Database, RLS) + Tailwind',
+    icon: '⚡',
+    color: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30',
+    prompt: `Crée une application full-stack avec React et Supabase.
+Inclure:
+- Authentification (inscription, connexion, déconnexion)
+- Profils utilisateurs avec RLS
+- Dashboard protégé
+- React Query pour la gestion d'état
+- Tailwind CSS pour le styling
+- Structure de migration SQL`,
+    templateDir: 'supabase-fullstack',
+    tags: ['fullstack', 'auth', 'database', 'supabase'],
+    isFullStack: true,
   },
 ];
 
@@ -78,4 +103,25 @@ export function getMainTemplates(): ProjectTemplate[] {
  */
 export function getAdditionalTemplates(): ProjectTemplate[] {
   return PROJECT_TEMPLATES.slice(4);
+}
+
+/**
+ * Récupère les templates full-stack avec backend intégré
+ */
+export function getFullStackTemplates(): ProjectTemplate[] {
+  return PROJECT_TEMPLATES.filter((template) => template.isFullStack);
+}
+
+/**
+ * Récupère les templates par tag
+ */
+export function getTemplatesByTag(tag: string): ProjectTemplate[] {
+  return PROJECT_TEMPLATES.filter((template) => template.tags?.includes(tag));
+}
+
+/**
+ * Vérifie si un template a des fichiers pré-existants
+ */
+export function hasTemplateFiles(template: ProjectTemplate): boolean {
+  return !!template.templateDir;
 }
