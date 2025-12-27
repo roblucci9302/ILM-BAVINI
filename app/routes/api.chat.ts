@@ -38,6 +38,7 @@ function getLastUserMessage(messages: Messages): string {
 
 /**
  * Traite en mode Chat (analyse sans modification)
+ * Retourne un stream compatible avec le AI SDK (useChat)
  */
 async function handleChatMode(
   messages: Messages,
@@ -54,14 +55,23 @@ async function handleChatMode(
   try {
     const response = await agent.process(lastMessage);
 
-    // Formater la réponse en JSON pour le client
-    return new Response(JSON.stringify({
-      mode: 'chat',
-      ...response,
-    }), {
+    // Créer un stream compatible avec le AI SDK format
+    // Format: 0:"texte"\n pour les chunks de texte
+    const encoder = new TextEncoder();
+    const text = response.response || response.content || '';
+
+    const stream = new ReadableStream({
+      start(controller) {
+        // Envoyer le texte au format AI SDK stream
+        controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain; charset=utf-8',
       },
     });
   } catch (error) {
@@ -225,7 +235,7 @@ Régénère les fichiers corrigés.`;
     return new Response(stream.readable, {
       status: 200,
       headers: {
-        contentType: 'text/plain; charset=utf-8',
+        'Content-Type': 'text/plain; charset=utf-8',
       },
     });
   } catch (error) {
