@@ -1,9 +1,10 @@
 /**
- * Tests d'intégration - Sprint 3.3 & 3.4
+ * Tests d'intégration - Sprint 3.3, 3.4 & 3.5
  *
  * Ce fichier teste l'intégration complète entre:
  * - RLSGenerator + RLSValidator (Sprint 3.3)
  * - MigrationGenerator + SandboxExecutor (Sprint 3.4)
+ * - ReviewManager + AuditLogger + MetricsCollector (Sprint 3.5)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -11,7 +12,10 @@ import { createRLSGenerator } from './generators/RLSGenerator';
 import { createRLSValidator } from './validators/RLSValidator';
 import { createMigrationGenerator } from './generators/MigrationGenerator';
 import { createSandboxExecutor } from './SandboxExecutor';
-import type { Schema, Table, Column, Migration } from './types';
+import { createReviewManager } from './ReviewManager';
+import { createAuditLogger } from './AuditLogger';
+import { createMetricsCollector } from './MetricsCollector';
+import type { Schema, Table, Column, Migration, OperationDetails } from './types';
 
 describe('RLS Integration', () => {
   const createTestTable = (overrides?: Partial<Table>): Table => ({
@@ -472,6 +476,284 @@ describe('Migration Integration', () => {
       // Test migration
       const testResult = await sandboxExecutor.testMigration(migrationResult.migration);
       expect(testResult.success).toBe(true);
+    });
+  });
+});
+
+// =============================================================================
+// Sprint 3.5 Integration Tests: ReviewManager + AuditLogger + MetricsCollector
+// =============================================================================
+
+describe('Review and Audit Integration', () => {
+  const createOperation = (overrides?: Partial<OperationDetails>): OperationDetails => ({
+    type: 'create',
+    target: 'table',
+    name: 'users',
+    isDestructive: false,
+    isAdditive: true,
+    modifiesStructure: true,
+    affectedElements: ['users'],
+    ...overrides,
+  });
+
+  describe('ReviewManager -> AuditLogger', () => {
+    it('should log review requests in audit', async () => {
+      const reviewManager = createReviewManager();
+      const auditLogger = createAuditLogger();
+
+      // Create a review request
+      const operation = createOperation();
+      const reviewRequest = await reviewManager.requestReview(operation);
+
+      // Log the review request in audit
+      const entry = await auditLogger.log({
+        operation: {
+          type: 'create',
+          target: 'table',
+          name: operation.name,
+        },
+        input: {
+          description: `Review request: ${reviewRequest.id}`,
+        },
+        result: {
+          success: true,
+          duration: 50,
+        },
+        security: {
+          riskLevel: reviewRequest.riskLevel,
+          validationsPassed: ['review_created'],
+          warnings: reviewRequest.warnings,
+        },
+      });
+
+      expect(entry.security.riskLevel).toBe(reviewRequest.riskLevel);
+      expect(entry.input.description).toContain(reviewRequest.id);
+    });
+
+    it('should log review decisions in audit', async () => {
+      const reviewManager = createReviewManager();
+      const auditLogger = createAuditLogger();
+
+      // Create and submit review
+      const operation = createOperation({ isDestructive: true });
+      const request = await reviewManager.requestReview(operation);
+      const decision = await reviewManager.submitDecision(request.id, 'approve', {
+        reason: 'Approved by admin',
+      });
+
+      // Log the decision
+      const entry = await auditLogger.log({
+        operation: {
+          type: 'modify',
+          target: 'table',
+          name: operation.name,
+        },
+        input: {
+          description: `Review ${decision.decision}: ${decision.reason}`,
+        },
+        result: {
+          success: decision.approved,
+          duration: 100,
+        },
+        security: {
+          riskLevel: 'critical',
+          validationsPassed: ['review_approved'],
+          warnings: [],
+        },
+      });
+
+      expect(entry.result.success).toBe(true);
+    });
+  });
+
+  describe('AuditLogger -> MetricsCollector', () => {
+    it('should collect metrics from audit entries', async () => {
+      const auditLogger = createAuditLogger();
+      const metricsCollector = createMetricsCollector({ auditLogger });
+
+      // Add some audit entries
+      for (let i = 0; i < 5; i++) {
+        await auditLogger.log({
+          operation: {
+            type: 'create',
+            target: 'table',
+            name: `table_${i}`,
+          },
+          input: {},
+          result: {
+            success: i < 4, // 4 success, 1 failure
+            duration: 100 + i * 10,
+          },
+          security: {
+            riskLevel: i === 4 ? 'high' : 'low',
+            validationsPassed: ['test'],
+            warnings: [],
+          },
+        });
+      }
+
+      // Collect metrics
+      const now = new Date();
+      const metrics = await metricsCollector.collect({
+        start: new Date(now.getTime() - 60000),
+        end: now,
+      });
+
+      expect(metrics.totalOperations).toBe(5);
+      expect(metrics.successfulOperations).toBe(4);
+      expect(metrics.failedValidations).toBe(1);
+      expect(metrics.lowRiskOperations).toBe(4);
+      expect(metrics.highRiskOperations).toBe(1);
+    });
+
+    it('should calculate performance metrics', async () => {
+      const auditLogger = createAuditLogger();
+      const metricsCollector = createMetricsCollector({ auditLogger });
+
+      // Add entries with varying durations
+      for (let i = 0; i < 10; i++) {
+        await auditLogger.log({
+          operation: { type: 'create', target: 'table', name: `t${i}` },
+          input: {},
+          result: { success: true, duration: (i + 1) * 10 }, // 10, 20, ..., 100
+          security: { riskLevel: 'low', validationsPassed: [], warnings: [] },
+        });
+      }
+
+      const now = new Date();
+      const perfMetrics = metricsCollector.collectPerformanceMetrics({
+        start: new Date(now.getTime() - 60000),
+        end: now,
+      });
+
+      expect(perfMetrics.minExecutionTime).toBe(10);
+      expect(perfMetrics.maxExecutionTime).toBe(100);
+      expect(perfMetrics.avgExecutionTime).toBe(55); // Average of 10-100
+    });
+  });
+
+  describe('Full workflow: Review -> Audit -> Metrics', () => {
+    it('should track complete operation lifecycle', async () => {
+      const reviewManager = createReviewManager();
+      const auditLogger = createAuditLogger();
+      const metricsCollector = createMetricsCollector({ auditLogger });
+
+      // Step 1: Create review request
+      const operation = createOperation({ isDestructive: true });
+      const request = await reviewManager.requestReview(operation);
+      expect(request.riskLevel).toBe('critical');
+      expect(request.autoApproved).toBe(false);
+
+      // Step 2: Log the review request
+      await auditLogger.log({
+        operation: { type: 'create', target: 'table', name: operation.name },
+        input: { description: 'Review requested' },
+        result: { success: true, duration: 50 },
+        security: {
+          riskLevel: request.riskLevel,
+          validationsPassed: ['review_created'],
+          warnings: request.warnings,
+        },
+      });
+
+      // Step 3: Submit decision
+      const decision = await reviewManager.submitDecision(request.id, 'approve');
+
+      // Step 4: Log the decision
+      await auditLogger.log({
+        operation: { type: 'modify', target: 'table', name: operation.name },
+        input: { description: 'Review approved' },
+        result: { success: decision.approved, duration: 100 },
+        security: {
+          riskLevel: 'critical',
+          validationsPassed: ['review_approved'],
+          warnings: [],
+        },
+      });
+
+      // Step 5: Collect metrics
+      const now = new Date();
+      const metrics = await metricsCollector.collect({
+        start: new Date(now.getTime() - 60000),
+        end: now,
+      });
+
+      expect(metrics.totalOperations).toBe(2);
+      expect(metrics.criticalRiskOperations).toBe(2);
+      expect(metrics.successfulOperations).toBe(2);
+    });
+
+    it('should check system health', async () => {
+      const auditLogger = createAuditLogger();
+      const metricsCollector = createMetricsCollector({ auditLogger });
+
+      // Add successful operations
+      for (let i = 0; i < 10; i++) {
+        await auditLogger.log({
+          operation: { type: 'create', target: 'table', name: `t${i}` },
+          input: {},
+          result: { success: true, duration: 100 },
+          security: { riskLevel: 'low', validationsPassed: [], warnings: [] },
+        });
+      }
+
+      // Collect and check health
+      const now = new Date();
+      await metricsCollector.collect({
+        start: new Date(now.getTime() - 60000),
+        end: now,
+      });
+
+      const health = metricsCollector.checkHealth();
+      expect(health.status).toBe('healthy');
+      expect(health.score).toBeGreaterThanOrEqual(80);
+    });
+
+    it('should generate metrics report', async () => {
+      const auditLogger = createAuditLogger();
+      const metricsCollector = createMetricsCollector({ auditLogger });
+
+      // Add some entries
+      await auditLogger.log({
+        operation: { type: 'create', target: 'table', name: 'test' },
+        input: {},
+        result: { success: true, duration: 100 },
+        security: { riskLevel: 'low', validationsPassed: [], warnings: [] },
+      });
+
+      const now = new Date();
+      const report = metricsCollector.generateReport({
+        start: new Date(now.getTime() - 60000),
+        end: now,
+      });
+
+      expect(report).toContain('# Rapport de Métriques');
+      expect(report).toContain('Santé du Système');
+      expect(report).toContain('Performance');
+    });
+  });
+
+  describe('Review statistics', () => {
+    it('should track review statistics', async () => {
+      const reviewManager = createReviewManager();
+
+      // Create multiple reviews with different outcomes
+      const op1 = createOperation({ isDestructive: true, name: 'op1' });
+      const op2 = createOperation({ isDestructive: true, name: 'op2' });
+      const op3 = createOperation({ isDestructive: true, name: 'op3' });
+
+      const req1 = await reviewManager.requestReview(op1);
+      const req2 = await reviewManager.requestReview(op2);
+      const req3 = await reviewManager.requestReview(op3);
+
+      await reviewManager.submitDecision(req1.id, 'approve');
+      await reviewManager.submitDecision(req2.id, 'reject');
+      await reviewManager.submitDecision(req3.id, 'modify');
+
+      const stats = reviewManager.getStatistics();
+      expect(stats.approved).toBe(1);
+      expect(stats.rejected).toBe(1);
+      expect(stats.modified).toBe(1);
     });
   });
 });
