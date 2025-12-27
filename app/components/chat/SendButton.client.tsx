@@ -1,4 +1,5 @@
 import { AnimatePresence, cubicBezier, motion } from 'framer-motion';
+import { classNames } from '~/utils/classNames';
 
 interface SendButtonProps {
   show: boolean;
@@ -13,11 +14,12 @@ export function SendButton({ show, isStreaming, onClick }: SendButtonProps) {
     <AnimatePresence>
       {show ? (
         <motion.button
-          className={`absolute flex justify-center items-center bottom-[68px] right-[12px] p-2.5 rounded-full transition-theme ${
+          className={classNames(
+            'absolute flex justify-center items-center bottom-[68px] right-[12px] p-2.5 rounded-full transition-theme border',
             isStreaming
-              ? 'bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white'
-              : 'bg-accent-500/20 text-accent-500 hover:bg-accent-500 hover:text-white'
-          }`}
+              ? 'bg-bolt-elements-item-backgroundDanger text-bolt-elements-item-contentDanger border-bolt-elements-item-contentDanger/20 hover:bg-bolt-elements-button-danger-backgroundHover'
+              : 'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent border-bolt-elements-item-contentAccent/20 hover:bg-bolt-elements-button-primary-backgroundHover'
+          )}
           transition={{ ease: customEasingFn, duration: 0.17 }}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
