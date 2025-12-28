@@ -155,6 +155,28 @@ export type {
 } from './tools/review-tools';
 
 // ============================================================================
+// EXECUTION - PARALLEL EXECUTOR
+// ============================================================================
+
+export {
+  DependencyGraph,
+  createDependencyGraph,
+  createGraphFromDefinitions,
+  ParallelExecutor,
+  createParallelExecutor,
+} from './execution';
+export type {
+  GraphNode,
+  ExecutionLevel,
+  GraphValidation,
+  SubtaskDefinition,
+  SubtaskResult,
+  ExecutionStats,
+  ParallelExecutorOptions,
+  TaskExecutor,
+} from './execution';
+
+// ============================================================================
 // UTILS
 // ============================================================================
 
