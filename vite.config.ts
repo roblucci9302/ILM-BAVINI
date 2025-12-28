@@ -1,10 +1,44 @@
 import { cloudflareDevProxyVitePlugin as remixCloudflareDevProxy, vitePlugin as remixVitePlugin } from '@remix-run/dev';
 import UnoCSS from 'unocss/vite';
-import { defineConfig, type ViteDevServer } from 'vite';
+import { defineConfig, type ViteDevServer, type Plugin } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { optimizeCssModules } from 'vite-plugin-optimize-css-modules';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import tsconfigPaths from 'vite-tsconfig-paths';
+
+/**
+ * Custom plugin to provide path polyfill that works in both SSR and client contexts.
+ * Uses native Node.js path in SSR, path-browserify in client.
+ *
+ * This plugin handles path resolution manually because vite-plugin-node-polyfills
+ * uses resolve.alias which doesn't distinguish between SSR and client contexts,
+ * and path-browserify (CJS) doesn't work in Vite's ESM-based SSR.
+ */
+function pathPolyfillPlugin(): Plugin {
+  return {
+    name: 'path-polyfill',
+    enforce: 'pre',
+    resolveId(id, _importer, options) {
+      // Handle path module resolution
+      if (id === 'path' || id === 'node:path') {
+        if (options?.ssr) {
+          // SSR: use native Node.js path
+          return { id: 'node:path', external: true };
+        }
+
+        // Client: use path-browserify
+        return { id: 'path-browserify', external: false };
+      }
+
+      // Prevent path-browserify from loading in SSR
+      if (options?.ssr && id === 'path-browserify') {
+        return { id: 'node:path', external: true };
+      }
+
+      return null;
+    },
+  };
+}
 
 export default defineConfig((config) => {
   return {
@@ -20,6 +54,15 @@ export default defineConfig((config) => {
     optimizeDeps: {
       exclude: ['@electric-sql/pglite', 'pyodide'],
     },
+    ssr: {
+      // Externalize CJS packages and browser-only packages from SSR bundling
+      external: [
+        'path-browserify',
+        '@isomorphic-git/lightning-fs',
+        '@isomorphic-git/idb-keyval',
+        'isomorphic-git',
+      ],
+    },
     test: {
       environment: 'jsdom',
       globals: true,
@@ -32,8 +75,10 @@ export default defineConfig((config) => {
       isolate: true,
     },
     plugins: [
+      pathPolyfillPlugin(),
       nodePolyfills({
-        include: ['path', 'buffer'],
+        // Path is handled by pathPolyfillPlugin for SSR compatibility
+        include: ['buffer'],
       }),
       config.mode !== 'test' && remixCloudflareDevProxy(),
       config.mode !== 'test' &&
