@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as RadixDialog from '@radix-ui/react-dialog';
@@ -31,6 +31,37 @@ export const SettingsModal = memo(() => {
     activeSettingsTab.set(tab);
   };
 
+  // Keyboard navigation for settings tabs (WAI-ARIA Tabs Pattern)
+  const handleTabKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const currentIndex = tabs.findIndex((tab) => tab.id === currentTab);
+      let newIndex = currentIndex;
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        newIndex = (currentIndex + 1) % tabs.length;
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        newIndex = 0;
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        newIndex = tabs.length - 1;
+      }
+
+      if (newIndex !== currentIndex) {
+        const newTab = tabs[newIndex];
+        handleTabChange(newTab.id);
+        // Focus the new tab
+        const newTabElement = document.getElementById(`settings-tab-${newTab.id}`);
+        newTabElement?.focus();
+      }
+    },
+    [currentTab],
+  );
+
   return (
     <RadixDialog.Root open={isOpen} onOpenChange={(open) => !open && closeSettingsModal()}>
       <AnimatePresence>
@@ -58,7 +89,7 @@ export const SettingsModal = memo(() => {
                 <div className="w-56 flex-shrink-0 border-r border-bolt-elements-borderColor bg-bolt-elements-background-depth-3 p-4">
                   <h2 className="text-lg font-semibold text-bolt-elements-textPrimary mb-4">Paramètres</h2>
 
-                  <nav className="space-y-1" role="tablist" aria-label="Onglets des paramètres">
+                  <nav className="space-y-1" role="tablist" aria-label="Onglets des paramètres" onKeyDown={handleTabKeyDown}>
                     {tabs.map((tab) => {
                       const isActive = currentTab === tab.id;
                       const tabId = `settings-tab-${tab.id}`;

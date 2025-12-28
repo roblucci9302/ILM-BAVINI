@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from 'react-resizable-panels';
 import {
   CodeMirrorEditor,
@@ -122,6 +122,36 @@ export const EditorPanel = memo(
       }
     };
 
+    // Keyboard navigation for terminal tabs (WAI-ARIA Tabs Pattern)
+    const handleTabKeyDown = useCallback(
+      (event: React.KeyboardEvent) => {
+        const { key } = event;
+        let newIndex = activeTerminal;
+
+        if (key === 'ArrowRight' || key === 'ArrowDown') {
+          event.preventDefault();
+          newIndex = (activeTerminal + 1) % terminalCount;
+        } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+          event.preventDefault();
+          newIndex = (activeTerminal - 1 + terminalCount) % terminalCount;
+        } else if (key === 'Home') {
+          event.preventDefault();
+          newIndex = 0;
+        } else if (key === 'End') {
+          event.preventDefault();
+          newIndex = terminalCount - 1;
+        }
+
+        if (newIndex !== activeTerminal) {
+          setActiveTerminal(newIndex);
+          // Focus the new tab
+          const newTab = document.getElementById(`terminal-tab-${newIndex}`);
+          newTab?.focus();
+        }
+      },
+      [activeTerminal, terminalCount],
+    );
+
     return (
       <PanelGroup direction="vertical">
         <Panel defaultSize={showTerminal ? DEFAULT_EDITOR_SIZE : 100} minSize={20}>
@@ -202,6 +232,7 @@ export const EditorPanel = memo(
                 className="flex items-center bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor gap-1.5 min-h-[34px] p-2"
                 role="tablist"
                 aria-label="Onglets des terminaux"
+                onKeyDown={handleTabKeyDown}
               >
                 {Array.from({ length: terminalCount }, (_, index) => {
                   const isActive = activeTerminal === index;
