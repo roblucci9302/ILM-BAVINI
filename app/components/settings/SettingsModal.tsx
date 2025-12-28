@@ -58,27 +58,43 @@ export const SettingsModal = memo(() => {
                 <div className="w-56 flex-shrink-0 border-r border-bolt-elements-borderColor bg-bolt-elements-background-depth-3 p-4">
                   <h2 className="text-lg font-semibold text-bolt-elements-textPrimary mb-4">Paramètres</h2>
 
-                  <nav className="space-y-1">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabChange(tab.id)}
-                        className={classNames(
-                          'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-theme',
-                          currentTab === tab.id
-                            ? 'bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText'
-                            : 'bg-bolt-elements-sidebar-buttonBackgroundDefault/50 text-bolt-elements-sidebar-buttonText/70 hover:bg-bolt-elements-sidebar-buttonBackgroundHover hover:text-bolt-elements-sidebar-buttonText',
-                        )}
-                      >
-                        <span className={classNames(tab.icon, 'text-lg')} />
-                        {tab.label}
-                      </button>
-                    ))}
+                  <nav className="space-y-1" role="tablist" aria-label="Onglets des paramètres">
+                    {tabs.map((tab) => {
+                      const isActive = currentTab === tab.id;
+                      const tabId = `settings-tab-${tab.id}`;
+                      const panelId = `settings-panel-${tab.id}`;
+
+                      return (
+                        <button
+                          key={tab.id}
+                          id={tabId}
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-controls={panelId}
+                          tabIndex={isActive ? 0 : -1}
+                          onClick={() => handleTabChange(tab.id)}
+                          className={classNames(
+                            'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-theme',
+                            isActive
+                              ? 'bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText'
+                              : 'bg-bolt-elements-sidebar-buttonBackgroundDefault/50 text-bolt-elements-sidebar-buttonText/70 hover:bg-bolt-elements-sidebar-buttonBackgroundHover hover:text-bolt-elements-sidebar-buttonText',
+                          )}
+                        >
+                          <span className={classNames(tab.icon, 'text-lg')} aria-hidden="true" />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
                   </nav>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div
+                  id={`settings-panel-${currentTab}`}
+                  role="tabpanel"
+                  aria-labelledby={`settings-tab-${currentTab}`}
+                  className="flex-1 overflow-y-auto p-6"
+                >
                   {currentTab === 'connectors' && <ConnectorsPanel />}
                   {currentTab === 'github' && <GitHubPanel />}
                   {currentTab === 'account' && <AccountPanel />}
