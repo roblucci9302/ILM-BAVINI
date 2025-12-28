@@ -15,11 +15,6 @@ export type {
   AgentMode,
   AgentMode as ChatMode,  // Alias pour compatibilité avec stores/chat.ts
 
-  // Intent Classification
-  IntentType,
-  IntentClassification,
-  ExtractedEntities,
-
   // Context
   AgentContext,
   ProjectFile,
@@ -73,17 +68,6 @@ export {
 } from './BaseAgent';
 
 export type { CodeAnalysis } from './BaseAgent';
-
-// =============================================================================
-// Intent Classifier
-// =============================================================================
-
-export {
-  IntentClassifier,
-  getIntentClassifier,
-  classifyIntent,
-  extractEntities,
-} from './intent-classifier';
 
 // =============================================================================
 // Chat Mode Agent

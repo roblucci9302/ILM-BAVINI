@@ -5,23 +5,10 @@ import { streamText, type Messages, type StreamingOptions } from '~/lib/.server/
 import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 import { evaluateQuality, type QualityReport } from '~/lib/.server/quality';
 import { createScopedLogger } from '~/utils/logger';
-import { ChatModeAgent, type ChatMode, classifyIntent } from '~/lib/.server/agents';
+import { ChatModeAgent, type ChatMode } from '~/lib/.server/agents';
 import type { AgentContext, ProjectFile } from '~/lib/.server/agents';
 
 const logger = createScopedLogger('api.chat');
-
-/**
- * Détermine le mode à utiliser basé sur le message utilisateur
- */
-function determineMode(requestedMode: ChatMode, lastUserMessage: string): ChatMode {
-  if (requestedMode !== 'auto') {
-    return requestedMode;
-  }
-
-  // Auto-détection basée sur l'intention
-  const intent = classifyIntent(lastUserMessage);
-  return intent.recommendedMode as ChatMode;
-}
 
 /**
  * Extrait le dernier message utilisateur des messages
@@ -146,16 +133,12 @@ interface ChatRequestBody {
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
   const body = await request.json<ChatRequestBody>();
-  const { messages, mode: requestedMode = 'auto', context: agentContext } = body;
+  const { messages, mode = 'agent', context: agentContext } = body;
 
-  // Déterminer le mode effectif
-  const lastUserMessage = getLastUserMessage(messages);
-  const effectiveMode = determineMode(requestedMode, lastUserMessage);
+  logger.debug(`Chat mode: ${mode}`);
 
-  logger.debug(`Chat mode: requested=${requestedMode}, effective=${effectiveMode}`);
-
-  // Router vers le bon handler selon le mode
-  if (effectiveMode === 'chat') {
+  // Mode Chat : analyse seule, pas de modifications
+  if (mode === 'chat') {
     return handleChatMode(messages, agentContext);
   }
 

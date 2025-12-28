@@ -1,21 +1,19 @@
 /**
  * AgentModeAgent - Agent d'exécution des actions
  *
- * Cet agent exécute les actions approuvées par l'utilisateur après
- * l'analyse en mode Chat. Il peut créer, modifier, supprimer des
- * fichiers, exécuter des commandes, installer des packages, etc.
+ * Cet agent exécute les actions approuvées par l'utilisateur.
+ * Il peut créer, modifier, supprimer des fichiers, exécuter des
+ * commandes, installer des packages, etc.
  */
 
 import { BaseAgent } from './BaseAgent';
 import { ActionExecutor, type ExecutionResult, type ExecutionOptions } from './ActionExecutor';
-import { IntentClassifier } from './intent-classifier';
 import type {
   AgentModeResponse,
   ProposedAction,
   ExecutionPlan,
   ActionResult,
   AgentContext,
-  IntentClassification,
   PlanEstimates,
 } from './types';
 import { AGENT_MODE_CONFIG } from './types';
@@ -71,49 +69,29 @@ export interface ExecutionSummary {
  * 5. Retourner le résumé d'exécution
  */
 export class AgentModeAgent extends BaseAgent<AgentModeResponse> {
-  private intentClassifier: IntentClassifier;
   private executor: ActionExecutor;
   private currentPlan: ExecutionPlan | null = null;
   private executionStatus: ExecutionStatus = 'pending';
 
   constructor(executorOptions?: ExecutionOptions) {
     super(AGENT_MODE_CONFIG);
-    this.intentClassifier = new IntentClassifier();
     this.executor = new ActionExecutor(executorOptions);
     logger.debug('AgentModeAgent initialized');
   }
 
   /**
-   * Traite un message utilisateur et exécute les actions
+   * Traite un message utilisateur - en mode Agent, prêt à exécuter
    */
   async process(userMessage: string): Promise<AgentModeResponse> {
-    logger.debug('Processing message', { messageLength: userMessage.length });
+    logger.debug('Processing message in Agent mode', { messageLength: userMessage.length });
 
-    // 1. Classifier l'intention
-    const intent = this.intentClassifier.classify(userMessage);
-    logger.debug('Intent classified', { type: intent.type, confidence: intent.confidence });
-
-    // 2. Vérifier que c'est une intention d'action
-    if (!this.isActionIntent(intent)) {
-      return {
-        type: 'response',
-        status: 'no_action',
-        message: 'Cette demande nécessite le mode Chat pour l\'analyse.',
-        suggestions: ['Passez en mode Chat pour analyser cette demande.'],
-      };
-    }
-
-    // 3. Générer le plan d'exécution
-    const plan = await this.generateExecutionPlan(intent, userMessage);
-    this.currentPlan = plan;
-
-    // 4. Retourner le plan pour validation
+    // En mode Agent, on est prêt à exécuter des actions
+    // Le streaming LLM génère les artifacts directement
     return {
-      type: 'plan',
-      status: 'awaiting_approval',
-      plan,
-      message: this.formatPlanMessage(plan),
-      canExecute: plan.actions.length > 0,
+      type: 'response',
+      status: 'ready',
+      message: 'Mode Agent actif. Je peux créer et modifier du code.',
+      suggestions: [],
     };
   }
 
@@ -210,166 +188,6 @@ export class AgentModeAgent extends BaseAgent<AgentModeResponse> {
   }
 
   // ===========================================================================
-  // Plan Generation
-  // ===========================================================================
-
-  /**
-   * Génère un plan d'exécution basé sur l'intention
-   */
-  private async generateExecutionPlan(
-    intent: IntentClassification,
-    userMessage: string
-  ): Promise<ExecutionPlan> {
-    const actions: ProposedAction[] = [];
-
-    // Générer les actions selon le type d'intention
-    switch (intent.type) {
-      case 'create':
-        actions.push(...this.generateCreateActions(intent));
-        break;
-      case 'modify':
-        actions.push(...this.generateModifyActions(intent));
-        break;
-      case 'fix':
-        actions.push(...this.generateFixActions(intent));
-        break;
-      case 'refactor':
-        actions.push(...this.generateRefactorActions(intent));
-        break;
-    }
-
-    // Calculer les estimations
-    const estimates = this.estimatePlan(actions);
-
-    return {
-      actions,
-      estimates,
-      dependencies: this.detectDependencies(actions),
-    };
-  }
-
-  /**
-   * Génère les actions de création
-   */
-  private generateCreateActions(intent: IntentClassification): ProposedAction[] {
-    const actions: ProposedAction[] = [];
-
-    for (const file of intent.entities.files) {
-      actions.push({
-        id: this.generateActionId(),
-        type: 'create_file',
-        description: `Créer ${file}`,
-        details: {
-          type: 'create_file',
-          path: file,
-          content: '', // Le contenu sera généré par le LLM
-          language: this.detectLanguage(file),
-        },
-        risk: 'low',
-        reversible: true,
-      });
-    }
-
-    // Si aucun fichier spécifié, créer un template basé sur les composants
-    if (actions.length === 0 && intent.entities.components.length > 0) {
-      for (const component of intent.entities.components) {
-        const filePath = `src/components/${component}.tsx`;
-        actions.push({
-          id: this.generateActionId(),
-          type: 'create_file',
-          description: `Créer le composant ${component}`,
-          details: {
-            type: 'create_file',
-            path: filePath,
-            content: '',
-            language: 'typescript',
-          },
-          risk: 'low',
-          reversible: true,
-        });
-      }
-    }
-
-    return actions;
-  }
-
-  /**
-   * Génère les actions de modification
-   */
-  private generateModifyActions(intent: IntentClassification): ProposedAction[] {
-    return intent.entities.files.map(file => ({
-      id: this.generateActionId(),
-      type: 'modify_file',
-      description: `Modifier ${file}`,
-      details: {
-        type: 'modify_file',
-        path: file,
-        changes: [], // Les changements seront générés par le LLM
-      },
-      risk: 'medium',
-      reversible: true,
-    }));
-  }
-
-  /**
-   * Génère les actions de correction
-   */
-  private generateFixActions(intent: IntentClassification): ProposedAction[] {
-    const actions: ProposedAction[] = [];
-
-    // Actions sur les fichiers mentionnés
-    for (const file of intent.entities.files) {
-      actions.push({
-        id: this.generateActionId(),
-        type: 'modify_file',
-        description: `Corriger ${file}`,
-        details: {
-          type: 'modify_file',
-          path: file,
-          changes: [],
-        },
-        risk: 'medium',
-        reversible: true,
-      });
-    }
-
-    // Si des erreurs sont mentionnées, ajouter des actions de diagnostic
-    if (intent.entities.errors.length > 0) {
-      actions.push({
-        id: this.generateActionId(),
-        type: 'run_command',
-        description: 'Exécuter les tests pour vérifier la correction',
-        details: {
-          type: 'run_command',
-          command: 'pnpm test',
-        },
-        risk: 'low',
-        reversible: false,
-      });
-    }
-
-    return actions;
-  }
-
-  /**
-   * Génère les actions de refactoring
-   */
-  private generateRefactorActions(intent: IntentClassification): ProposedAction[] {
-    return intent.entities.files.map(file => ({
-      id: this.generateActionId(),
-      type: 'modify_file',
-      description: `Refactoriser ${file}`,
-      details: {
-        type: 'modify_file',
-        path: file,
-        changes: [],
-      },
-      risk: 'high',
-      reversible: true,
-    }));
-  }
-
-  // ===========================================================================
   // Estimation & Analysis
   // ===========================================================================
 
@@ -432,36 +250,10 @@ export class AgentModeAgent extends BaseAgent<AgentModeResponse> {
   // ===========================================================================
 
   /**
-   * Vérifie si l'intention nécessite une action
-   */
-  private isActionIntent(intent: IntentClassification): boolean {
-    return ['create', 'modify', 'fix', 'refactor'].includes(intent.type);
-  }
-
-  /**
    * Génère un ID d'action unique
    */
   private generateActionId(): string {
     return `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Détecte le langage d'un fichier
-   */
-  private detectLanguage(filePath: string): string {
-    const ext = filePath.split('.').pop()?.toLowerCase() || '';
-    const langMap: Record<string, string> = {
-      ts: 'typescript',
-      tsx: 'typescript',
-      js: 'javascript',
-      jsx: 'javascript',
-      json: 'json',
-      css: 'css',
-      scss: 'scss',
-      html: 'html',
-      md: 'markdown',
-    };
-    return langMap[ext] || 'text';
   }
 
   /**
@@ -539,24 +331,6 @@ export class AgentModeAgent extends BaseAgent<AgentModeResponse> {
       linesChanged: 0,
       risk: 'low',
     };
-  }
-
-  // ===========================================================================
-  // Public API
-  // ===========================================================================
-
-  /**
-   * Classifie l'intention d'un message
-   */
-  classifyMessage(message: string): IntentClassification {
-    return this.intentClassifier.classify(message);
-  }
-
-  /**
-   * Vérifie si un message nécessite le mode Agent
-   */
-  requiresAgentMode(message: string): boolean {
-    return this.intentClassifier.requiresAction(message);
   }
 }
 

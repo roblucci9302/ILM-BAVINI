@@ -27,59 +27,10 @@ export type AgentCapability =
 
 /**
  * Modes d'opération des agents
+ * - 'chat': Analyse seule (lecture seule, pas de modifications)
+ * - 'agent': Mode action (BAVINI peut créer/modifier du code)
  */
-export type AgentMode = 'chat' | 'agent' | 'auto';
-
-// =============================================================================
-// Intent Classification
-// =============================================================================
-
-/**
- * Types d'intentions utilisateur détectées
- */
-export type IntentType =
-  | 'debug'      // Déboguer un problème
-  | 'explain'    // Expliquer le code/fonctionnement
-  | 'plan'       // Planifier une fonctionnalité
-  | 'review'     // Revoir/évaluer le code
-  | 'question'   // Question technique générale
-  | 'create'     // Créer quelque chose de nouveau
-  | 'modify'     // Modifier le code existant
-  | 'fix'        // Corriger une erreur
-  | 'refactor'   // Refactorer le code
-  | 'unknown';   // Intention non déterminée
-
-/**
- * Résultat de la classification d'intention
- */
-export interface IntentClassification {
-  /** Type d'intention détecté */
-  type: IntentType;
-  /** Score de confiance (0-1) */
-  confidence: number;
-  /** Entités extraites du message */
-  entities: ExtractedEntities;
-  /** Mode recommandé basé sur l'intention */
-  recommendedMode: AgentMode;
-  /** Raison de la recommandation */
-  reasoning: string;
-}
-
-/**
- * Entités extraites du message utilisateur
- */
-export interface ExtractedEntities {
-  /** Fichiers mentionnés */
-  files: string[];
-  /** Composants/modules mentionnés */
-  components: string[];
-  /** Technologies/frameworks mentionnés */
-  technologies: string[];
-  /** Actions demandées */
-  actions: string[];
-  /** Erreurs/problèmes mentionnés */
-  errors: string[];
-}
+export type AgentMode = 'chat' | 'agent';
 
 // =============================================================================
 // Agent Context
