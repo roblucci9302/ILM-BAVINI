@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import { AgentRegistry } from '../core/agent-registry';
 import { ORCHESTRATOR_SYSTEM_PROMPT, AGENT_CAPABILITIES } from '../prompts/orchestrator-prompt';
 import type {
@@ -16,6 +17,7 @@ import type {
   ExecutionPlan,
   ExecutionStep,
   Artifact,
+  ToolExecutionResult,
 } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -136,6 +138,50 @@ export class Orchestrator extends BaseAgent {
     });
 
     this.registry = AgentRegistry.getInstance();
+
+    // Enregistrer les outils d'orchestration dans le ToolRegistry
+    this.registerOrchestratorTools();
+  }
+
+  /**
+   * Enregistrer les outils d'orchestration dans le ToolRegistry
+   */
+  private registerOrchestratorTools(): void {
+    const orchestratorHandlers: Record<string, ToolHandler> = {
+      delegate_to_agent: async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await this.handleDelegateToAgent(input as {
+          agent: AgentType;
+          task: string;
+          context?: Record<string, unknown>;
+        });
+        return { success: true, output: result };
+      },
+
+      create_subtasks: async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await this.handleCreateSubtasks(input as {
+          tasks: Array<{
+            agent: AgentType;
+            description: string;
+            dependsOn?: number[];
+          }>;
+          reasoning: string;
+        });
+        return { success: true, output: result };
+      },
+
+      get_agent_status: async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await this.handleGetAgentStatus(input as { agent?: AgentType });
+        return { success: true, output: result };
+      },
+    };
+
+    this.registerTools(
+      [DelegateToAgentTool, CreateSubtasksTool, GetAgentStatusTool],
+      orchestratorHandlers,
+      'orchestration'
+    );
+
+    this.log('info', 'Orchestrator tools registered in ToolRegistry');
   }
 
   /**
@@ -217,38 +263,7 @@ export class Orchestrator extends BaseAgent {
     this.apiKey = apiKey;
   }
 
-  /**
-   * Handler d'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    switch (toolName) {
-      case 'delegate_to_agent':
-        return this.handleDelegateToAgent(input as {
-          agent: AgentType;
-          task: string;
-          context?: Record<string, unknown>;
-        });
-
-      case 'create_subtasks':
-        return this.handleCreateSubtasks(input as {
-          tasks: Array<{
-            agent: AgentType;
-            description: string;
-            dependsOn?: number[];
-          }>;
-          reasoning: string;
-        });
-
-      case 'get_agent_status':
-        return this.handleGetAgentStatus(input as { agent?: AgentType });
-
-      default:
-        throw new Error(`Unknown orchestrator tool: ${toolName}`);
-    }
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   // ============================================================================
   // MÉTHODES PRIVÉES
