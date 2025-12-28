@@ -177,8 +177,10 @@ export const ConnectorCard = memo(({ connector, isConnected = false }: Connector
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className="flex items-center gap-2 p-2 bg-red-500/10 border border-red-500/30 rounded-md"
+                    role="alert"
+                    aria-live="assertive"
                   >
-                    <span className="i-ph:warning-circle text-red-400 text-sm" />
+                    <span className="i-ph:warning-circle text-red-400 text-sm" aria-hidden="true" />
                     <span className="text-xs text-red-400">{validationError}</span>
                   </motion.div>
                 )}

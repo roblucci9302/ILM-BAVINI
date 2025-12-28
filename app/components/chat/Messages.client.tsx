@@ -15,7 +15,7 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
   const { id, isStreaming = false, messages = [] } = props;
 
   return (
-    <div id={id} ref={ref} className={props.className}>
+    <div id={id} ref={ref} className={props.className} role="log" aria-label="Historique de la conversation" aria-live="polite">
       {messages.length > 0
         ? messages.map((message, index) => {
             const { role, content } = message;
@@ -46,7 +46,12 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
           })
         : null}
       {isStreaming && (
-        <div className="text-center w-full text-bolt-elements-textSecondary i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
+        <div
+          className="text-center w-full text-bolt-elements-textSecondary i-svg-spinners:3-dots-fade text-4xl mt-4"
+          role="status"
+          aria-live="polite"
+          aria-label="Génération de la réponse en cours"
+        />
       )}
     </div>
   );
