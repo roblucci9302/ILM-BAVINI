@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { getMainTemplates, getAdditionalTemplates, type ProjectTemplate } from '~/lib/templates';
+import { getMainTemplates, getAdditionalTemplates, hasTemplateFiles, type ProjectTemplate } from '~/lib/templates';
+import { useTemplateLoader } from '~/lib/hooks';
 import { classNames } from '~/utils/classNames';
 import styles from './TemplatePills.module.scss';
 
@@ -28,11 +29,24 @@ function getVariantClass(templateId: string): string {
  */
 export function TemplatePills({ onSelectTemplate }: TemplatePillsProps) {
   const [showMore, setShowMore] = useState(false);
+  const { loadTemplate, isLoading, error } = useTemplateLoader();
 
   const mainTemplates = getMainTemplates();
   const additionalTemplates = getAdditionalTemplates();
 
-  const handleTemplateClick = (template: ProjectTemplate) => {
+  const handleTemplateClick = async (template: ProjectTemplate) => {
+    // Si le template a des fichiers pré-construits, les charger d'abord
+    if (hasTemplateFiles(template)) {
+      const loaded = await loadTemplate(template);
+
+      if (loaded) {
+        // Envoyer un message de bienvenue simple
+        onSelectTemplate(`J'ai chargé le template ${template.name}. Comment puis-je vous aider à le personnaliser ?`);
+        return;
+      }
+    }
+
+    // Sinon, envoyer le prompt pour générer le code
     onSelectTemplate(template.prompt);
   };
 
@@ -40,18 +54,34 @@ export function TemplatePills({ onSelectTemplate }: TemplatePillsProps) {
     <div className="w-full max-w-2xl mx-auto mb-6">
       <p className="text-center text-sm text-bolt-elements-textSecondary mb-3">Démarrer avec :</p>
 
-      <div className="flex flex-wrap justify-center gap-3">
+      {isLoading && (
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress" />
+          <span className="text-sm text-bolt-elements-textSecondary">Chargement du template...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-center gap-2 mb-3 text-red-500">
+          <div className="i-ph:warning-circle" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
+
+      <div className={classNames('flex flex-wrap justify-center gap-3', { 'opacity-50 pointer-events-none': isLoading })}>
         {mainTemplates.map((template) => (
           <AnimatedTemplatePill
             key={template.id}
             template={template}
             onClick={() => handleTemplateClick(template)}
+            disabled={isLoading}
           />
         ))}
 
         {!showMore && additionalTemplates.length > 0 && (
           <button
             onClick={() => setShowMore(true)}
+            disabled={isLoading}
             className={classNames(
               'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
               'bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3',
@@ -69,12 +99,14 @@ export function TemplatePills({ onSelectTemplate }: TemplatePillsProps) {
               key={template.id}
               template={template}
               onClick={() => handleTemplateClick(template)}
+              disabled={isLoading}
             />
           ))}
 
         {showMore && (
           <button
             onClick={() => setShowMore(false)}
+            disabled={isLoading}
             className={classNames(
               'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
               'bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3',
@@ -93,18 +125,20 @@ export function TemplatePills({ onSelectTemplate }: TemplatePillsProps) {
 interface AnimatedTemplatePillProps {
   template: ProjectTemplate;
   onClick: () => void;
+  disabled?: boolean;
 }
 
 /**
  * Animated template pill with Uiverse-style effects
  */
-function AnimatedTemplatePill({ template, onClick }: AnimatedTemplatePillProps) {
+function AnimatedTemplatePill({ template, onClick, disabled }: AnimatedTemplatePillProps) {
   const variantClass = getVariantClass(template.id);
 
   return (
     <button
       onClick={onClick}
-      className={classNames(styles.templatePill, variantClass)}
+      disabled={disabled}
+      className={classNames(styles.templatePill, variantClass, { [styles.disabled]: disabled })}
       title={template.description}
     >
       <div className={styles.wrapper}>
