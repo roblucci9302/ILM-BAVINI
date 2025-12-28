@@ -124,7 +124,7 @@ export const Dialog = memo(({ className, children, onBackdrop, onClose }: Dialog
         >
           {children}
           <RadixDialog.Close asChild onClick={onClose}>
-            <IconButton icon="i-ph:x" className="absolute top-[10px] right-[10px]" />
+            <IconButton icon="i-ph:x" className="absolute top-[10px] right-[10px]" title="Fermer" />
           </RadixDialog.Close>
         </motion.div>
       </RadixDialog.Content>

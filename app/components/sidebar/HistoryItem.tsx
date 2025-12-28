@@ -48,6 +48,8 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
               <Dialog.Trigger asChild>
                 <button
                   className="i-ph:trash scale-110"
+                  title="Supprimer la conversation"
+                  aria-label="Supprimer la conversation"
                   onClick={(event) => {
                     // we prevent the default so we don't trigger the anchor above
                     event.preventDefault();
