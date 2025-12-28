@@ -87,6 +87,7 @@ export const Preview = memo(() => {
             className="w-full bg-transparent outline-none"
             type="text"
             value={url}
+            aria-label="Barre d'adresse de l'aperçu"
             onChange={(event) => {
               setUrl(event.target.value);
             }}
@@ -114,7 +115,7 @@ export const Preview = memo(() => {
       </div>
       <div className="flex-1 border-t border-bolt-elements-borderColor">
         {activePreview ? (
-          <iframe ref={iframeRef} className="border-none w-full h-full bg-white" src={iframeUrl} />
+          <iframe ref={iframeRef} className="border-none w-full h-full bg-white" src={iframeUrl} title="Aperçu de l'application" />
         ) : (
           <div className="flex w-full h-full justify-center items-center bg-white">Aucun aperçu disponible</div>
         )}

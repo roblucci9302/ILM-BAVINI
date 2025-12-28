@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from 'react-resizable-panels';
 import {
   CodeMirrorEditor,
@@ -122,6 +122,36 @@ export const EditorPanel = memo(
       }
     };
 
+    // Keyboard navigation for terminal tabs (WAI-ARIA Tabs Pattern)
+    const handleTabKeyDown = useCallback(
+      (event: React.KeyboardEvent) => {
+        const { key } = event;
+        let newIndex = activeTerminal;
+
+        if (key === 'ArrowRight' || key === 'ArrowDown') {
+          event.preventDefault();
+          newIndex = (activeTerminal + 1) % terminalCount;
+        } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+          event.preventDefault();
+          newIndex = (activeTerminal - 1 + terminalCount) % terminalCount;
+        } else if (key === 'Home') {
+          event.preventDefault();
+          newIndex = 0;
+        } else if (key === 'End') {
+          event.preventDefault();
+          newIndex = terminalCount - 1;
+        }
+
+        if (newIndex !== activeTerminal) {
+          setActiveTerminal(newIndex);
+          // Focus the new tab
+          const newTab = document.getElementById(`terminal-tab-${newIndex}`);
+          newTab?.focus();
+        }
+      },
+      [activeTerminal, terminalCount],
+    );
+
     return (
       <PanelGroup direction="vertical">
         <Panel defaultSize={showTerminal ? DEFAULT_EDITOR_SIZE : 100} minSize={20}>
@@ -198,13 +228,25 @@ export const EditorPanel = memo(
         >
           <div className="h-full">
             <div className="bg-bolt-elements-terminals-background h-full flex flex-col">
-              <div className="flex items-center bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor gap-1.5 min-h-[34px] p-2">
+              <div
+                className="flex items-center bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor gap-1.5 min-h-[34px] p-2"
+                role="tablist"
+                aria-label="Onglets des terminaux"
+                onKeyDown={handleTabKeyDown}
+              >
                 {Array.from({ length: terminalCount }, (_, index) => {
                   const isActive = activeTerminal === index;
+                  const tabId = `terminal-tab-${index}`;
+                  const panelId = `terminal-panel-${index}`;
 
                   return (
                     <button
                       key={index}
+                      id={tabId}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-controls={panelId}
+                      tabIndex={isActive ? 0 : -1}
                       className={classNames(
                         'flex items-center text-sm cursor-pointer gap-1.5 px-3 py-2 h-full whitespace-nowrap rounded-full',
                         {
@@ -215,7 +257,7 @@ export const EditorPanel = memo(
                       )}
                       onClick={() => setActiveTerminal(index)}
                     >
-                      <div className="i-ph:terminal-window-duotone text-lg" />
+                      <div className="i-ph:terminal-window-duotone text-lg" aria-hidden="true" />
                       Terminal {terminalCount > 1 && index + 1}
                     </button>
                   );
@@ -231,20 +273,29 @@ export const EditorPanel = memo(
               </div>
               {Array.from({ length: terminalCount }, (_, index) => {
                 const isActive = activeTerminal === index;
+                const tabId = `terminal-tab-${index}`;
+                const panelId = `terminal-panel-${index}`;
 
                 return (
-                  <Terminal
+                  <div
                     key={index}
+                    id={panelId}
+                    role="tabpanel"
+                    aria-labelledby={tabId}
                     className={classNames('h-full overflow-hidden', {
                       hidden: !isActive,
                     })}
-                    ref={(ref) => {
-                      terminalRefs.current.push(ref);
-                    }}
-                    onTerminalReady={(terminal) => workbenchStore.attachTerminal(terminal)}
-                    onTerminalResize={(cols, rows) => workbenchStore.onTerminalResize(cols, rows)}
-                    theme={theme}
-                  />
+                  >
+                    <Terminal
+                      className="h-full"
+                      ref={(ref) => {
+                        terminalRefs.current.push(ref);
+                      }}
+                      onTerminalReady={(terminal) => workbenchStore.attachTerminal(terminal)}
+                      onTerminalResize={(cols, rows) => workbenchStore.onTerminalResize(cols, rows)}
+                      theme={theme}
+                    />
+                  </div>
                 );
               })}
             </div>
