@@ -30,6 +30,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     icon: '⚛️',
     color: 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30',
     prompt: 'Crée une application React avec TypeScript, Vite, et Vitest pour les tests. Inclure un composant App de base avec un test.',
+    templateDir: 'react-vite-ts',
   },
   {
     id: 'node-ts',
@@ -38,6 +39,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     icon: '🟢',
     color: 'bg-green-500/10 hover:bg-green-500/20 border-green-500/30',
     prompt: 'Crée un projet Node.js avec TypeScript et Vitest pour les tests. Inclure un point d\'entrée index.ts et un module utilitaire avec tests.',
+    templateDir: 'node-ts',
   },
   {
     id: 'next-ts',
