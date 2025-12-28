@@ -160,12 +160,13 @@ export const GitHubPanel = memo(() => {
 
           {/* Search */}
           <div className="relative">
-            <span className="i-ph:magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-bolt-elements-textTertiary" />
+            <span className="i-ph:magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-bolt-elements-textTertiary" aria-hidden="true" />
             <input
               type="text"
               placeholder="Rechercher un repository..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Rechercher un repository"
               className="w-full pl-9 pr-4 py-2 text-sm bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-md focus:outline-none focus:border-accent-500 text-bolt-elements-textPrimary placeholder:text-bolt-elements-textTertiary transition-colors"
             />
           </div>

@@ -152,22 +152,26 @@ export const ConnectorCard = memo(({ connector, isConnected = false }: Connector
           >
             <form onSubmit={handleSubmit} className="p-3 pt-0 space-y-3">
               <div className="border-t border-bolt-elements-borderColor pt-3 space-y-2">
-                {connector.fields.map((field) => (
-                  <div key={field.key}>
-                    <label className="block text-xs text-bolt-elements-textSecondary mb-1">
-                      {field.label}
-                      {field.required && <span className="text-red-400 ml-0.5">*</span>}
-                    </label>
-                    <input
-                      type={field.type === 'password' ? 'password' : 'text'}
-                      value={formData[field.key] || ''}
-                      onChange={(e) => handleInputChange(field.key, e.target.value)}
-                      placeholder={field.placeholder}
-                      className="w-full px-2.5 py-1.5 text-sm bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary focus:outline-none focus:border-accent-500 transition-colors"
-                      required={field.required}
-                    />
-                  </div>
-                ))}
+                {connector.fields.map((field) => {
+                  const inputId = `connector-${connector.id}-${field.key}`;
+                  return (
+                    <div key={field.key}>
+                      <label htmlFor={inputId} className="block text-xs text-bolt-elements-textSecondary mb-1">
+                        {field.label}
+                        {field.required && <span className="text-red-400 ml-0.5">*</span>}
+                      </label>
+                      <input
+                        id={inputId}
+                        type={field.type === 'password' ? 'password' : 'text'}
+                        value={formData[field.key] || ''}
+                        onChange={(e) => handleInputChange(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        className="w-full px-2.5 py-1.5 text-sm bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary focus:outline-none focus:border-accent-500 transition-colors"
+                        required={field.required}
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
               <AnimatePresence>

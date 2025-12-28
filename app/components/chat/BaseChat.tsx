@@ -307,6 +307,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         maxHeight: TEXTAREA_MAX_HEIGHT,
                       }}
                       placeholder={chatStarted ? 'Comment BAVINI peut-il vous aider ?' : ''}
+                      aria-label="Message à envoyer à BAVINI"
                       translate="no"
                     />
                   </div>

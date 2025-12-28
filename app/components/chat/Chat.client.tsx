@@ -340,6 +340,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingH
         accept="image/jpeg,image/png,image/gif,image/webp"
         multiple
         className="hidden"
+        aria-label="Sélectionner des images à joindre"
         onChange={handleFileChange}
       />
       <BaseChat
