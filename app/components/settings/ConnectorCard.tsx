@@ -195,7 +195,7 @@ export const ConnectorCard = memo(({ connector, isConnected = false }: Connector
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-2.5 py-1 text-xs rounded-md bg-accent-500/20 text-accent-500 hover:bg-accent-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText hover:bg-bolt-elements-sidebar-buttonBackgroundHover rounded-md transition-theme disabled:opacity-50 text-xs font-medium"
                 >
                   {isSubmitting ? <Spinner /> : 'Connecter'}
                 </button>
