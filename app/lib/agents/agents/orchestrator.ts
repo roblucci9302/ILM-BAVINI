@@ -20,6 +20,12 @@ import type {
   ToolExecutionResult,
 } from '../types';
 import { createScopedLogger } from '~/utils/logger';
+import {
+  ParallelExecutor,
+  createParallelExecutor,
+  type SubtaskDefinition,
+  type SubtaskResult,
+} from '../execution/parallel-executor';
 
 const logger = createScopedLogger('Orchestrator');
 
@@ -451,7 +457,7 @@ Choisis la meilleure approche.`;
   }
 
   /**
-   * Exécuter une décomposition en sous-tâches
+   * Exécuter une décomposition en sous-tâches avec exécution parallèle
    */
   private async executeDecomposition(
     decision: OrchestrationDecision,
@@ -475,75 +481,116 @@ Choisis la meilleure approche.`;
       subtasks: decision.subTasks.map((t) => t.type),
     });
 
-    const results: TaskResult[] = [];
-    const artifacts: Artifact[] = [];
-
-    // Exécuter les sous-tâches séquentiellement (pour Phase 1)
-    // TODO: Phase 2 - Ajouter l'exécution parallèle avec gestion des dépendances
-    for (let i = 0; i < decision.subTasks.length; i++) {
-      const subTaskDef = decision.subTasks[i];
-
-      const subTask: Task = {
+    // Convertir les sous-tâches en format pour l'exécuteur parallèle
+    const subtaskDefinitions: SubtaskDefinition[] = decision.subTasks.map((subTaskDef, i) => ({
+      id: `${originalTask.id}-step-${i}`,
+      agent: (subTaskDef.type || 'explore') as AgentType,
+      task: {
         id: `${originalTask.id}-step-${i}`,
         type: subTaskDef.type || 'explore',
         prompt: subTaskDef.prompt,
         context: {
           ...originalTask.context,
-          previousResults: results,
         },
-        status: 'pending',
+        status: 'pending' as const,
         metadata: {
           parentTaskId: originalTask.id,
-          source: 'orchestrator',
+          source: 'orchestrator' as const,
         },
         createdAt: new Date(),
-      };
+      },
+      // Convertir les indices en IDs de dépendances
+      dependencies: subTaskDef.dependencies?.map((idx) => `${originalTask.id}-step-${idx}`),
+    }));
 
-      const agentType = subTaskDef.type as AgentType;
+    // Créer l'exécuteur parallèle
+    const executor = createParallelExecutor({
+      maxConcurrency: 3, // Limite de 3 agents en parallèle
+      continueOnError: true, // Continuer même si une tâche échoue
+      taskTimeout: 120000, // 2 minutes par tâche
+      onProgress: (completed, total, current) => {
+        this.log('debug', `Progress: ${completed}/${total}`, {
+          subtaskId: current.id,
+          success: current.success,
+        });
+        this.emitEvent('task:progress' as keyof import('../types').AgentEventMap, {
+          completed,
+          total,
+          current: current.id,
+        });
+      },
+      onLevelStart: (level, taskCount) => {
+        this.log('info', `Starting level ${level} with ${taskCount} task(s)`);
+      },
+      onLevelComplete: (level, results) => {
+        const successful = results.filter((r) => r.success).length;
+        this.log('info', `Level ${level} complete: ${successful}/${results.length} successful`);
+      },
+    });
+
+    // Exécuter avec le callback qui utilise le registry d'agents
+    const results = await executor.execute(subtaskDefinitions, async (task, agentType) => {
       const agent = this.registry.get(agentType);
 
       if (!agent) {
-        this.log('warn', `Agent ${agentType} not found, skipping subtask ${i}`);
-        results.push({
+        return {
           success: false,
           output: `Agent ${agentType} non disponible`,
-        });
-        continue;
+          errors: [
+            {
+              code: 'AGENT_NOT_FOUND',
+              message: `Agent ${agentType} not found in registry`,
+              recoverable: false,
+            },
+          ],
+        };
       }
 
-      this.log('info', `Executing subtask ${i + 1}/${decision.subTasks.length}`, {
-        agent: agentType,
-      });
+      return agent.run(task, this.apiKey);
+    });
 
-      const result = await agent.run(subTask, this.apiKey);
-      results.push(result);
+    // Agréger les artefacts
+    const artifacts: Artifact[] = [];
 
-      if (result.artifacts) {
-        artifacts.push(...result.artifacts);
-      }
-
-      // Si une sous-tâche échoue, on peut décider de continuer ou s'arrêter
-      if (!result.success) {
-        this.log('warn', `Subtask ${i} failed`, { error: result.errors });
-        // Pour Phase 1, on continue malgré les erreurs
+    for (const r of results) {
+      if (r.result.artifacts) {
+        artifacts.push(...r.result.artifacts);
       }
     }
 
-    // Agréger les résultats
-    const allSuccessful = results.every((r) => r.success);
-    const combinedOutput = results
-      .map((r, i) => `### Étape ${i + 1}\n${r.output}`)
-      .join('\n\n');
+    // Calculer les statistiques
+    const stats = ParallelExecutor.calculateStats(results);
+
+    // Grouper par niveau pour un meilleur affichage
+    const byLevel = new Map<number, SubtaskResult[]>();
+
+    for (const r of results) {
+      const level = byLevel.get(r.level) || [];
+      level.push(r);
+      byLevel.set(r.level, level);
+    }
+
+    const combinedOutput = Array.from(byLevel.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([level, levelResults]) => {
+        const levelOutput = levelResults.map((r) => `#### ${r.id}\n${r.result.output}`).join('\n\n');
+        return `### Niveau ${level} (${levelResults.length} tâche(s), parallèle)\n${levelOutput}`;
+      })
+      .join('\n\n---\n\n');
 
     return {
-      success: allSuccessful,
+      success: stats.failed === 0,
       output:
-        `## Résultat de l'exécution (${results.filter((r) => r.success).length}/${results.length} réussies)\n\n` +
+        `## Résultat de l'exécution parallèle (${stats.successful}/${stats.total} réussies)\n\n` +
+        `**Niveaux d'exécution:** ${stats.levels}\n` +
+        `**Efficacité parallèle:** ${stats.parallelEfficiency}x\n` +
+        `**Temps total:** ${stats.totalTime}ms\n\n` +
         combinedOutput,
       artifacts,
       data: {
         subtaskResults: results,
         reasoning: decision.reasoning,
+        executionStats: stats,
       },
     };
   }
