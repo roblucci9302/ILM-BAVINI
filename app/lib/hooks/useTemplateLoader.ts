@@ -2,24 +2,10 @@ import { useState, useCallback } from 'react';
 import { workbenchStore } from '~/lib/stores/workbench';
 import type { FileMap } from '~/lib/stores/files';
 import { hasTemplateFiles, type ProjectTemplate } from '~/lib/templates';
+import type { TemplateFilesResponse } from '~/lib/templates/types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('useTemplateLoader');
-
-interface TemplateFile {
-  path: string;
-  content: string;
-}
-
-interface TemplateFilesResponse {
-  success: true;
-  metadata: {
-    id: string;
-    name: string;
-    totalFiles: number;
-  };
-  files: TemplateFile[];
-}
 
 interface UseTemplateLoaderResult {
   /** Charge les fichiers d'un template dans le workbench */
