@@ -32,8 +32,8 @@ export interface TemplateMetadata {
  * Réponse de l'API de chargement de template
  */
 export interface TemplateFilesResponse {
-  /** Succès de l'opération */
-  success: boolean;
+  /** Succès de l'opération (toujours true pour ce type) */
+  success: true;
   /** Métadonnées du template */
   metadata: TemplateMetadata;
   /** Liste des fichiers du template */
