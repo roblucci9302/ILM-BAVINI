@@ -1,11 +1,13 @@
 import type { Message } from 'ai';
-import React, { type RefCallback, useRef, useCallback, useState, useEffect } from 'react';
+import { useStore } from '@nanostores/react';
+import React, { type RefCallback, useRef, useCallback, useState, useEffect, memo } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { LazyColorBendsWrapper as ColorBends } from '~/components/ui/ColorBends.lazy';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { IconButton } from '~/components/ui/IconButton';
 import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
+import { chatStore, setChatMode } from '~/lib/stores/chat';
 import {
   preloadOnTypingStart,
   preloadOnFirstMessage,
@@ -17,6 +19,46 @@ import { SendButton } from './SendButton.client';
 import { TemplatePills } from './TemplatePills';
 
 import styles from './BaseChat.module.scss';
+
+/**
+ * Bouton toggle pour activer/désactiver le mode Chat
+ * - Actif: icône remplie + dot vert
+ * - Inactif: icône outline
+ */
+const ChatModeToggle = memo(() => {
+  const { mode } = useStore(chatStore);
+  const isChatMode = mode === 'chat';
+
+  const handleToggle = useCallback(() => {
+    // Toggle entre 'chat' et 'auto'
+    setChatMode(isChatMode ? 'auto' : 'chat');
+  }, [isChatMode]);
+
+  return (
+    <IconButton
+      title={isChatMode ? 'Mode Chat actif (cliquez pour désactiver)' : 'Activer le mode Chat (analyse seule)'}
+      className={classNames(
+        'relative transition-colors',
+        isChatMode
+          ? 'text-bolt-elements-item-contentAccent'
+          : 'text-bolt-elements-item-contentDefault hover:text-bolt-elements-item-contentActive',
+      )}
+      onClick={handleToggle}
+    >
+      <div className="relative">
+        <div
+          className={classNames(
+            'text-xl transition-all',
+            isChatMode ? 'i-ph:chat-circle-fill' : 'i-ph:chat-circle',
+          )}
+        />
+        {isChatMode && (
+          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-bolt-elements-background-depth-1" />
+        )}
+      </div>
+    </IconButton>
+  );
+});
 
 interface FilePreview {
   file: File;
@@ -310,6 +352,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           </>
                         )}
                       </IconButton>
+                      <ChatModeToggle />
                     </div>
                     {input.length > 3 ? (
                       <div className="text-xs text-bolt-elements-textTertiary">
