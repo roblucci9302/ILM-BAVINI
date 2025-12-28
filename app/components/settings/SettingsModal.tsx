@@ -66,8 +66,8 @@ export const SettingsModal = memo(() => {
                         className={classNames(
                           'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-theme',
                           currentTab === tab.id
-                            ? 'bg-accent-500/15 text-accent-500'
-                            : 'text-bolt-elements-textTertiary hover:bg-bolt-elements-background-depth-4 hover:text-bolt-elements-textSecondary',
+                            ? 'bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText'
+                            : 'bg-bolt-elements-sidebar-buttonBackgroundDefault/50 text-bolt-elements-sidebar-buttonText/70 hover:bg-bolt-elements-sidebar-buttonBackgroundHover hover:text-bolt-elements-sidebar-buttonText',
                         )}
                       >
                         <span className={classNames(tab.icon, 'text-lg')} />
