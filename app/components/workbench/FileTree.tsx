@@ -111,7 +111,11 @@ export const FileTree = memo(
     };
 
     return (
-      <div className={classNames('text-sm', className)}>
+      <div
+        role="tree"
+        aria-label="Explorateur de fichiers"
+        className={classNames('text-sm', className)}
+      >
         {filteredFileList.map((fileOrFolder) => {
           switch (fileOrFolder.kind) {
             case 'file': {
@@ -173,6 +177,9 @@ function Folder({ folder: { depth, name }, collapsed, selected = false, onClick 
         'i-ph:caret-down scale-98': !collapsed,
       })}
       onClick={onClick}
+      role="treeitem"
+      aria-expanded={!collapsed}
+      aria-selected={selected}
     >
       {name}
     </NodeButton>
@@ -198,6 +205,8 @@ function File({ file: { depth, name }, onClick, selected, unsavedChanges = false
         'group-hover:text-bolt-elements-item-contentActive': !selected,
       })}
       onClick={onClick}
+      role="treeitem"
+      aria-selected={selected}
     >
       <div
         className={classNames('flex items-center', {
@@ -205,7 +214,7 @@ function File({ file: { depth, name }, onClick, selected, unsavedChanges = false
         })}
       >
         <div className="flex-1 truncate pr-2">{name}</div>
-        {unsavedChanges && <span className="i-ph:circle-fill scale-68 shrink-0 text-orange-500" />}
+        {unsavedChanges && <span className="i-ph:circle-fill scale-68 shrink-0 text-orange-500" aria-label="Modifications non enregistrées" />}
       </div>
     </NodeButton>
   );
@@ -217,9 +226,21 @@ interface ButtonProps {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
+  role?: 'treeitem';
+  'aria-expanded'?: boolean;
+  'aria-selected'?: boolean;
 }
 
-function NodeButton({ depth, iconClasses, onClick, className, children }: ButtonProps) {
+function NodeButton({
+  depth,
+  iconClasses,
+  onClick,
+  className,
+  children,
+  role,
+  'aria-expanded': ariaExpanded,
+  'aria-selected': ariaSelected,
+}: ButtonProps) {
   return (
     <button
       className={classNames(
@@ -228,8 +249,11 @@ function NodeButton({ depth, iconClasses, onClick, className, children }: Button
       )}
       style={{ paddingLeft: `${6 + depth * NODE_PADDING_LEFT}px` }}
       onClick={() => onClick?.()}
+      role={role}
+      aria-expanded={ariaExpanded}
+      aria-selected={ariaSelected}
     >
-      <div className={classNames('scale-120 shrink-0', iconClasses)}></div>
+      <div className={classNames('scale-120 shrink-0', iconClasses)} aria-hidden="true" />
       <div className="truncate w-full text-left">{children}</div>
     </button>
   );
