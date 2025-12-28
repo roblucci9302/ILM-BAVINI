@@ -278,7 +278,7 @@ const NotConnectedState = memo(() => (
         href="https://github.com/settings/tokens/new?scopes=repo,read:user"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 px-4 py-2 bg-bolt-elements-button-primary-background text-bolt-elements-button-primary-text hover:bg-bolt-elements-button-primary-backgroundHover rounded-md text-sm font-medium transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText hover:bg-bolt-elements-sidebar-buttonBackgroundHover rounded-md text-sm font-medium transition-theme"
       >
         <span className="i-ph:key" />
         Créer un token GitHub
@@ -311,7 +311,7 @@ const ErrorState = memo(({ error, onRetry }: ErrorStateProps) => (
       <p className="text-sm text-red-400 text-center max-w-sm mb-4">{error}</p>
       <button
         onClick={onRetry}
-        className="inline-flex items-center gap-2 px-3 py-1.5 bg-bolt-elements-button-secondary-background text-bolt-elements-button-secondary-text hover:bg-bolt-elements-button-secondary-backgroundHover rounded-md text-sm transition-colors"
+        className="inline-flex items-center gap-2 px-3 py-1.5 bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText hover:bg-bolt-elements-sidebar-buttonBackgroundHover rounded-md text-sm font-medium transition-theme"
       >
         <span className="i-ph:arrows-clockwise" />
         Réessayer
@@ -459,7 +459,7 @@ const SelectedRepoDetails = memo(
             href={`https://github.com/${owner}/${repo}/issues/new`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-bolt-elements-button-secondary-background text-bolt-elements-button-secondary-text hover:bg-bolt-elements-button-secondary-backgroundHover rounded-md text-sm transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText hover:bg-bolt-elements-sidebar-buttonBackgroundHover rounded-md text-sm font-medium transition-theme"
           >
             <span className="i-ph:plus" />
             Nouvelle Issue
@@ -468,7 +468,7 @@ const SelectedRepoDetails = memo(
             href={`https://github.com/${owner}/${repo}/compare`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-bolt-elements-button-primary-background text-bolt-elements-button-primary-text hover:bg-bolt-elements-button-primary-backgroundHover rounded-md text-sm transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-bolt-elements-sidebar-buttonBackgroundDefault text-bolt-elements-sidebar-buttonText hover:bg-bolt-elements-sidebar-buttonBackgroundHover rounded-md text-sm font-medium transition-theme"
           >
             <span className="i-ph:git-pull-request" />
             Nouvelle PR
