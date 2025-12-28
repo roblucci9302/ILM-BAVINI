@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import {
   SHELL_TOOLS,
   createShellToolHandlers,
@@ -11,7 +12,7 @@ import {
   type RunningProcess,
 } from '../tools/shell-tools';
 import { BUILDER_SYSTEM_PROMPT } from '../prompts/builder-prompt';
-import type { Task, TaskResult, ToolDefinition, Artifact } from '../types';
+import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('BuilderAgent');
@@ -25,7 +26,6 @@ const logger = createScopedLogger('BuilderAgent');
  */
 export class BuilderAgent extends BaseAgent {
   private shell: ShellInterface | null = null;
-  private shellHandlers: ReturnType<typeof createShellToolHandlers> | null = null;
   private executedCommands: Array<{
     command: string;
     success: boolean;
@@ -59,7 +59,7 @@ export class BuilderAgent extends BaseAgent {
    */
   async execute(task: Task): Promise<TaskResult> {
     // Vérifier que le shell est initialisé
-    if (!this.shell || !this.shellHandlers) {
+    if (!this.shell) {
       return {
         success: false,
         output: 'Shell not initialized. Call setShell() first.',
@@ -117,11 +117,39 @@ export class BuilderAgent extends BaseAgent {
 
   /**
    * Initialiser l'interface shell
+   * Enregistre les outils shell dans le ToolRegistry
    */
   setShell(shell: ShellInterface): void {
     this.shell = shell;
-    this.shellHandlers = createShellToolHandlers(shell);
-    this.log('info', 'Shell interface initialized for BuilderAgent');
+
+    // Créer des handlers wrappés pour tracker les commandes
+    const handlers = createShellToolHandlers(shell);
+    const wrappedHandlers = this.wrapShellHandlersWithTracking(handlers);
+    this.registerTools(SHELL_TOOLS, wrappedHandlers, 'shell');
+
+    this.log('info', 'Shell interface initialized for BuilderAgent with ToolRegistry');
+  }
+
+  /**
+   * Wrapper les handlers shell pour tracker les commandes exécutées
+   */
+  private wrapShellHandlersWithTracking(
+    handlers: ReturnType<typeof createShellToolHandlers>
+  ): Record<string, ToolHandler> {
+    const wrapped: Record<string, ToolHandler> = {};
+
+    for (const [name, handler] of Object.entries(handlers)) {
+      wrapped[name] = async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await (handler as (input: unknown) => Promise<ToolExecutionResult>)(input);
+
+        // Tracker la commande
+        this.trackCommand(name, input, result);
+
+        return result;
+      };
+    }
+
+    return wrapped;
   }
 
   /**
@@ -142,29 +170,7 @@ export class BuilderAgent extends BaseAgent {
     return [...this.executedCommands];
   }
 
-  /**
-   * Handler pour l'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    if (!this.shellHandlers || !(toolName in this.shellHandlers)) {
-      throw new Error(`Unknown tool: ${toolName}`);
-    }
-
-    const handler = this.shellHandlers[toolName as keyof typeof this.shellHandlers];
-    const result = await handler(input);
-
-    // Tracker la commande exécutée
-    this.trackCommand(toolName, input, result);
-
-    if (!result.success) {
-      throw new Error(result.error || 'Shell command failed');
-    }
-
-    return result.output;
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Tracker les commandes exécutées

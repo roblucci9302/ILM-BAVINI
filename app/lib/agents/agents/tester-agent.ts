@@ -4,9 +4,10 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import { TEST_TOOLS, createTestToolHandlers, type TestRunner } from '../tools/test-tools';
 import { TESTER_SYSTEM_PROMPT } from '../prompts/tester-prompt';
-import type { Task, TaskResult, ToolDefinition, Artifact } from '../types';
+import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('TesterAgent');
@@ -20,7 +21,6 @@ const logger = createScopedLogger('TesterAgent');
  */
 export class TesterAgent extends BaseAgent {
   private testRunner: TestRunner | null = null;
-  private testHandlers: ReturnType<typeof createTestToolHandlers> | null = null;
   private testHistory: Array<{
     timestamp: Date;
     passed: number;
@@ -54,7 +54,7 @@ export class TesterAgent extends BaseAgent {
    */
   async execute(task: Task): Promise<TaskResult> {
     // Vérifier que le TestRunner est initialisé
-    if (!this.testRunner || !this.testHandlers) {
+    if (!this.testRunner) {
       return {
         success: false,
         output: 'TestRunner not initialized. Call setTestRunner() first.',
@@ -109,11 +109,41 @@ export class TesterAgent extends BaseAgent {
 
   /**
    * Initialiser le runner de tests
+   * Enregistre les outils de test dans le ToolRegistry
    */
   setTestRunner(runner: TestRunner): void {
     this.testRunner = runner;
-    this.testHandlers = createTestToolHandlers(runner);
-    this.log('info', 'TestRunner initialized for TesterAgent');
+
+    // Créer des handlers wrappés pour tracker les tests
+    const handlers = createTestToolHandlers(runner);
+    const wrappedHandlers = this.wrapTestHandlersWithTracking(handlers);
+    this.registerTools(TEST_TOOLS, wrappedHandlers, 'test');
+
+    this.log('info', 'TestRunner initialized for TesterAgent with ToolRegistry');
+  }
+
+  /**
+   * Wrapper les handlers de test pour tracker les résultats
+   */
+  private wrapTestHandlersWithTracking(
+    handlers: ReturnType<typeof createTestToolHandlers>
+  ): Record<string, ToolHandler> {
+    const wrapped: Record<string, ToolHandler> = {};
+
+    for (const [name, handler] of Object.entries(handlers)) {
+      wrapped[name] = async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await (handler as (input: unknown) => Promise<ToolExecutionResult>)(input);
+
+        // Tracker les résultats de test
+        if (name === 'run_tests' && result.success) {
+          this.trackTestRun(result.output as string);
+        }
+
+        return result;
+      };
+    }
+
+    return wrapped;
   }
 
   /**
@@ -130,31 +160,7 @@ export class TesterAgent extends BaseAgent {
     this.testHistory = [];
   }
 
-  /**
-   * Handler pour l'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    if (!this.testHandlers || !(toolName in this.testHandlers)) {
-      throw new Error(`Unknown tool: ${toolName}`);
-    }
-
-    const handler = this.testHandlers[toolName as keyof typeof this.testHandlers];
-    const result = await handler(input);
-
-    // Tracker les résultats de test
-    if (toolName === 'run_tests' && result.success) {
-      this.trackTestRun(result.output as string);
-    }
-
-    if (!result.success) {
-      throw new Error(result.error || 'Test tool failed');
-    }
-
-    return result.output;
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Tracker les résultats d'un run de tests

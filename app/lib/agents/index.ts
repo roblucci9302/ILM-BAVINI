@@ -18,6 +18,15 @@ export { AgentRegistry, agentRegistry } from './core/agent-registry';
 export type { RegisteredAgent, RegistryStats } from './core/agent-registry';
 export { TaskQueue, createTaskQueue } from './core/task-queue';
 export type { TaskQueueConfig, QueueStats } from './core/task-queue';
+export {
+  ToolRegistry,
+  createStandardToolRegistry,
+  createReadToolsRegistry,
+  createWriteToolsRegistry,
+  createShellToolsRegistry,
+  createGitToolsRegistry,
+} from './core/tool-registry';
+export type { ToolHandler, RegisteredTool, RegisterOptions, RegistryStats as ToolRegistryStats } from './core/tool-registry';
 
 // ============================================================================
 // AGENTS

@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import {
   REVIEW_TOOLS,
   createReviewToolHandlers,
@@ -13,7 +14,7 @@ import {
 } from '../tools/review-tools';
 import { READ_TOOLS, createReadToolHandlers, type FileSystem } from '../tools/read-tools';
 import { REVIEWER_SYSTEM_PROMPT } from '../prompts/reviewer-prompt';
-import type { Task, TaskResult, ToolDefinition, Artifact } from '../types';
+import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ReviewerAgent');
@@ -54,8 +55,6 @@ export interface ReviewReport {
 export class ReviewerAgent extends BaseAgent {
   private analyzer: CodeAnalyzer | null = null;
   private fileSystem: FileSystem | null = null;
-  private reviewHandlers: ReturnType<typeof createReviewToolHandlers> | null = null;
-  private readHandlers: ReturnType<typeof createReadToolHandlers> | null = null;
   private reviewHistory: Array<{
     timestamp: Date;
     file: string;
@@ -89,7 +88,7 @@ export class ReviewerAgent extends BaseAgent {
    */
   async execute(task: Task): Promise<TaskResult> {
     // Vérifier que l'analyseur est initialisé
-    if (!this.analyzer || !this.reviewHandlers) {
+    if (!this.analyzer) {
       return {
         success: false,
         output: 'CodeAnalyzer not initialized. Call setAnalyzer() first.',
@@ -136,20 +135,62 @@ export class ReviewerAgent extends BaseAgent {
 
   /**
    * Initialiser l'analyseur de code
+   * Enregistre les outils de review dans le ToolRegistry
    */
   setAnalyzer(analyzer: CodeAnalyzer): void {
     this.analyzer = analyzer;
-    this.reviewHandlers = createReviewToolHandlers(analyzer);
-    this.log('info', 'CodeAnalyzer initialized for ReviewerAgent');
+
+    // Créer des handlers wrappés pour tracker les reviews
+    const handlers = createReviewToolHandlers(analyzer);
+    const wrappedHandlers = this.wrapReviewHandlersWithTracking(handlers);
+    this.registerTools(REVIEW_TOOLS, wrappedHandlers, 'review');
+
+    this.log('info', 'CodeAnalyzer initialized for ReviewerAgent with ToolRegistry');
   }
 
   /**
    * Initialiser le système de fichiers (pour la lecture)
+   * Enregistre les outils de lecture dans le ToolRegistry
    */
   setFileSystem(fs: FileSystem): void {
     this.fileSystem = fs;
-    this.readHandlers = createReadToolHandlers(fs);
-    this.log('info', 'FileSystem initialized for ReviewerAgent');
+
+    const handlers = createReadToolHandlers(fs);
+    this.registerTools(
+      READ_TOOLS,
+      handlers as unknown as Record<string, ToolHandler>,
+      'filesystem'
+    );
+
+    this.log('info', 'FileSystem initialized for ReviewerAgent with ToolRegistry');
+  }
+
+  /**
+   * Wrapper les handlers de review pour tracker les résultats
+   */
+  private wrapReviewHandlersWithTracking(
+    handlers: ReturnType<typeof createReviewToolHandlers>
+  ): Record<string, ToolHandler> {
+    const wrapped: Record<string, ToolHandler> = {};
+
+    for (const [name, handler] of Object.entries(handlers)) {
+      wrapped[name] = async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await (handler as (input: unknown) => Promise<unknown>)(input);
+
+        // Tracker les résultats d'analyse
+        if (name === 'analyze_code' && result) {
+          this.trackReview(result as AnalysisResult);
+        }
+
+        // Wrapper le résultat dans le format attendu
+        return {
+          success: true,
+          output: result,
+        };
+      };
+    }
+
+    return wrapped;
   }
 
   /**
@@ -166,41 +207,7 @@ export class ReviewerAgent extends BaseAgent {
     this.reviewHistory = [];
   }
 
-  /**
-   * Handler pour l'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    // D'abord vérifier les outils de review
-    if (this.reviewHandlers && toolName in this.reviewHandlers) {
-      const handler = this.reviewHandlers[toolName as keyof typeof this.reviewHandlers];
-      const result = await handler(input);
-
-      // Tracker les résultats d'analyse
-      if (toolName === 'analyze_code' && result) {
-        this.trackReview(result as AnalysisResult);
-      }
-
-      return result;
-    }
-
-    // Ensuite vérifier les outils de lecture
-    if (this.readHandlers && toolName in this.readHandlers) {
-      const handler = this.readHandlers[toolName as keyof typeof this.readHandlers];
-      // Cast input to any for type flexibility with tool handlers
-      const result = await handler(input as any);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Read tool failed');
-      }
-
-      return result.output;
-    }
-
-    throw new Error(`Unknown tool: ${toolName}`);
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Tracker les résultats d'une review

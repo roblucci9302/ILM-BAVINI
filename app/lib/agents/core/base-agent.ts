@@ -5,6 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { createScopedLogger } from '~/utils/logger';
+import { ToolRegistry, type ToolHandler } from './tool-registry';
 import type {
   AgentConfig,
   AgentStatus,
@@ -39,6 +40,9 @@ export abstract class BaseAgent {
 
   // Client Anthropic (sera initialisé avec la clé API)
   protected anthropicClient: Anthropic | null = null;
+
+  // Registre d'outils pour l'exécution des tools
+  protected toolRegistry: ToolRegistry = new ToolRegistry();
 
   constructor(config: AgentConfig) {
     this.config = {
@@ -190,6 +194,75 @@ export abstract class BaseAgent {
   }
 
   // ============================================================================
+  // GESTION DES OUTILS (Tool Registry)
+  // ============================================================================
+
+  /**
+   * Enregistrer un outil avec son handler
+   */
+  registerTool(definition: ToolDefinition, handler: ToolHandler): void {
+    this.toolRegistry.register(definition, handler);
+
+    // Ajouter à la config si pas déjà présent (pour le LLM)
+    if (!this.config.tools.find((t) => t.name === definition.name)) {
+      this.config.tools.push(definition);
+    }
+
+    this.log('debug', `Tool registered: ${definition.name}`);
+  }
+
+  /**
+   * Enregistrer plusieurs outils d'un coup
+   */
+  registerTools(
+    definitions: ToolDefinition[],
+    handlers: Record<string, ToolHandler>,
+    category?: string
+  ): void {
+    this.toolRegistry.registerBatch(definitions, handlers, category);
+
+    // Ajouter à la config
+    for (const def of definitions) {
+      if (handlers[def.name] && !this.config.tools.find((t) => t.name === def.name)) {
+        this.config.tools.push(def);
+      }
+    }
+
+    this.log('debug', `Registered ${definitions.length} tools`, { category });
+  }
+
+  /**
+   * Désinscrire un outil
+   */
+  unregisterTool(name: string): boolean {
+    const removed = this.toolRegistry.unregister(name);
+
+    if (removed) {
+      // Retirer de la config
+      const index = this.config.tools.findIndex((t) => t.name === name);
+      if (index !== -1) {
+        this.config.tools.splice(index, 1);
+      }
+    }
+
+    return removed;
+  }
+
+  /**
+   * Obtenir le registre d'outils (pour les sous-classes)
+   */
+  protected getToolRegistry(): ToolRegistry {
+    return this.toolRegistry;
+  }
+
+  /**
+   * Obtenir les définitions des outils enregistrés
+   */
+  getRegisteredTools(): ToolDefinition[] {
+    return this.toolRegistry.getDefinitions();
+  }
+
+  // ============================================================================
   // MÉTHODES PROTÉGÉES (utilisables par les sous-classes)
   // ============================================================================
 
@@ -309,14 +382,45 @@ export abstract class BaseAgent {
   }
 
   /**
-   * Handler d'exécution des outils (à override ou étendre)
+   * Handler d'exécution des outils
+   * Utilise le ToolRegistry pour trouver et exécuter le handler approprié
    */
   protected async executeToolHandler(
     toolName: string,
     input: Record<string, unknown>
   ): Promise<unknown> {
-    // Par défaut, retourne une erreur - les sous-classes doivent implémenter
-    throw new Error(`Tool handler not implemented for: ${toolName}`);
+    // 1. Chercher dans le registre d'outils
+    if (this.toolRegistry.has(toolName)) {
+      const result = await this.toolRegistry.execute(toolName, input);
+
+      if (!result.success) {
+        throw new Error(result.error || `Tool '${toolName}' execution failed`);
+      }
+
+      return result.output;
+    }
+
+    // 2. Permettre aux sous-classes de gérer des outils personnalisés
+    return this.handleCustomTool(toolName, input);
+  }
+
+  /**
+   * Handler pour les outils personnalisés non enregistrés dans le registry
+   * Les sous-classes peuvent override cette méthode pour gérer des cas spéciaux
+   */
+  protected async handleCustomTool(
+    toolName: string,
+    _input: Record<string, unknown>
+  ): Promise<unknown> {
+    // Par défaut, retourne une erreur si l'outil n'est pas trouvé
+    const availableTools = this.toolRegistry.getToolNames();
+    const toolList = availableTools.length > 0
+      ? `Available tools: ${availableTools.join(', ')}`
+      : 'No tools registered';
+
+    throw new Error(
+      `Tool '${toolName}' not found in registry and no custom handler provided. ${toolList}`
+    );
   }
 
   /**

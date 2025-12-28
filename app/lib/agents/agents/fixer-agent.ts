@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import { READ_TOOLS, createReadToolHandlers, type FileSystem } from '../tools/read-tools';
 import {
   WRITE_TOOLS,
@@ -11,7 +12,7 @@ import {
   type WritableFileSystem,
 } from '../tools/write-tools';
 import { FIXER_SYSTEM_PROMPT } from '../prompts/fixer-prompt';
-import type { Task, TaskResult, ToolDefinition, Artifact, AgentError } from '../types';
+import type { Task, TaskResult, ToolDefinition, Artifact, AgentError, ToolExecutionResult } from '../types';
 import type { CodeIssue } from '../tools/review-tools';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -73,8 +74,6 @@ export interface FixResult {
  */
 export class FixerAgent extends BaseAgent {
   private fileSystem: WritableFileSystem | null = null;
-  private readHandlers: ReturnType<typeof createReadToolHandlers> | null = null;
-  private writeHandlers: ReturnType<typeof createWriteToolHandlers> | null = null;
   private fixHistory: Array<{
     timestamp: Date;
     file: string;
@@ -109,7 +108,7 @@ export class FixerAgent extends BaseAgent {
    */
   async execute(task: Task): Promise<TaskResult> {
     // Vérifier que le FileSystem est initialisé
-    if (!this.fileSystem || !this.readHandlers || !this.writeHandlers) {
+    if (!this.fileSystem) {
       return {
         success: false,
         output: 'FileSystem not initialized. Call setFileSystem() first.',
@@ -221,12 +220,49 @@ export class FixerAgent extends BaseAgent {
 
   /**
    * Initialiser le système de fichiers
+   * Enregistre les outils de lecture et d'écriture dans le ToolRegistry
    */
   setFileSystem(fs: WritableFileSystem): void {
     this.fileSystem = fs;
-    this.readHandlers = createReadToolHandlers(fs);
-    this.writeHandlers = createWriteToolHandlers(fs);
-    this.log('info', 'FileSystem initialized for FixerAgent');
+
+    // Enregistrer les outils de lecture
+    const readHandlers = createReadToolHandlers(fs);
+    this.registerTools(
+      READ_TOOLS,
+      readHandlers as unknown as Record<string, ToolHandler>,
+      'filesystem'
+    );
+
+    // Créer des handlers d'écriture wrappés pour tracker les corrections
+    const writeHandlers = createWriteToolHandlers(fs);
+    const wrappedWriteHandlers = this.wrapWriteHandlersWithTracking(writeHandlers);
+    this.registerTools(WRITE_TOOLS, wrappedWriteHandlers, 'filesystem');
+
+    this.log('info', 'FileSystem initialized for FixerAgent with ToolRegistry');
+  }
+
+  /**
+   * Wrapper les handlers d'écriture pour tracker les corrections
+   */
+  private wrapWriteHandlersWithTracking(
+    handlers: ReturnType<typeof createWriteToolHandlers>
+  ): Record<string, ToolHandler> {
+    const wrapped: Record<string, ToolHandler> = {};
+
+    for (const [name, handler] of Object.entries(handlers)) {
+      wrapped[name] = async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await (handler as (input: unknown) => Promise<ToolExecutionResult>)(input);
+
+        // Tracker les corrections si succès
+        if (result.success) {
+          this.trackFix(name, input);
+        }
+
+        return result;
+      };
+    }
+
+    return wrapped;
   }
 
   /**
@@ -250,42 +286,7 @@ export class FixerAgent extends BaseAgent {
     this.fixHistory = [];
   }
 
-  /**
-   * Handler pour l'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    // Outils de lecture
-    if (this.readHandlers && toolName in this.readHandlers) {
-      const handler = this.readHandlers[toolName as keyof typeof this.readHandlers];
-      const result = await handler(input as any);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Read tool failed');
-      }
-
-      return result.output;
-    }
-
-    // Outils d'écriture
-    if (this.writeHandlers && toolName in this.writeHandlers) {
-      const handler = this.writeHandlers[toolName as keyof typeof this.writeHandlers];
-      const result = await handler(input);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Write tool failed');
-      }
-
-      // Tracker les corrections
-      this.trackFix(toolName, input);
-
-      return result.output;
-    }
-
-    throw new Error(`Unknown tool: ${toolName}`);
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Tracker une correction appliquée

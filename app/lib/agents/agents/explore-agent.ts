@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import { EXPLORE_SYSTEM_PROMPT } from '../prompts/explore-prompt';
 import { READ_TOOLS, createReadToolHandlers, type FileSystem } from '../tools/read-tools';
 import type {
@@ -20,7 +21,6 @@ import type {
  */
 export class ExploreAgent extends BaseAgent {
   private fileSystem: FileSystem | null = null;
-  private toolHandlers: ReturnType<typeof createReadToolHandlers> | null = null;
 
   constructor() {
     super({
@@ -41,11 +41,20 @@ export class ExploreAgent extends BaseAgent {
 
   /**
    * Initialiser le système de fichiers (WebContainer)
+   * Enregistre les outils de lecture dans le ToolRegistry
    */
   setFileSystem(fs: FileSystem): void {
     this.fileSystem = fs;
-    this.toolHandlers = createReadToolHandlers(fs);
-    this.log('info', 'FileSystem initialized for ExploreAgent');
+
+    // Créer les handlers et les enregistrer dans le registry
+    const handlers = createReadToolHandlers(fs);
+    this.registerTools(
+      READ_TOOLS,
+      handlers as unknown as Record<string, ToolHandler>,
+      'filesystem'
+    );
+
+    this.log('info', 'FileSystem initialized for ExploreAgent with ToolRegistry');
   }
 
   /**
@@ -59,7 +68,7 @@ export class ExploreAgent extends BaseAgent {
    * Exécution principale de l'agent
    */
   async execute(task: Task): Promise<TaskResult> {
-    if (!this.fileSystem || !this.toolHandlers) {
+    if (!this.fileSystem) {
       return {
         success: false,
         output: 'FileSystem not initialized. Call setFileSystem() first.',
@@ -92,36 +101,7 @@ export class ExploreAgent extends BaseAgent {
     }
   }
 
-  /**
-   * Handler d'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    if (!this.toolHandlers) {
-      throw new Error('Tool handlers not initialized');
-    }
-
-    switch (toolName) {
-      case 'read_file':
-        return this.toolHandlers.read_file(input as Parameters<typeof this.toolHandlers.read_file>[0]);
-
-      case 'grep':
-        return this.toolHandlers.grep(input as Parameters<typeof this.toolHandlers.grep>[0]);
-
-      case 'glob':
-        return this.toolHandlers.glob(input as Parameters<typeof this.toolHandlers.glob>[0]);
-
-      case 'list_directory':
-        return this.toolHandlers.list_directory(
-          input as Parameters<typeof this.toolHandlers.list_directory>[0]
-        );
-
-      default:
-        throw new Error(`Unknown tool: ${toolName}`);
-    }
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Construire le prompt complet pour la tâche

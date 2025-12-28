@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import {
   GIT_TOOLS,
   createGitToolHandlers,
@@ -12,7 +13,7 @@ import {
   type GitBranch,
 } from '../tools/git-tools';
 import { DEPLOYER_SYSTEM_PROMPT } from '../prompts/deployer-prompt';
-import type { Task, TaskResult, ToolDefinition, Artifact } from '../types';
+import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('DeployerAgent');
@@ -26,7 +27,6 @@ const logger = createScopedLogger('DeployerAgent');
  */
 export class DeployerAgent extends BaseAgent {
   private git: GitInterface | null = null;
-  private gitHandlers: ReturnType<typeof createGitToolHandlers> | null = null;
   private commitHistory: Array<{
     hash: string;
     message: string;
@@ -65,7 +65,7 @@ export class DeployerAgent extends BaseAgent {
    */
   async execute(task: Task): Promise<TaskResult> {
     // Vérifier que Git est initialisé
-    if (!this.git || !this.gitHandlers) {
+    if (!this.git) {
       return {
         success: false,
         output: 'Git interface not initialized. Call setGit() first.',
@@ -153,11 +153,44 @@ export class DeployerAgent extends BaseAgent {
 
   /**
    * Initialiser l'interface Git
+   * Enregistre les outils Git dans le ToolRegistry
    */
   setGit(git: GitInterface): void {
     this.git = git;
-    this.gitHandlers = createGitToolHandlers(git);
-    this.log('info', 'Git interface initialized for DeployerAgent');
+
+    // Créer des handlers wrappés pour tracker les opérations
+    const handlers = createGitToolHandlers(git);
+    const wrappedHandlers = this.wrapGitHandlersWithTracking(handlers);
+    this.registerTools(GIT_TOOLS, wrappedHandlers, 'git');
+
+    this.log('info', 'Git interface initialized for DeployerAgent with ToolRegistry');
+  }
+
+  /**
+   * Wrapper les handlers Git pour tracker les opérations
+   */
+  private wrapGitHandlersWithTracking(
+    handlers: ReturnType<typeof createGitToolHandlers>
+  ): Record<string, ToolHandler> {
+    const wrapped: Record<string, ToolHandler> = {};
+
+    for (const [name, handler] of Object.entries(handlers)) {
+      wrapped[name] = async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await (handler as (input: unknown) => Promise<ToolExecutionResult>)(input);
+
+        // Tracker l'opération
+        this.trackOperation(name, result.success, result.output as string);
+
+        // Tracker les commits
+        if (name === 'git_commit' && result.success) {
+          this.trackCommit(result.output as string);
+        }
+
+        return result;
+      };
+    }
+
+    return wrapped;
   }
 
   /**
@@ -182,34 +215,7 @@ export class DeployerAgent extends BaseAgent {
     this.operationHistory = [];
   }
 
-  /**
-   * Handler pour l'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    if (!this.gitHandlers || !(toolName in this.gitHandlers)) {
-      throw new Error(`Unknown tool: ${toolName}`);
-    }
-
-    const handler = this.gitHandlers[toolName as keyof typeof this.gitHandlers];
-    const result = await handler(input);
-
-    // Tracker l'opération
-    this.trackOperation(toolName, result.success, result.output as string);
-
-    // Tracker les commits
-    if (toolName === 'git_commit' && result.success) {
-      this.trackCommit(result.output as string);
-    }
-
-    if (!result.success) {
-      throw new Error(result.error || 'Git operation failed');
-    }
-
-    return result.output;
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Tracker une opération Git

@@ -4,6 +4,7 @@
  */
 
 import { BaseAgent } from '../core/base-agent';
+import type { ToolHandler } from '../core/tool-registry';
 import { READ_TOOLS, createReadToolHandlers } from '../tools/read-tools';
 import {
   WRITE_TOOLS,
@@ -11,7 +12,7 @@ import {
   type WritableFileSystem,
 } from '../tools/write-tools';
 import { CODER_SYSTEM_PROMPT } from '../prompts/coder-prompt';
-import type { Task, TaskResult, ToolDefinition, Artifact } from '../types';
+import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('CoderAgent');
@@ -35,8 +36,6 @@ export type CoderFileSystem = WritableFileSystem;
  */
 export class CoderAgent extends BaseAgent {
   private fileSystem: CoderFileSystem | null = null;
-  private readHandlers: ReturnType<typeof createReadToolHandlers> | null = null;
-  private writeHandlers: ReturnType<typeof createWriteToolHandlers> | null = null;
   private modifiedFiles: Map<string, { action: string; content?: string }> = new Map();
 
   constructor() {
@@ -65,7 +64,7 @@ export class CoderAgent extends BaseAgent {
    */
   async execute(task: Task): Promise<TaskResult> {
     // Vérifier que le FileSystem est initialisé
-    if (!this.fileSystem || !this.readHandlers || !this.writeHandlers) {
+    if (!this.fileSystem) {
       return {
         success: false,
         output: 'FileSystem not initialized. Call setFileSystem() first.',
@@ -128,12 +127,49 @@ export class CoderAgent extends BaseAgent {
 
   /**
    * Initialiser le système de fichiers
+   * Enregistre les outils de lecture et d'écriture dans le ToolRegistry
    */
   setFileSystem(fs: CoderFileSystem): void {
     this.fileSystem = fs;
-    this.readHandlers = createReadToolHandlers(fs);
-    this.writeHandlers = createWriteToolHandlers(fs);
-    this.log('info', 'FileSystem initialized for CoderAgent');
+
+    // Enregistrer les outils de lecture
+    const readHandlers = createReadToolHandlers(fs);
+    this.registerTools(
+      READ_TOOLS,
+      readHandlers as unknown as Record<string, ToolHandler>,
+      'filesystem'
+    );
+
+    // Créer des handlers d'écriture wrappés pour tracker les modifications
+    const writeHandlers = createWriteToolHandlers(fs);
+    const wrappedWriteHandlers = this.wrapWriteHandlersWithTracking(writeHandlers);
+    this.registerTools(WRITE_TOOLS, wrappedWriteHandlers, 'filesystem');
+
+    this.log('info', 'FileSystem initialized for CoderAgent with ToolRegistry');
+  }
+
+  /**
+   * Wrapper les handlers d'écriture pour tracker les modifications
+   */
+  private wrapWriteHandlersWithTracking(
+    handlers: ReturnType<typeof createWriteToolHandlers>
+  ): Record<string, ToolHandler> {
+    const wrapped: Record<string, ToolHandler> = {};
+
+    for (const [name, handler] of Object.entries(handlers)) {
+      wrapped[name] = async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
+        const result = await (handler as (input: unknown) => Promise<ToolExecutionResult>)(input);
+
+        // Tracker les modifications si succès
+        if (result.success) {
+          this.trackFileModification(name, input);
+        }
+
+        return result;
+      };
+    }
+
+    return wrapped;
   }
 
   /**
@@ -143,43 +179,7 @@ export class CoderAgent extends BaseAgent {
     return new Map(this.modifiedFiles);
   }
 
-  /**
-   * Handler pour l'exécution des outils
-   */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
-    // Outils de lecture
-    if (this.readHandlers && toolName in this.readHandlers) {
-      const handler = this.readHandlers[toolName as keyof typeof this.readHandlers];
-      // Cast input to any for type flexibility with tool handlers
-      const result = await handler(input as any);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Read tool failed');
-      }
-
-      return result.output;
-    }
-
-    // Outils d'écriture
-    if (this.writeHandlers && toolName in this.writeHandlers) {
-      const handler = this.writeHandlers[toolName as keyof typeof this.writeHandlers];
-      const result = await handler(input);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Write tool failed');
-      }
-
-      // Tracker les modifications
-      this.trackFileModification(toolName, input);
-
-      return result.output;
-    }
-
-    throw new Error(`Unknown tool: ${toolName}`);
-  }
+  // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
   /**
    * Tracker les modifications de fichiers
