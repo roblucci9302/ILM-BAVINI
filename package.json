@@ -100,6 +100,7 @@
     "jsdom": "^27.3.0",
     "node-fetch": "^3.3.2",
     "prettier": "^3.3.2",
+    "sass-embedded": "^1.97.1",
     "typescript": "^5.5.2",
     "unified": "^11.0.5",
     "unocss": "^0.61.3",

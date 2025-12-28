@@ -1,18 +1,44 @@
 /**
  * Git operations using isomorphic-git.
  * All operations run entirely in the browser using LightningFS.
+ *
+ * Note: LightningFS is lazy-initialized to avoid SSR issues.
+ * It requires IndexedDB which is only available in browsers.
  */
 
 import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
-import LightningFS from '@isomorphic-git/lightning-fs';
 import { getCorsProxyUrl } from './cors-proxy';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('Git');
 
-// initialize the filesystem
-const fs = new LightningFS('bavini-git');
+// Lazy-initialized filesystem (browser-only)
+let _fs: InstanceType<typeof import('@isomorphic-git/lightning-fs').default> | null = null;
+
+/**
+ * Get the LightningFS instance, initializing it if needed.
+ * This is lazy-loaded to avoid SSR issues with IndexedDB.
+ */
+async function getFileSystem() {
+  if (_fs) {
+    return _fs;
+  }
+
+  // Dynamic import to avoid SSR issues
+  const LightningFS = (await import('@isomorphic-git/lightning-fs')).default;
+  _fs = new LightningFS('bavini-git');
+  return _fs;
+}
+
+// Synchronous getter for already-initialized fs (used by getFs export)
+function getFileSystemSync() {
+  if (!_fs) {
+    throw new Error('Git filesystem not initialized. Call a git operation first.');
+  }
+
+  return _fs;
+}
 
 // default author for commits
 const DEFAULT_AUTHOR = {
@@ -83,9 +109,11 @@ export interface LogEntry {
 
 /**
  * Get the LightningFS instance.
+ * Must be called after any git operation has been performed (which initializes the fs).
+ * For async initialization, use the git operations directly.
  */
 export function getFs() {
-  return fs;
+  return getFileSystemSync();
 }
 
 /**
@@ -93,6 +121,7 @@ export function getFs() {
  */
 export async function clone(options: CloneOptions): Promise<void> {
   const { url, dir, branch, depth = 1, onProgress, onAuth } = options;
+  const fs = await getFileSystem();
 
   logger.info(`Cloning ${url} to ${dir}`);
 
@@ -140,6 +169,7 @@ export async function clone(options: CloneOptions): Promise<void> {
  * Initialize a new repository.
  */
 export async function init(dir: string): Promise<void> {
+  const fs = await getFileSystem();
   logger.info(`Initializing repository in ${dir}`);
 
   await git.init({ fs, dir, defaultBranch: 'main' });
@@ -151,6 +181,7 @@ export async function init(dir: string): Promise<void> {
  * Get the current branch name.
  */
 export async function currentBranch(dir: string): Promise<string | undefined> {
+  const fs = await getFileSystem();
   try {
     const branch = await git.currentBranch({ fs, dir });
     return branch || undefined;
@@ -163,6 +194,7 @@ export async function currentBranch(dir: string): Promise<string | undefined> {
  * List all branches.
  */
 export async function listBranches(dir: string): Promise<string[]> {
+  const fs = await getFileSystem();
   try {
     return await git.listBranches({ fs, dir });
   } catch {
@@ -174,6 +206,7 @@ export async function listBranches(dir: string): Promise<string[]> {
  * Get the status of all files in the repository.
  */
 export async function status(dir: string): Promise<FileStatus[]> {
+  const fs = await getFileSystem();
   try {
     const matrix = await git.statusMatrix({ fs, dir });
     const files: FileStatus[] = [];
@@ -215,6 +248,7 @@ export async function status(dir: string): Promise<FileStatus[]> {
  * Add files to the staging area.
  */
 export async function add(dir: string, filepath: string): Promise<void> {
+  const fs = await getFileSystem();
   await git.add({ fs, dir, filepath });
   logger.debug(`Added ${filepath}`);
 }
@@ -223,6 +257,7 @@ export async function add(dir: string, filepath: string): Promise<void> {
  * Add all files to the staging area.
  */
 export async function addAll(dir: string): Promise<void> {
+  const fs = await getFileSystem();
   const statusMatrix = await git.statusMatrix({ fs, dir });
 
   for (const [filepath, headStatus, workdirStatus] of statusMatrix) {
@@ -243,6 +278,7 @@ export async function addAll(dir: string): Promise<void> {
  */
 export async function commit(options: CommitOptions): Promise<string> {
   const { dir, message, author = DEFAULT_AUTHOR } = options;
+  const fs = await getFileSystem();
 
   const sha = await git.commit({
     fs,
@@ -264,6 +300,7 @@ export async function commit(options: CommitOptions): Promise<string> {
  */
 export async function push(options: PushOptions): Promise<void> {
   const { dir, remote = 'origin', branch, onAuth, onProgress } = options;
+  const fs = await getFileSystem();
 
   const currentRef = branch || (await currentBranch(dir)) || 'main';
 
@@ -307,6 +344,7 @@ export async function push(options: PushOptions): Promise<void> {
  */
 export async function pull(options: PullOptions): Promise<void> {
   const { dir, remote = 'origin', branch, onAuth, onProgress } = options;
+  const fs = await getFileSystem();
 
   const currentRef = branch || (await currentBranch(dir)) || 'main';
 
@@ -355,6 +393,7 @@ export async function fetch(
   remote: string = 'origin',
   onAuth?: () => Promise<GitAuth | null>,
 ): Promise<void> {
+  const fs = await getFileSystem();
   logger.info(`Fetching from ${remote}`);
 
   await git.fetch({
@@ -383,6 +422,7 @@ export async function fetch(
  * Get commit log.
  */
 export async function log(dir: string, depth: number = 10): Promise<LogEntry[]> {
+  const fs = await getFileSystem();
   try {
     const commits = await git.log({ fs, dir, depth });
 
@@ -404,6 +444,7 @@ export async function log(dir: string, depth: number = 10): Promise<LogEntry[]> 
  * Checkout a branch.
  */
 export async function checkout(dir: string, ref: string): Promise<void> {
+  const fs = await getFileSystem();
   logger.info(`Checking out ${ref}`);
 
   await git.checkout({ fs, dir, ref });
@@ -415,6 +456,7 @@ export async function checkout(dir: string, ref: string): Promise<void> {
  * Create a new branch.
  */
 export async function createBranch(dir: string, name: string, checkout: boolean = true): Promise<void> {
+  const fs = await getFileSystem();
   logger.info(`Creating branch ${name}`);
 
   await git.branch({ fs, dir, ref: name, checkout });
@@ -426,6 +468,7 @@ export async function createBranch(dir: string, name: string, checkout: boolean 
  * Get remotes.
  */
 export async function listRemotes(dir: string): Promise<Array<{ remote: string; url: string }>> {
+  const fs = await getFileSystem();
   try {
     return await git.listRemotes({ fs, dir });
   } catch {
@@ -437,6 +480,7 @@ export async function listRemotes(dir: string): Promise<Array<{ remote: string; 
  * Add a remote.
  */
 export async function addRemote(dir: string, remote: string, url: string): Promise<void> {
+  const fs = await getFileSystem();
   await git.addRemote({ fs, dir, remote, url });
   logger.info(`Added remote ${remote}: ${url}`);
 }
@@ -445,6 +489,7 @@ export async function addRemote(dir: string, remote: string, url: string): Promi
  * Check if a directory is a git repository.
  */
 export async function isGitRepo(dir: string): Promise<boolean> {
+  const fs = await getFileSystem();
   try {
     await git.findRoot({ fs, filepath: dir });
     return true;
@@ -457,6 +502,7 @@ export async function isGitRepo(dir: string): Promise<boolean> {
  * Read a file from the repository.
  */
 export async function readFile(dir: string, filepath: string): Promise<string> {
+  const fs = await getFileSystem();
   const content = await fs.promises.readFile(`${dir}/${filepath}`, { encoding: 'utf8' });
   return content as string;
 }
@@ -465,6 +511,7 @@ export async function readFile(dir: string, filepath: string): Promise<string> {
  * Write a file to the repository.
  */
 export async function writeFile(dir: string, filepath: string, content: string): Promise<void> {
+  const fs = await getFileSystem();
   // ensure directory exists
   const parts = filepath.split('/');
 
@@ -489,6 +536,7 @@ export async function writeFile(dir: string, filepath: string, content: string):
  * List files in a directory.
  */
 export async function listFiles(dir: string, subdir: string = ''): Promise<string[]> {
+  const fs = await getFileSystem();
   const fullPath = subdir ? `${dir}/${subdir}` : dir;
 
   try {
@@ -503,6 +551,7 @@ export async function listFiles(dir: string, subdir: string = ''): Promise<strin
  * Delete a repository from the filesystem.
  */
 export async function deleteRepo(dir: string): Promise<void> {
+  const fs = await getFileSystem();
   logger.info(`Deleting repository ${dir}`);
 
   // recursively delete all files
