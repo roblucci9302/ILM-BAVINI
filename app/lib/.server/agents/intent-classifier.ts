@@ -80,6 +80,9 @@ const INTENT_PATTERNS: Record<IntentType, RegExp[]> = {
     /implemente|implementer|implement/i,
     /developpe|developper|develop/i,
     /nouveau|nouvelle|new/i,
+    /code[rz]?|coding/i,
+    /programme[rz]?|programming/i,
+    /ecri[st]?|ecrire|write/i,
   ],
 
   modify: [
