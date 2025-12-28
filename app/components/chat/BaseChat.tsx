@@ -216,10 +216,15 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   // Show loading skeleton while history is loading
                   if (isLoadingHistory) {
                     return (
-                      <div className="flex flex-col w-full flex-1 max-w-chat px-4 pb-6 mx-auto z-1">
+                      <div
+                        className="flex flex-col w-full flex-1 max-w-chat px-4 pb-6 mx-auto z-1"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Chargement de la conversation en cours"
+                      >
                         <div className="flex items-center justify-center h-full">
                           <div className="flex flex-col items-center gap-3">
-                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-3xl" />
+                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-3xl" aria-hidden="true" />
                             <span className="text-bolt-elements-textSecondary text-sm">
                               Chargement de la conversation...
                             </span>

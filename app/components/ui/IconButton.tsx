@@ -9,6 +9,8 @@ interface BaseIconButtonProps {
   iconClassName?: string;
   disabledClassName?: string;
   title?: string;
+  /** Label accessible pour les lecteurs d'écran. Fallback sur title si non spécifié. */
+  'aria-label'?: string;
   disabled?: boolean;
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
 }
@@ -34,6 +36,7 @@ export const IconButton = memo(
     disabledClassName,
     disabled = false,
     title,
+    'aria-label': ariaLabel,
     onClick,
     children,
   }: IconButtonProps) => {
@@ -47,6 +50,7 @@ export const IconButton = memo(
           className,
         )}
         title={title}
+        aria-label={ariaLabel || title}
         disabled={disabled}
         onClick={(event) => {
           if (disabled) {

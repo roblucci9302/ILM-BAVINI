@@ -86,7 +86,7 @@ export const SettingsModal = memo(() => {
 
                 {/* Close button */}
                 <RadixDialog.Close asChild onClick={closeSettingsModal}>
-                  <IconButton icon="i-ph:x" className="absolute top-4 right-4" />
+                  <IconButton icon="i-ph:x" className="absolute top-4 right-4" title="Fermer les paramètres" />
                 </RadixDialog.Close>
               </motion.div>
             </RadixDialog.Content>
