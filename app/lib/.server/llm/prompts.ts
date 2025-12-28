@@ -901,15 +901,13 @@ export { AGENT_MODE_SYSTEM_PROMPT };
 /**
  * Retourne le prompt système approprié selon le mode
  */
-export type AgentModeType = 'chat' | 'agent' | 'auto';
+export type AgentModeType = 'chat' | 'agent';
 
 export function getSystemPromptForMode(mode: AgentModeType, cwd?: string): string {
   switch (mode) {
     case 'chat':
       return CHAT_MODE_SYSTEM_PROMPT;
     case 'agent':
-      return AGENT_MODE_SYSTEM_PROMPT;
-    case 'auto':
     default:
       return getSystemPrompt(cwd);
   }

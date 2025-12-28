@@ -8,7 +8,7 @@ describe('chatStore', () => {
       started: false,
       aborted: false,
       showChat: true,
-      mode: 'auto',
+      mode: 'agent',
       pendingActions: [],
       awaitingAgentApproval: false,
     });
@@ -54,7 +54,7 @@ describe('chatStore', () => {
         started: true,
         aborted: false,
         showChat: true,
-        mode: 'auto',
+        mode: 'agent',
         pendingActions: [],
         awaitingAgentApproval: false,
       });
