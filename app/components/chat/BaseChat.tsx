@@ -22,21 +22,21 @@ import styles from './BaseChat.module.scss';
 
 /**
  * Bouton toggle pour activer/désactiver le mode Chat
- * - Actif: icône remplie + dot vert
- * - Inactif: icône outline
+ * - Mode Chat actif: icône remplie + dot vert (analyse seule)
+ * - Mode Agent actif: icône outline (BAVINI peut coder)
  */
 const ChatModeToggle = memo(() => {
   const { mode } = useStore(chatStore);
   const isChatMode = mode === 'chat';
 
   const handleToggle = useCallback(() => {
-    // Toggle entre 'chat' et 'auto'
-    setChatMode(isChatMode ? 'auto' : 'chat');
+    // Toggle entre 'chat' et 'agent'
+    setChatMode(isChatMode ? 'agent' : 'chat');
   }, [isChatMode]);
 
   return (
     <IconButton
-      title={isChatMode ? 'Mode Chat actif (cliquez pour désactiver)' : 'Activer le mode Chat (analyse seule)'}
+      title={isChatMode ? 'Mode Chat actif - Cliquez pour passer en mode Agent' : 'Mode Agent actif - Cliquez pour passer en mode Chat'}
       className={classNames(
         'relative transition-colors',
         isChatMode

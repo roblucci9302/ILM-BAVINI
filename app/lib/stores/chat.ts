@@ -3,11 +3,10 @@ import type { ProposedAction } from '~/lib/.server/agents/types';
 
 /**
  * Mode d'opération du chat
- * - 'chat': Mode analyse uniquement (lecture seule)
- * - 'agent': Mode action (modifications autorisées)
- * - 'auto': Détection automatique selon l'intention
+ * - 'chat': Mode analyse uniquement (lecture seule, pas de modifications)
+ * - 'agent': Mode action (BAVINI peut créer/modifier du code) - DÉFAUT
  */
-export type ChatMode = 'chat' | 'agent' | 'auto';
+export type ChatMode = 'chat' | 'agent';
 
 export interface ChatState {
   /** Le chat a-t-il démarré */
@@ -28,7 +27,7 @@ export const chatStore = map<ChatState>({
   started: false,
   aborted: false,
   showChat: true,
-  mode: 'auto',
+  mode: 'agent',
   pendingActions: [],
   awaitingAgentApproval: false,
 });

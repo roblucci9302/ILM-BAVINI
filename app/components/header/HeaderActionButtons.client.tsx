@@ -2,7 +2,6 @@ import { useStore } from '@nanostores/react';
 import { chatStore } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { classNames } from '~/utils/classNames';
-import { ModeSwitch } from '~/components/ui/ModeSwitch';
 
 interface HeaderActionButtonsProps {}
 
@@ -14,7 +13,6 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <ModeSwitch />
       <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden">
         <Button
           active={showChat}
