@@ -50,6 +50,14 @@
     transform: scale(0.95);
   }
 
+  &.disabled,
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: scale(1);
+  }
+
   &::before {
     content: "";
     pointer-events: none;
