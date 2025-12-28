@@ -104,12 +104,15 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingH
   const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
 
-  const { showChat } = useStore(chatStore);
+  const { showChat, mode } = useStore(chatStore);
 
   const [animationScope, animate] = useAnimate();
 
   const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
     api: '/api/chat',
+    body: {
+      mode,
+    },
     onError: (error) => {
       logger.error('Request failed\n\n', error);
       toast.error('Une erreur est survenue lors du traitement de votre demande');
