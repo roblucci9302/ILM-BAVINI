@@ -33,12 +33,26 @@ export function Chat() {
           logger.error('Chat error boundary caught error:', error);
         }}
       >
-        {/* Always render ChatImpl - it handles its own loading state */}
-        <ChatImpl
-          initialMessages={initialMessages}
-          storeMessageHistory={storeMessageHistory}
-          isLoadingHistory={!ready}
-        />
+        {/* Only render ChatImpl when ready - like Bolt.new
+          * This prevents the flash to welcome screen when loading a chat from URL.
+          * Before ready, initialMessages is empty which causes chatStarted=false,
+          * briefly showing the welcome screen before the useEffect corrects it.
+          */}
+        {ready ? (
+          <ChatImpl
+            initialMessages={initialMessages}
+            storeMessageHistory={storeMessageHistory}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full bg-bolt-elements-background-depth-1">
+            <div className="flex flex-col items-center gap-3">
+              <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-3xl" />
+              <span className="text-bolt-elements-textSecondary text-sm">
+                Chargement...
+              </span>
+            </div>
+          </div>
+        )}
       </ErrorBoundary>
       <ToastContainer
         closeButton={({ closeToast }) => {
@@ -74,7 +88,6 @@ export function Chat() {
 interface ChatProps {
   initialMessages: Message[];
   storeMessageHistory: (messages: Message[]) => Promise<void>;
-  isLoadingHistory?: boolean;
 }
 
 interface FilePreview {
@@ -95,7 +108,7 @@ const fileToDataURL = (file: File): Promise<string> => {
   });
 };
 
-export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingHistory = false }: ChatProps) => {
+export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProps) => {
   useShortcuts();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -128,22 +141,11 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingH
 
   const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
-  // Sync chatStarted with initialMessages ONLY on mount (like Bolt.new)
-  // This prevents the flash to welcome screen when initialMessages reference changes
+  // Sync chatStore on mount - like Bolt.new
+  // Since we only render when ready=true, initialMessages is already populated at mount
   useEffect(() => {
-    if (initialMessages.length > 0) {
-      setChatStarted(true);
-      chatStore.setKey('started', true);
-    }
+    chatStore.setKey('started', initialMessages.length > 0);
   }, []);
-
-  // Update chatStarted when initialMessages loads from DB (but NEVER reset to false)
-  useEffect(() => {
-    if (initialMessages.length > 0 && !chatStarted) {
-      setChatStarted(true);
-      chatStore.setKey('started', true);
-    }
-  }, [initialMessages.length]);
 
   useEffect(() => {
     parseMessages(messages, isLoading);
@@ -359,7 +361,6 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingH
         showChat={showChat}
         chatStarted={chatStarted}
         isStreaming={isLoading}
-        isLoadingHistory={isLoadingHistory}
         enhancingPrompt={enhancingPrompt}
         promptEnhanced={promptEnhanced}
         selectedFiles={selectedFiles}
