@@ -6,6 +6,7 @@
 import type { PGlite } from '@electric-sql/pglite';
 import type { Message } from 'ai';
 import { createScopedLogger } from '~/utils/logger';
+import { markIndexedDBClosed } from './db';
 
 const logger = createScopedLogger('Migration');
 
@@ -152,8 +153,9 @@ export async function migrateFromIndexedDB(pglite: PGlite): Promise<{ migrated: 
 
     logger.info(`Found ${chats.length} chats to migrate`);
 
-    // close legacy connection
+    // close legacy connection and mark as closed to prevent further access
     legacyDb.close();
+    markIndexedDBClosed();
 
     if (chats.length === 0) {
       markMigrationComplete();
