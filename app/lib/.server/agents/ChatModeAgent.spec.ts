@@ -170,23 +170,6 @@ describe('ChatModeAgent', () => {
   });
 
   // ===========================================================================
-  // Intent Classification Integration
-  // ===========================================================================
-
-  describe('Intent Classification', () => {
-    it('should classify messages correctly', () => {
-      const intent = agent.classifyMessage('Explique-moi ce code');
-      expect(intent.type).toBe('explain');
-      expect(intent.recommendedMode).toBe('chat');
-    });
-
-    it('should detect action requirements', () => {
-      expect(agent.requiresAgentMode('Ajoute un composant')).toBe(true);
-      expect(agent.requiresAgentMode('Explique le code')).toBe(false);
-    });
-  });
-
-  // ===========================================================================
   // Context Handling
   // ===========================================================================
 

@@ -491,6 +491,7 @@ export type AgentEventType =
   | 'agent:tool_result'
   | 'task:created'
   | 'task:started'
+  | 'task:progress'
   | 'task:completed'
   | 'task:failed'
   | 'orchestrator:decision'

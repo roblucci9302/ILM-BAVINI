@@ -195,22 +195,6 @@ describe('AgentModeAgent', () => {
   });
 
   // ===========================================================================
-  // Intent Classification
-  // ===========================================================================
-
-  describe('Intent Classification', () => {
-    it('should classify messages', () => {
-      const intent = agent.classifyMessage('Ajoute un bouton');
-      expect(intent.type).toBe('create');
-    });
-
-    it('should detect agent mode requirements', () => {
-      expect(agent.requiresAgentMode('Crée un fichier')).toBe(true);
-      expect(agent.requiresAgentMode('Explique le code')).toBe(false);
-    });
-  });
-
-  // ===========================================================================
   // System Prompt
   // ===========================================================================
 

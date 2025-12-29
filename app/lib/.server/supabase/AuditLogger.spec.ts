@@ -56,7 +56,7 @@ describe('AuditLogger', () => {
     });
 
     it('should use persist function if provided', async () => {
-      let persisted: AuditEntry | null = null;
+      let persisted: AuditEntry | null = null as AuditEntry | null;
       const persistFn = async (entry: AuditEntry) => {
         persisted = entry;
       };

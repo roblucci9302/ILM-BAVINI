@@ -309,9 +309,10 @@ export class TypeScriptParser {
    * Vérifier si un nœud est exporté
    */
   isExported(node: ts.Node): boolean {
-    if (!ts.isDeclaration(node)) return false;
+    // Check if node has modifiers (declarations)
+    if (!('modifiers' in node)) return false;
 
-    const modifiers = ts.getModifiers(node);
+    const modifiers = (node as ts.HasModifiers).modifiers;
     if (!modifiers) return false;
 
     return modifiers.some(
