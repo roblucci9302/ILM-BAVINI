@@ -14,7 +14,8 @@ import { createScopedLogger } from '~/utils/logger';
 const logger = createScopedLogger('Git');
 
 // Lazy-initialized filesystem (browser-only)
-let _fs: InstanceType<typeof import('@isomorphic-git/lightning-fs').default> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _fs: any = null;
 
 /**
  * Get the LightningFS instance, initializing it if needed.

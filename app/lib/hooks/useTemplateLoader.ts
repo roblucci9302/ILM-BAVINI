@@ -70,6 +70,7 @@ export function useTemplateLoader(): UseTemplateLoaderResult {
         fileMap[file.path] = {
           type: 'file',
           content: file.content,
+          isBinary: false,
         };
       }
 

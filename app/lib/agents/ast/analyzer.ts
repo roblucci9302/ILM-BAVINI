@@ -414,7 +414,8 @@ export class ASTAnalyzer {
    */
   private getParserDiagnostics(sourceFile: ts.SourceFile): readonly ts.Diagnostic[] {
     // Les erreurs syntaxiques sont stockées dans le sourceFile
-    return sourceFile.parseDiagnostics || [];
+    // Note: parseDiagnostics is an internal property, use type assertion
+    return (sourceFile as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics || [];
   }
 
   // ============================================================================

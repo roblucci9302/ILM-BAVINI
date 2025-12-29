@@ -692,7 +692,7 @@ export abstract class BaseAgent {
   /**
    * Émet un événement
    */
-  private emitEvent(
+  protected emitEvent(
     type: AgentEvent['type'],
     data: Record<string, unknown>
   ): void {

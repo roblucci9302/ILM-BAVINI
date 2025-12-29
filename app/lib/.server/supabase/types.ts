@@ -376,6 +376,7 @@ export interface ReviewRequest {
     before: string;
     after: string;
     diff: string;
+    summary: string;
   };
   suggestedAction: 'approve' | 'modify' | 'reject';
   warnings: string[];

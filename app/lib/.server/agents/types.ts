@@ -143,7 +143,7 @@ export interface AgentModeResponse {
   /** Type de réponse */
   type: 'execution' | 'plan' | 'response';
   /** Statut de l'exécution */
-  status?: 'awaiting_approval' | 'no_action' | 'completed' | 'failed';
+  status?: 'ready' | 'awaiting_approval' | 'no_action' | 'completed' | 'failed';
   /** Plan d'exécution */
   plan?: ExecutionPlan;
   /** Résultats des actions */

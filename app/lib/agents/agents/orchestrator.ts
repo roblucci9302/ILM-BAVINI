@@ -513,7 +513,7 @@ Choisis la meilleure approche.`;
           subtaskId: current.id,
           success: current.success,
         });
-        this.emitEvent('task:progress' as keyof import('../types').AgentEventMap, {
+        this.emitEvent('task:progress', {
           completed,
           total,
           current: current.id,

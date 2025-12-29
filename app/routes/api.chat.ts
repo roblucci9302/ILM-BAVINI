@@ -45,7 +45,7 @@ async function handleChatMode(
     // Créer un stream compatible avec le AI SDK format
     // Format: 0:"texte"\n pour les chunks de texte
     const encoder = new TextEncoder();
-    const text = response.response || response.content || '';
+    const text = response.content || '';
 
     const stream = new ReadableStream({
       start(controller) {
