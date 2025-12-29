@@ -18,11 +18,36 @@ export type Database = PGlite | IDBDatabase;
 // flag to track if we're using PGlite or legacy IndexedDB
 let usingPGlite = false;
 
+// flag to track if IndexedDB has been closed (after migration)
+let indexedDBClosed = false;
+
 /**
  * Check if the database is PGlite.
  */
 function isPGlite(db: Database): db is PGlite {
   return usingPGlite && 'query' in db;
+}
+
+/**
+ * Check if IndexedDB is still usable (not closed).
+ */
+function isIndexedDBUsable(db: Database): boolean {
+  if (isPGlite(db)) return true;
+  if (indexedDBClosed) return false;
+
+  // Check if the IDBDatabase connection is still open
+  try {
+    return (db as IDBDatabase).objectStoreNames.length >= 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mark IndexedDB as closed (called after migration).
+ */
+export function markIndexedDBClosed(): void {
+  indexedDBClosed = true;
 }
 
 /**
@@ -94,14 +119,24 @@ export async function getAll(db: Database): Promise<ChatHistoryItem[]> {
     return result.rows.map(rowToChatItem);
   }
 
-  // legacy IndexedDB
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction('chats', 'readonly');
-    const store = transaction.objectStore('chats');
-    const request = store.getAll();
+  // legacy IndexedDB - check if still usable
+  if (!isIndexedDBUsable(db)) {
+    logger.warn('IndexedDB connection closed, returning empty list');
+    return [];
+  }
 
-    request.onsuccess = () => resolve(request.result as ChatHistoryItem[]);
-    request.onerror = () => reject(request.error);
+  return new Promise((resolve, reject) => {
+    try {
+      const transaction = db.transaction('chats', 'readonly');
+      const store = transaction.objectStore('chats');
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result as ChatHistoryItem[]);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      logger.warn('IndexedDB transaction failed:', error);
+      resolve([]);
+    }
   });
 }
 

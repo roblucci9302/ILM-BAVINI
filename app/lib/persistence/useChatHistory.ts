@@ -19,12 +19,14 @@ const persistenceEnabled = !import.meta.env.VITE_DISABLE_PERSISTENCE;
 // Database instance - initialized lazily, not at module load
 let dbInstance: Database | undefined;
 let dbInitPromise: Promise<Database | undefined> | null = null;
+let dbInitComplete = false;
 
 /**
  * Lazy database initialization with timeout
  * Returns the database instance or undefined if init fails/times out
  */
 export async function getDatabase(): Promise<Database | undefined> {
+  // Return cached instance if available
   if (dbInstance) {
     return dbInstance;
   }
@@ -38,22 +40,37 @@ export async function getDatabase(): Promise<Database | undefined> {
     return dbInitPromise;
   }
 
-  // Start initialization with timeout
-  dbInitPromise = Promise.race([
-    openDatabase(),
-    new Promise<undefined>((resolve) => {
-      // 5 second timeout for database init
-      setTimeout(() => {
-        console.warn('[DB] Database initialization timed out after 5s');
+  // Start initialization with timeout (15s for WASM loading)
+  const initPromise = openDatabase();
+  const timeoutPromise = new Promise<undefined>((resolve) => {
+    setTimeout(() => {
+      if (!dbInitComplete) {
+        console.warn('[DB] Database initialization timed out after 15s');
         resolve(undefined);
-      }, 5000);
-    }),
-  ]).then((db) => {
-    dbInstance = db;
-    return db;
-  }).catch((error) => {
-    console.error('[DB] Database initialization failed:', error);
-    return undefined;
+      }
+    }, 15000);
+  });
+
+  dbInitPromise = Promise.race([initPromise, timeoutPromise])
+    .then((db) => {
+      dbInitComplete = true;
+      dbInstance = db;
+      return db;
+    })
+    .catch((error) => {
+      console.error('[DB] Database initialization failed:', error);
+      dbInitComplete = true;
+      return undefined;
+    });
+
+  // Also handle the case where init completes after timeout
+  initPromise.then((db) => {
+    if (db && !dbInstance) {
+      dbInstance = db;
+      console.info('[DB] Database initialized (after timeout)');
+    }
+  }).catch(() => {
+    // Already handled above
   });
 
   return dbInitPromise;
