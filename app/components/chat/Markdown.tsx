@@ -23,10 +23,18 @@ export const Markdown = memo(({ children, html = false, limitedMarkdown = false 
     return {
       div: ({ className, children, node, ...props }) => {
         if (className?.includes('__boltArtifact__')) {
-          const messageId = node?.properties.dataMessageId as string;
+          // Try multiple ways to get messageId (React Markdown may use different formats)
+          const properties = node?.properties || {};
+          const messageId = (
+            properties.dataMessageId ||           // camelCase (rehype default)
+            properties['data-message-id'] ||      // kebab-case (raw HTML)
+            (props as Record<string, unknown>)['data-message-id'] ||  // from props
+            (props as Record<string, unknown>).dataMessageId          // camelCase in props
+          ) as string | undefined;
 
           if (!messageId) {
-            logger.error(`Invalid message id ${messageId}`);
+            logger.error('Invalid message id for artifact', { properties, props });
+            return null;  // Don't crash, just don't render
           }
 
           return <Artifact messageId={messageId} />;

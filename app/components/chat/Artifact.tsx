@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { computed } from 'nanostores';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { createHighlighter, type BundledLanguage, type BundledTheme, type HighlighterGeneric } from 'shiki';
 import type { ActionState } from '~/lib/runtime/action-runner';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -31,11 +31,20 @@ export const Artifact = memo(({ messageId }: ArtifactProps) => {
   const artifacts = useStore(workbenchStore.artifacts);
   const artifact = artifacts[messageId];
 
-  const actions = useStore(
-    computed(artifact.runner.actions, (actions) => {
-      return Object.values(actions);
-    }),
-  );
+  // Create a stable computed store that handles missing artifact gracefully
+  const actionsStore = useMemo(() => {
+    if (!artifact?.runner?.actions) {
+      return computed(() => [] as ActionState[]);
+    }
+    return computed(artifact.runner.actions, (actions) => Object.values(actions));
+  }, [artifact?.runner?.actions]);
+
+  const actions = useStore(actionsStore);
+
+  // Don't render if artifact doesn't exist yet
+  if (!artifact) {
+    return null;
+  }
 
   const toggleActions = () => {
     userToggledActions.current = true;
