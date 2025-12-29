@@ -4,6 +4,8 @@
  * Lightweight client for GitHub REST API.
  */
 
+import { BaseHttpClient } from '../base-http-client';
+
 // Types
 export interface GitHubUser {
   id: number;
@@ -86,68 +88,16 @@ export interface CreatePROptions {
 }
 
 // Client
-export class GitHubClient {
-  private readonly token: string;
-  private readonly baseUrl = 'https://api.github.com';
-
+export class GitHubClient extends BaseHttpClient {
   constructor(config: { token: string }) {
-    if (!config.token) {
-      throw new Error('GitHub token is required');
-    }
-
-    this.token = config.token;
-  }
-
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${this.token}`,
+    super({
+      baseUrl: 'https://api.github.com',
+      token: config.token,
+      serviceName: 'GitHub',
+      additionalHeaders: {
         Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
       },
-      body: body ? JSON.stringify(body) : undefined,
     });
-
-    if (!response.ok) {
-      const error = (await response.json().catch(() => ({}))) as { message?: string };
-      throw new Error(error.message || `GitHub API error: ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return {} as T;
-    }
-
-    return response.json();
-  }
-
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>('GET', path);
-  }
-
-  async post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('POST', path, body);
-  }
-
-  async patch<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('PATCH', path, body);
-  }
-
-  async put<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('PUT', path, body);
-  }
-
-  async delete<T>(path: string): Promise<T> {
-    return this.request<T>('DELETE', path);
-  }
-
-  async validateToken(): Promise<boolean> {
-    try {
-      await this.get('/user');
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   async getUser(): Promise<GitHubUser> {

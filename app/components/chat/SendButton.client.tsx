@@ -15,7 +15,7 @@ export function SendButton({ show, isStreaming, onClick }: SendButtonProps) {
       {show ? (
         <motion.button
           className={classNames(
-            'absolute flex justify-center items-center bottom-[68px] right-[12px] p-2.5 rounded-full transition-theme border',
+            'absolute flex justify-center items-center top-4 right-2.5 p-2 rounded-full transition-theme border',
             isStreaming
               ? 'bg-bolt-elements-item-backgroundDanger text-bolt-elements-item-contentDanger border-bolt-elements-item-contentDanger/20 hover:bg-bolt-elements-button-danger-backgroundHover'
               : 'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent border-bolt-elements-item-contentAccent/20 hover:bg-bolt-elements-button-primary-backgroundHover'

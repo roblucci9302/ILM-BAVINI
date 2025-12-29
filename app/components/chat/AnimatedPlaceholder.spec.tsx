@@ -1,62 +1,67 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { AnimatedPlaceholder } from './AnimatedPlaceholder';
 
-// mock framer-motion to avoid animation complexities in tests
-vi.mock('framer-motion', () => ({
-  motion: {
-    span: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 describe('AnimatedPlaceholder', () => {
-  it('should not render when show is false', () => {
-    const { container } = render(<AnimatedPlaceholder show={false} />);
-
+  it('should not render when chatStarted is true', () => {
+    const { container } = render(<AnimatedPlaceholder chatStarted={true} />);
     expect(container.firstChild).toBeNull();
   });
 
-  it('should render when show is true', () => {
-    render(<AnimatedPlaceholder show={true} />);
-
-    expect(screen.getByText('Créer')).toBeInTheDocument();
+  it('should render when chatStarted is false', () => {
+    render(<AnimatedPlaceholder chatStarted={false} />);
+    expect(screen.getByText('Décrivez votre projet...')).toBeInTheDocument();
   });
 
-  it('should have aria-hidden attribute for accessibility', () => {
-    render(<AnimatedPlaceholder show={true} />);
-
-    const container = screen.getByText('Créer').parentElement;
-
-    expect(container).toHaveAttribute('aria-hidden', 'true');
+  it('should have aria-hidden attribute', () => {
+    const { container } = render(<AnimatedPlaceholder chatStarted={false} />);
+    expect(container.firstChild).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('should have pointer-events-none class', () => {
-    render(<AnimatedPlaceholder show={true} />);
+  it('should hide when textarea has content', async () => {
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    const textareaRef = { current: textarea };
 
-    const container = screen.getByText('Créer').parentElement;
-
-    expect(container).toHaveClass('pointer-events-none');
-  });
-
-  it('should render the cursor character', () => {
-    render(<AnimatedPlaceholder show={true} />);
-
-    expect(screen.getByText('|')).toBeInTheDocument();
-  });
-
-  it('should start typing after initial render', async () => {
-    render(<AnimatedPlaceholder show={true} />);
-
-    // wait for the first character to be typed
-    await waitFor(
-      () => {
-        const container = screen.getByText('Créer').parentElement;
-
-        // the animated text should contain at least one character
-        expect(container?.textContent).toContain('u');
-      },
-      { timeout: 500 },
+    const { container } = render(
+      <AnimatedPlaceholder chatStarted={false} textareaRef={textareaRef} />,
     );
+
+    expect(container.firstChild).not.toBeNull();
+
+    textarea.value = 'hello';
+    fireEvent.input(textarea);
+
+    await waitFor(() => {
+      expect(container.firstChild).toBeNull();
+    });
+
+    document.body.removeChild(textarea);
+  });
+
+  it('should show again when textarea is cleared', async () => {
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    const textareaRef = { current: textarea };
+
+    const { container } = render(
+      <AnimatedPlaceholder chatStarted={false} textareaRef={textareaRef} />,
+    );
+
+    textarea.value = 'hello';
+    fireEvent.input(textarea);
+
+    await waitFor(() => {
+      expect(container.firstChild).toBeNull();
+    });
+
+    textarea.value = '';
+    fireEvent.input(textarea);
+
+    await waitFor(() => {
+      expect(container.firstChild).not.toBeNull();
+    });
+
+    document.body.removeChild(textarea);
   });
 });

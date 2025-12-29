@@ -10,8 +10,13 @@ const messageParser = new StreamingMessageParser({
   callbacks: {
     onArtifactOpen: (data) => {
       logger.debug('🎨 Artifact detected - Opening workbench', { id: data.id, title: data.title });
+      console.log('%c[WORKBENCH DEBUG] 🎨 Artifact detected! Opening workbench...', 'background: #4CAF50; color: white; font-size: 14px; padding: 4px 8px;', data);
 
+      const beforeState = workbenchStore.showWorkbench.get();
       workbenchStore.showWorkbench.set(true);
+      const afterState = workbenchStore.showWorkbench.get();
+      console.log('%c[WORKBENCH DEBUG] showWorkbench state:', 'background: #2196F3; color: white; font-size: 14px; padding: 4px 8px;', { before: beforeState, after: afterState });
+
       workbenchStore.addArtifact(data);
     },
     onArtifactClose: (data) => {

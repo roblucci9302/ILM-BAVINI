@@ -55,6 +55,45 @@ const DEFAULT_SYNC_OPTIONS: SyncOptions = {
   excludePaths: ['node_modules', '.git', '.cache'],
 };
 
+// Batch size for parallel operations
+const BATCH_SIZE = 10;
+
+/**
+ * Process items in parallel batches for better performance.
+ */
+async function processBatch<T>(
+  items: T[],
+  processor: (item: T) => Promise<void>,
+  onProgress?: (completed: number, total: number, item: T) => void,
+): Promise<{ succeeded: number; errors: Array<{ item: T; error: string }> }> {
+  let succeeded = 0;
+  const errors: Array<{ item: T; error: string }> = [];
+  let completed = 0;
+  const total = items.length;
+
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(batch.map(processor));
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j];
+      const item = batch[j];
+
+      completed++;
+
+      if (result.status === 'fulfilled') {
+        succeeded++;
+      } else {
+        errors.push({ item, error: String(result.reason) });
+      }
+
+      onProgress?.(completed, total, item);
+    }
+  }
+
+  return { succeeded, errors };
+}
+
 /**
  * Sync WebContainer files to match a checkpoint snapshot.
  */
@@ -81,63 +120,61 @@ export async function syncToSnapshot(
     const { toWrite, toDelete } = calculateDiff(snapshot, currentFiles, opts.excludePaths ?? []);
 
     const totalOperations = toWrite.length + toDelete.length;
-    let completed = 0;
+    let progressOffset = 0;
 
-    // Create necessary directories first
+    // Create necessary directories first (in parallel batches)
     if (opts.createDirectories) {
       const directories = getRequiredDirectories(toWrite);
 
-      for (const dir of directories) {
-        try {
-          await ensureDirectory(webcontainer, dir);
-          result.foldersCreated++;
-        } catch (error) {
-          result.errors.push({
-            path: dir,
-            operation: 'mkdir',
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-        }
+      const dirResults = await processBatch(directories, async (dir) => {
+        await ensureDirectory(webcontainer, dir);
+      });
+
+      result.foldersCreated = dirResults.succeeded;
+
+      for (const { item, error } of dirResults.errors) {
+        result.errors.push({ path: item, operation: 'mkdir', error });
       }
     }
 
-    // Write new/modified files
-    for (const path of toWrite) {
-      try {
+    // Write new/modified files (in parallel batches)
+    const writeResults = await processBatch(
+      toWrite,
+      async (path) => {
         const file = snapshot[path];
 
         if (file?.type === 'file') {
           await writeFile(webcontainer, path, file);
-          result.filesWritten++;
         }
+      },
+      (completed, _total, path) => {
+        opts.onProgress?.(progressOffset + completed, totalOperations, path);
+      },
+    );
 
-        completed++;
-        opts.onProgress?.(completed, totalOperations, path);
-      } catch (error) {
-        result.errors.push({
-          path,
-          operation: 'write',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
+    result.filesWritten = writeResults.succeeded;
+    progressOffset += toWrite.length;
+
+    for (const { item, error } of writeResults.errors) {
+      result.errors.push({ path: item, operation: 'write', error });
     }
 
-    // Delete extra files
+    // Delete extra files (in parallel batches)
     if (opts.deleteExtraFiles) {
-      for (const path of toDelete) {
-        try {
+      const deleteResults = await processBatch(
+        toDelete,
+        async (path) => {
           await deleteFile(webcontainer, path);
-          result.filesDeleted++;
+        },
+        (completed, _total, path) => {
+          opts.onProgress?.(progressOffset + completed, totalOperations, path);
+        },
+      );
 
-          completed++;
-          opts.onProgress?.(completed, totalOperations, path);
-        } catch (error) {
-          result.errors.push({
-            path,
-            operation: 'delete',
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-        }
+      result.filesDeleted = deleteResults.succeeded;
+
+      for (const { item, error } of deleteResults.errors) {
+        result.errors.push({ path: item, operation: 'delete', error });
       }
     }
 

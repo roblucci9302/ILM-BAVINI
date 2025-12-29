@@ -48,14 +48,16 @@ const sliderOptions: SliderOptions<WorkbenchViewType> = {
 
 const workbenchVariants = {
   closed: {
-    width: 0,
+    opacity: 0,
+    pointerEvents: 'none' as const,
     transition: {
       duration: 0.2,
       ease: cubicEasingFn,
     },
   },
   open: {
-    width: 'var(--workbench-width)',
+    opacity: 1,
+    pointerEvents: 'auto' as const,
     transition: {
       duration: 0.2,
       ease: cubicEasingFn,
@@ -69,6 +71,15 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
   const showWorkbench = useStore(workbenchStore.showWorkbench);
   const selectedFile = useStore(workbenchStore.selectedFile);
+  
+  // Debug logging
+  useEffect(() => {
+    logger.debug('Workbench state changed', { showWorkbench, chatStarted });
+    console.log('%c[WORKBENCH RENDER] State changed:', 'background: #9C27B0; color: white; font-size: 14px; padding: 4px 8px;', { showWorkbench, chatStarted, hasPreview });
+    if (showWorkbench) {
+      console.log('%c[WORKBENCH RENDER] ✅ Workbench should be VISIBLE now!', 'background: #4CAF50; color: white; font-size: 16px; font-weight: bold; padding: 8px;');
+    }
+  }, [showWorkbench, chatStarted, hasPreview]);
   const currentDocument = useStore(workbenchStore.currentDocument);
   const unsavedFiles = useStore(workbenchStore.unsavedFiles);
   const files = useStore(workbenchStore.files);
@@ -243,19 +254,23 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
     workbenchStore.resetCurrentDocument();
   }, []);
 
-  // Render workbench when chat has started OR when an artifact is detected
-  // This fixes the race condition where artifact detection happens before chat animation completes
-  const shouldRender = chatStarted || showWorkbench;
-
+  // Always render workbench component to avoid re-mount issues
+  // The visibility is controlled by motion.div animation (open/closed variants)
+  
+  // Debug: log showWorkbench value
+  logger.debug('Rendering Workbench', { showWorkbench, chatStarted, hasPreview });
+  
   return (
-    shouldRender ? (
-      <>
-        <motion.div
-          initial="closed"
-          animate={showWorkbench ? 'open' : 'closed'}
-          variants={workbenchVariants}
-          className="z-workbench flex-shrink-0 h-full overflow-hidden"
-        >
+    <>
+      <div
+        className="z-workbench flex-shrink-0 h-full overflow-hidden transition-all duration-300"
+        style={{
+          width: chatStarted && showWorkbench ? 'min(55vw, calc(100vw - 450px))' : 0,
+          minWidth: chatStarted && showWorkbench ? '350px' : 0,
+          maxWidth: chatStarted && showWorkbench ? '900px' : 0,
+          opacity: chatStarted && showWorkbench ? 1 : 0,
+        }}
+      >
           <div className="h-full w-full py-4 pr-4">
             <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
               <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor">
@@ -360,7 +375,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
       {/* Restore Modal */}
       <RestoreModal
@@ -373,8 +388,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
         }}
         isLoading={isRestoring}
       />
-      </>
-    ) : null
+    </>
   );
 });
 

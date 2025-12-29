@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { computed } from 'nanostores';
+import { atom, computed } from 'nanostores';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { createHighlighter, type BundledLanguage, type BundledTheme, type HighlighterGeneric } from 'shiki';
 import type { ActionState } from '~/lib/runtime/action-runner';
@@ -34,9 +34,13 @@ export const Artifact = memo(({ messageId }: ArtifactProps) => {
   // Create a stable computed store that handles missing artifact gracefully
   const actionsStore = useMemo(() => {
     if (!artifact?.runner?.actions) {
-      return computed(() => [] as ActionState[]);
+      // Use atom for empty state - computed requires a store as first argument
+      return atom<ActionState[]>([]);
     }
-    return computed(artifact.runner.actions, (actions) => Object.values(actions));
+
+    return computed(artifact.runner.actions, (actionsMap): ActionState[] =>
+      Object.values(actionsMap),
+    );
   }, [artifact?.runner?.actions]);
 
   const actions = useStore(actionsStore);

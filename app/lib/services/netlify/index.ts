@@ -4,6 +4,8 @@
  * Lightweight client for Netlify API.
  */
 
+import { BaseHttpClient } from '../base-http-client';
+
 // Types
 export interface NetlifySite {
   id: string;
@@ -42,67 +44,13 @@ export interface CreateSiteOptions {
 }
 
 // Client
-export class NetlifyClient {
-  private readonly accessToken: string;
-  private readonly baseUrl = 'https://api.netlify.com/api/v1';
-
+export class NetlifyClient extends BaseHttpClient {
   constructor(config: { accessToken: string }) {
-    if (!config.accessToken) {
-      throw new Error('Netlify access token is required');
-    }
-
-    this.accessToken = config.accessToken;
-  }
-
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
+    super({
+      baseUrl: 'https://api.netlify.com/api/v1',
+      token: config.accessToken,
+      serviceName: 'Netlify',
     });
-
-    if (!response.ok) {
-      const error = (await response.json().catch(() => ({}))) as { message?: string };
-      throw new Error(error.message || `Netlify API error: ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return {} as T;
-    }
-
-    return response.json();
-  }
-
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>('GET', path);
-  }
-
-  async post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('POST', path, body);
-  }
-
-  async put<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('PUT', path, body);
-  }
-
-  async patch<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('PATCH', path, body);
-  }
-
-  async delete<T>(path: string): Promise<T> {
-    return this.request<T>('DELETE', path);
-  }
-
-  async validateToken(): Promise<boolean> {
-    try {
-      await this.get('/user');
-      return true;
-    } catch {
-      return false;
-    }
   }
 }
 

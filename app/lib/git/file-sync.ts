@@ -105,9 +105,40 @@ async function listDirsRecursive(dir: string, basePath: string = ''): Promise<st
   return dirs;
 }
 
+// Batch size for parallel operations (avoid overwhelming the system)
+const BATCH_SIZE = 10;
+
+/**
+ * Process items in parallel batches.
+ */
+async function processBatch<T, R>(
+  items: T[],
+  processor: (item: T) => Promise<R>,
+  batchSize: number = BATCH_SIZE,
+): Promise<{ results: R[]; errors: string[] }> {
+  const results: R[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.allSettled(batch.map(processor));
+
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        errors.push(String(result.reason));
+      }
+    }
+  }
+
+  return { results, errors };
+}
+
 /**
  * Sync files from LightningFS to WebContainer.
  * Call this after clone, pull, or checkout operations.
+ * Optimized with parallel batch processing for better performance.
  */
 export async function syncToWebContainer(webcontainer: WebContainer, gitDir: string): Promise<SyncStats> {
   const fs = getFs();
@@ -116,40 +147,35 @@ export async function syncToWebContainer(webcontainer: WebContainer, gitDir: str
   logger.info(`Syncing from LightningFS to WebContainer: ${gitDir}`);
 
   try {
-    // first, create all directories
+    // first, create all directories in parallel batches
     const dirs = await listDirsRecursive(gitDir);
 
-    for (const dir of dirs) {
-      try {
-        await webcontainer.fs.mkdir(dir, { recursive: true });
-        stats.folders++;
-      } catch {
-        // directory might already exist
-        logger.debug(`Directory already exists or error: ${dir}`);
-      }
-    }
+    const dirResults = await processBatch(dirs, async (dir) => {
+      await webcontainer.fs.mkdir(dir, { recursive: true });
+      return dir;
+    });
 
-    // then, copy all files
+    stats.folders = dirResults.results.length;
+    stats.errors.push(...dirResults.errors.map((e) => `Dir error: ${e}`));
+
+    // then, copy all files in parallel batches
     const files = await listFilesRecursive(gitDir);
 
-    for (const file of files) {
-      try {
-        const content = await fs.promises.readFile(`${gitDir}/${file}`);
+    const fileResults = await processBatch(files, async (file) => {
+      const content = await fs.promises.readFile(`${gitDir}/${file}`);
 
-        // content can be string or Uint8Array
-        if (typeof content === 'string') {
-          await webcontainer.fs.writeFile(file, content);
-        } else {
-          await webcontainer.fs.writeFile(file, content as Uint8Array);
-        }
-
-        stats.files++;
-      } catch (error) {
-        const errorMsg = `Failed to sync file ${file}: ${error}`;
-        stats.errors.push(errorMsg);
-        logger.error(errorMsg);
+      // content can be string or Uint8Array
+      if (typeof content === 'string') {
+        await webcontainer.fs.writeFile(file, content);
+      } else {
+        await webcontainer.fs.writeFile(file, content as Uint8Array);
       }
-    }
+
+      return file;
+    });
+
+    stats.files = fileResults.results.length;
+    stats.errors.push(...fileResults.errors.map((e) => `File error: ${e}`));
 
     logger.info(`Sync complete: ${stats.files} files, ${stats.folders} folders`);
   } catch (error) {
@@ -199,6 +225,7 @@ export async function syncFileToLightningFS(
 /**
  * Sync all modified files from WebContainer to LightningFS.
  * Call this before git add/commit operations.
+ * Optimized with parallel batch processing.
  */
 export async function syncAllToLightningFS(
   webcontainer: WebContainer,
@@ -207,20 +234,18 @@ export async function syncAllToLightningFS(
 ): Promise<SyncStats> {
   const stats: SyncStats = { files: 0, folders: 0, errors: [] };
 
-  logger.info(`Syncing ${files.length} files to LightningFS`);
+  // Filter out excluded files first
+  const filesToSync = files.filter((file) => !shouldExclude(file));
 
-  for (const file of files) {
-    if (shouldExclude(file)) {
-      continue;
-    }
+  logger.info(`Syncing ${filesToSync.length} files to LightningFS`);
 
-    try {
-      await syncFileToLightningFS(webcontainer, gitDir, file);
-      stats.files++;
-    } catch (error) {
-      stats.errors.push(`Failed to sync ${file}: ${error}`);
-    }
-  }
+  const results = await processBatch(filesToSync, async (file) => {
+    await syncFileToLightningFS(webcontainer, gitDir, file);
+    return file;
+  });
+
+  stats.files = results.results.length;
+  stats.errors.push(...results.errors);
 
   logger.info(`Sync to LightningFS complete: ${stats.files} files`);
 

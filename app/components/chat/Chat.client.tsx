@@ -4,6 +4,7 @@ import { useChat } from 'ai/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useEffect, useRef, useState } from 'react';
 import { cssTransition, toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from '~/components/ui/ErrorBoundary';
 import { useMessageParser, usePromptEnhancer, useShortcuts, useSnapScroll } from '~/lib/hooks';
 import { useChatHistory } from '~/lib/persistence';
@@ -20,6 +21,70 @@ const toastAnimation = cssTransition({
 });
 
 const logger = createScopedLogger('Chat');
+
+// Mots-clés indiquant une demande de continuation
+const CONTINUE_KEYWORDS = [
+  'continue',
+  'continuer',
+  'continues',
+  'poursuit',
+  'poursuis',
+  'reprend',
+  'reprends',
+  'finis',
+  'termine',
+  'complete',
+  'go on',
+  'keep going',
+];
+
+/**
+ * Vérifie si le message est une demande de continuation
+ */
+function isContinuationRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase().trim();
+  return CONTINUE_KEYWORDS.some((keyword) => {
+    // Match le mot-clé seul ou au début/fin du message
+    const regex = new RegExp(`(^|\\s)${keyword}($|\\s|\\.|!|\\?)`, 'i');
+    return regex.test(lowerMessage) || lowerMessage === keyword;
+  });
+}
+
+/**
+ * Vérifie si le dernier message assistant semble incomplet (artifact non fermé)
+ */
+function isLastResponseIncomplete(messages: Message[]): { incomplete: boolean; lastContent: string } {
+  // Trouver le dernier message assistant
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role === 'assistant' && msg.content) {
+      const content = msg.content;
+
+      // Vérifier si l'artifact est ouvert mais pas fermé
+      const hasOpenArtifact = content.includes('<boltArtifact');
+      const hasCloseArtifact = content.includes('</boltArtifact>');
+
+      // Vérifier si une action est ouverte mais pas fermée
+      const hasOpenAction = content.includes('<boltAction');
+      const lastOpenAction = content.lastIndexOf('<boltAction');
+      const lastCloseAction = content.lastIndexOf('</boltAction>');
+
+      const incomplete = (hasOpenArtifact && !hasCloseArtifact) ||
+                        (hasOpenAction && lastOpenAction > lastCloseAction);
+
+      return { incomplete, lastContent: content };
+    }
+  }
+  return { incomplete: false, lastContent: '' };
+}
+
+/**
+ * Extrait le contexte de continuation (ID artifact, etc.)
+ */
+function getContinuationContext(lastContent: string): { artifactId: string | null } {
+  const artifactIdMatch = lastContent.match(/<boltArtifact[^>]*id="([^"]+)"/);
+  return { artifactId: artifactIdMatch ? artifactIdMatch[1] : null };
+}
 
 export function Chat() {
   renderLogger.trace('Chat');
@@ -116,6 +181,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
+  const [continuationContext, setContinuationContext] = useState<{ artifactId: string | null } | null>(null);
 
   const { showChat, mode } = useStore(chatStore);
 
@@ -125,6 +191,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     api: '/api/chat',
     body: {
       mode,
+      continuationContext,
     },
     onError: (error) => {
       logger.error('Request failed\n\n', error);
@@ -132,6 +199,8 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     },
     onFinish: () => {
       logger.debug('Finished streaming');
+      // Reset continuation context after message is sent
+      setContinuationContext(null);
     },
     initialMessages,
   });
@@ -222,6 +291,16 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
     // build the message content
     let messageContent = _input;
+
+    // Détecter les demandes de continuation et définir le contexte (sans modifier le message affiché)
+    if (isContinuationRequest(_input)) {
+      const { incomplete, lastContent } = isLastResponseIncomplete(messages);
+      if (incomplete || lastContent) {
+        logger.debug('Continuation request detected, setting context');
+        const context = getContinuationContext(lastContent);
+        setContinuationContext(context);
+      }
+    }
 
     // if there are file modifications, prefix them
     if (fileModifications !== undefined) {

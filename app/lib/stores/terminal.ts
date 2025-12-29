@@ -2,7 +2,9 @@ import type { WebContainer, WebContainerProcess } from '@webcontainer/api';
 import { atom, type WritableAtom } from 'nanostores';
 import type { ITerminal } from '~/types/terminal';
 import { newShellProcess } from '~/utils/shell';
-import { coloredText } from '~/utils/terminal';
+
+// Terminal color escape codes (inlined from removed utils/terminal.ts)
+const redText = (text: string) => `\x1b[1;31m${text}\x1b[0m`;
 
 export class TerminalStore {
   #webcontainer: Promise<WebContainer>;
@@ -27,7 +29,7 @@ export class TerminalStore {
       const shellProcess = await newShellProcess(await this.#webcontainer, terminal);
       this.#terminals.push({ terminal, process: shellProcess });
     } catch (error: any) {
-      terminal.write(coloredText.red('Failed to spawn shell\n\n') + error.message);
+      terminal.write(redText('Failed to spawn shell\n\n') + error.message);
       return;
     }
   }

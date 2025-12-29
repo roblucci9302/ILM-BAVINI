@@ -103,6 +103,8 @@ export class ActionRunner {
   async #executeAction(actionId: string) {
     const action = this.actions.get()[actionId];
 
+    console.log('%c[ACTION RUNNER] Executing action:', 'background: #E91E63; color: white; font-size: 14px; padding: 4px 8px;', { actionId, type: action.type });
+
     this.#updateAction(actionId, { status: 'running' });
 
     try {
@@ -146,7 +148,11 @@ export class ActionRunner {
       unreachable('Expected shell action');
     }
 
+    console.log('%c[ACTION RUNNER] 🚀 Starting shell action:', 'background: #FF9800; color: white; font-size: 14px; padding: 4px 8px;', action.content);
+
     const webcontainer = await this.#webcontainer;
+
+    console.log('%c[ACTION RUNNER] WebContainer ready, spawning process...', 'background: #2196F3; color: white; font-size: 12px; padding: 2px 6px;');
 
     const process = await webcontainer.spawn('jsh', ['-c', action.content], {
       env: { npm_config_yes: true },
@@ -159,6 +165,7 @@ export class ActionRunner {
     process.output.pipeTo(
       new WritableStream({
         write(data) {
+          console.log('%c[SHELL OUTPUT]', 'background: #4CAF50; color: white; padding: 2px 6px;', data);
           logger.debug('[Shell output]', data);
         },
       }),
@@ -166,6 +173,7 @@ export class ActionRunner {
 
     const exitCode = await process.exit;
 
+    console.log('%c[ACTION RUNNER] Process terminated with code:', 'background: #9C27B0; color: white; font-size: 12px; padding: 2px 6px;', exitCode);
     logger.debug(`Process terminated with code ${exitCode}`);
   }
 

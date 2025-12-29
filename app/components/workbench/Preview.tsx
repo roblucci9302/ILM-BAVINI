@@ -115,7 +115,16 @@ export const Preview = memo(() => {
       </div>
       <div className="flex-1 border-t border-bolt-elements-borderColor">
         {activePreview ? (
-          <iframe ref={iframeRef} className="border-none w-full h-full bg-white" src={iframeUrl} title="Aperçu de l'application" />
+          activePreview.ready ? (
+            <iframe ref={iframeRef} className="border-none w-full h-full bg-white" src={iframeUrl} title="Aperçu de l'application" />
+          ) : (
+            <div className="flex w-full h-full justify-center items-center bg-bolt-elements-background-depth-1">
+              <div className="flex flex-col items-center gap-3">
+                <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-3xl" />
+                <span className="text-bolt-elements-textSecondary text-sm">Démarrage du serveur...</span>
+              </div>
+            </div>
+          )
         ) : (
           <div className="flex w-full h-full justify-center items-center bg-white">Aucun aperçu disponible</div>
         )}

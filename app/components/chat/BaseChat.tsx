@@ -187,11 +187,11 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           </ClientOnly>
         )}
         <ClientOnly>{() => <Menu />}</ClientOnly>
-        <div ref={scrollRef} className="flex overflow-y-auto overflow-x-hidden w-full h-full">
+        <div ref={scrollRef} className="flex w-full h-full">
           <div className={classNames(
               styles.Chat,
-              'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full',
-              showWorkbench && styles.chatWithWorkbench,
+              'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full overflow-y-auto',
+              { [styles.chatWithWorkbench]: showWorkbench },
             )}>
             {!chatStarted && (
               <div id="intro" className="mt-[20vh] max-w-chat mx-auto">
@@ -265,10 +265,10 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     </div>
                   )}
                   <div className="relative">
-                    <AnimatedPlaceholder show={!chatStarted && input.length === 0} />
+                    <AnimatedPlaceholder chatStarted={chatStarted} textareaRef={textareaRef} />
                     <textarea
                       ref={textareaRef}
-                      className={`w-full pl-4 pt-4 pr-12 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent`}
+                      className="w-full pl-4 pt-4 pr-14 pb-3 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent"
                       onFocus={handleTextareaFocus}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
@@ -293,23 +293,23 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       aria-label="Message à envoyer à BAVINI"
                       translate="no"
                     />
-                  </div>
-                  <ClientOnly>
-                    {() => (
-                      <SendButton
-                        show={input.length > 0 || isStreaming || selectedFiles.length > 0}
-                        isStreaming={isStreaming}
-                        onClick={(event) => {
-                          if (isStreaming) {
-                            handleStop?.();
-                            return;
-                          }
+                    <ClientOnly>
+                      {() => (
+                        <SendButton
+                          show={input.length > 0 || isStreaming || selectedFiles.length > 0}
+                          isStreaming={isStreaming}
+                          onClick={(event) => {
+                            if (isStreaming) {
+                              handleStop?.();
+                              return;
+                            }
 
-                          handleSendMessage(event);
-                        }}
-                      />
-                    )}
-                  </ClientOnly>
+                            handleSendMessage(event);
+                          }}
+                        />
+                      )}
+                    </ClientOnly>
+                  </div>
                   <div className="flex justify-between items-center text-sm p-4 pt-2">
                     <div className="flex gap-2 items-center">
                       <IconButton
