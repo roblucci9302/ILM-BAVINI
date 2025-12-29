@@ -8,6 +8,7 @@ import { IconButton } from '~/components/ui/IconButton';
 import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
 import { chatStore, setChatMode } from '~/lib/stores/chat';
+import { workbenchStore } from '~/lib/stores/workbench';
 import {
   preloadOnTypingStart,
   preloadOnFirstMessage,
@@ -124,6 +125,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const hasPreloadedOnFirstMessage = useRef(false);
+    const showWorkbench = useStore(workbenchStore.showWorkbench);
 
     // Defer ColorBends loading by 500ms to prioritize UI
     const [showColorBends, setShowColorBends] = useState(false);
@@ -188,7 +190,11 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         )}
         <ClientOnly>{() => <Menu />}</ClientOnly>
         <div ref={scrollRef} className="flex overflow-y-auto overflow-x-hidden w-full h-full">
-          <div className={classNames(styles.Chat, 'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full')}>
+          <div className={classNames(
+              styles.Chat,
+              'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full',
+              showWorkbench && styles.chatWithWorkbench,
+            )}>
             {!chatStarted && (
               <div id="intro" className="mt-[20vh] max-w-chat mx-auto">
                 <h1 className="text-5xl text-center font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-accent-600 dark:from-white dark:via-white dark:to-accent-300 bg-clip-text text-transparent mb-2">
