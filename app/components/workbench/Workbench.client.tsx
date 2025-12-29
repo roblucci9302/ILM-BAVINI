@@ -243,8 +243,12 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
     workbenchStore.resetCurrentDocument();
   }, []);
 
+  // Render workbench when chat has started OR when an artifact is detected
+  // This fixes the race condition where artifact detection happens before chat animation completes
+  const shouldRender = chatStarted || showWorkbench;
+
   return (
-    chatStarted ? (
+    shouldRender ? (
       <>
         <motion.div
           initial="closed"
