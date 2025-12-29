@@ -128,14 +128,22 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory, isLoadingH
 
   const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
-  // Update chatStarted when initialMessages changes (e.g., after loading from DB)
+  // Sync chatStarted with initialMessages ONLY on mount (like Bolt.new)
+  // This prevents the flash to welcome screen when initialMessages reference changes
+  useEffect(() => {
+    if (initialMessages.length > 0) {
+      setChatStarted(true);
+      chatStore.setKey('started', true);
+    }
+  }, []);
+
+  // Update chatStarted when initialMessages loads from DB (but NEVER reset to false)
   useEffect(() => {
     if (initialMessages.length > 0 && !chatStarted) {
       setChatStarted(true);
+      chatStore.setKey('started', true);
     }
-
-    chatStore.setKey('started', initialMessages.length > 0);
-  }, [initialMessages]);
+  }, [initialMessages.length]);
 
   useEffect(() => {
     parseMessages(messages, isLoading);
