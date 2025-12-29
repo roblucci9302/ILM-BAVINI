@@ -50,8 +50,14 @@ export async function openDatabase(): Promise<Database | undefined> {
 
 /**
  * Open the legacy IndexedDB database.
+ * Safe to call in SSR context - returns undefined.
  */
 async function openLegacyDatabase(): Promise<IDBDatabase | undefined> {
+  // SSR guard: indexedDB is not available on server
+  if (typeof indexedDB === 'undefined') {
+    return undefined;
+  }
+
   return new Promise((resolve) => {
     const request = indexedDB.open('boltHistory', 1);
 

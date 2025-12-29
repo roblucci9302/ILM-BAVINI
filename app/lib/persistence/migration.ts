@@ -23,8 +23,14 @@ interface LegacyChatItem {
 
 /**
  * Check if migration has already been completed.
+ * Safe to call in SSR context - returns false.
  */
 export function isMigrationComplete(): boolean {
+  // SSR guard: localStorage is not available on server
+  if (typeof localStorage === 'undefined') {
+    return false;
+  }
+
   try {
     return localStorage.getItem(MIGRATION_KEY) === 'true';
   } catch {
@@ -34,8 +40,14 @@ export function isMigrationComplete(): boolean {
 
 /**
  * Mark migration as complete.
+ * Safe to call in SSR context - no-op.
  */
 export function markMigrationComplete(): void {
+  // SSR guard: localStorage is not available on server
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
   try {
     localStorage.setItem(MIGRATION_KEY, 'true');
   } catch {
@@ -45,8 +57,14 @@ export function markMigrationComplete(): void {
 
 /**
  * Open the legacy IndexedDB database.
+ * Safe to call in SSR context - returns null.
  */
 async function openLegacyDatabase(): Promise<IDBDatabase | null> {
+  // SSR guard: indexedDB is not available on server
+  if (typeof indexedDB === 'undefined') {
+    return null;
+  }
+
   return new Promise((resolve) => {
     try {
       const request = indexedDB.open(LEGACY_DB_NAME, 1);
