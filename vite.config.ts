@@ -18,7 +18,7 @@ function pathPolyfillPlugin(): Plugin {
   return {
     name: 'path-polyfill',
     enforce: 'pre',
-    resolveId(id, _importer, options) {
+    async resolveId(id, importer, options) {
       // Handle path module resolution
       if (id === 'path' || id === 'node:path') {
         if (options?.ssr) {
@@ -26,8 +26,18 @@ function pathPolyfillPlugin(): Plugin {
           return { id: 'node:path', external: true };
         }
 
-        // Client: use path-browserify
-        return { id: 'path-browserify', external: false };
+        // Client: resolve path-browserify to its actual location
+        const resolved = await this.resolve('path-browserify', importer, {
+          skipSelf: true,
+          ...options,
+        });
+
+        if (resolved) {
+          return { id: resolved.id, external: false };
+        }
+
+        // Fallback: return the module name (let Vite resolve it)
+        return null;
       }
 
       // Prevent path-browserify from loading in SSR

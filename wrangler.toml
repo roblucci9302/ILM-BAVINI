@@ -70,12 +70,12 @@ ENVIRONMENT = "production"
 TEMPLATE_CACHE_TTL = "600"            # 10 minutes
 
 # ============================================================================
-# STAGING ENVIRONMENT
+# PREVIEW ENVIRONMENT (for PR previews and testing)
 # ============================================================================
 
-[env.staging]
-name = "bavini-staging"
+[env.preview]
+name = "bavini-preview"
 
-[env.staging.vars]
-ENVIRONMENT = "staging"
+[env.preview.vars]
+ENVIRONMENT = "preview"
 TEMPLATE_CACHE_TTL = "60"             # 1 minute
