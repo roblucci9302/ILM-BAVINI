@@ -1,9 +1,26 @@
 import type { ITheme } from '@xterm/xterm';
 
-const style = getComputedStyle(document.documentElement);
-const cssVar = (token: string) => style.getPropertyValue(token) || undefined;
+/**
+ * Get CSS variable value from document root.
+ * Returns undefined if running in SSR context.
+ */
+function getCssVar(style: CSSStyleDeclaration | null, token: string): string | undefined {
+  return style?.getPropertyValue(token) || undefined;
+}
 
+/**
+ * Get terminal theme from CSS variables.
+ * Safe to call in SSR context - returns overrides or empty object.
+ */
 export function getTerminalTheme(overrides?: ITheme): ITheme {
+  // SSR guard: document is not available on server
+  if (typeof document === 'undefined') {
+    return overrides ?? {};
+  }
+
+  const style = getComputedStyle(document.documentElement);
+  const cssVar = (token: string) => getCssVar(style, token);
+
   return {
     cursor: cssVar('--bolt-elements-terminal-cursorColor'),
     cursorAccent: cssVar('--bolt-elements-terminal-cursorColorAccent'),
