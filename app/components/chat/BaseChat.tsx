@@ -187,12 +187,15 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           </ClientOnly>
         )}
         <ClientOnly>{() => <Menu />}</ClientOnly>
-        <div ref={scrollRef} className="flex w-full h-full">
-          <div className={classNames(
+        <div className="flex w-full h-full">
+          <div
+            ref={scrollRef}
+            className={classNames(
               styles.Chat,
               'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full overflow-y-auto',
               { [styles.chatWithWorkbench]: showWorkbench },
-            )}>
+            )}
+          >
             {!chatStarted && (
               <div id="intro" className="mt-[12vh] max-w-chat mx-auto">
                 <h1 className="text-5xl text-center font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-accent-600 dark:from-white dark:via-white dark:to-accent-300 bg-clip-text text-transparent mb-2">
