@@ -178,6 +178,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedFilesRef = useRef<FilePreview[]>([]);
 
   const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
@@ -222,7 +223,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     if (messages.length > initialMessages.length) {
       storeMessageHistory(messages).catch((error) => toast.error(error.message));
     }
-  }, [messages, isLoading, parseMessages]);
+  }, [messages, isLoading, parseMessages, initialMessages.length, storeMessageHistory]);
 
   const scrollTextArea = () => {
     const textarea = textareaRef.current;
@@ -257,7 +258,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     }
 
     await Promise.all([
-      animate('#examples', { opacity: 0, display: 'none' }, { duration: 0.1 }),
+      animate('#categories', { opacity: 0, display: 'none' }, { duration: 0.1 }),
       animate('#intro', { opacity: 0, flex: 1 }, { duration: 0.2, ease: cubicEasingFn }),
     ]);
 
@@ -283,7 +284,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
      */
     await workbenchStore.saveAllFiles();
 
-    const fileModifications = workbenchStore.getFileModifcations();
+    const fileModifications = workbenchStore.getFileModifications();
 
     chatStore.setKey('aborted', false);
 
@@ -411,10 +412,15 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     });
   };
 
+  // Keep ref in sync with state for cleanup
+  useEffect(() => {
+    selectedFilesRef.current = selectedFiles;
+  }, [selectedFiles]);
+
   // cleanup object URLs on unmount
   useEffect(() => {
     return () => {
-      selectedFiles.forEach((filePreview) => {
+      selectedFilesRef.current.forEach((filePreview) => {
         URL.revokeObjectURL(filePreview.preview);
       });
     };

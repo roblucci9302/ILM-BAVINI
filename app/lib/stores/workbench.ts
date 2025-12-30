@@ -202,7 +202,7 @@ export class WorkbenchStore {
     }
   }
 
-  getFileModifcations() {
+  getFileModifications() {
     return this.#filesStore.getFileModifications();
   }
 

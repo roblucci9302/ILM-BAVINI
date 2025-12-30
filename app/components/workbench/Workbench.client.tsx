@@ -73,13 +73,8 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   const showWorkbench = useStore(workbenchStore.showWorkbench);
   const selectedFile = useStore(workbenchStore.selectedFile);
   
-  // Debug logging
   useEffect(() => {
-    logger.debug('Workbench state changed', { showWorkbench, chatStarted });
-    console.log('%c[WORKBENCH RENDER] State changed:', 'background: #9C27B0; color: white; font-size: 14px; padding: 4px 8px;', { showWorkbench, chatStarted, hasPreview });
-    if (showWorkbench) {
-      console.log('%c[WORKBENCH RENDER] ✅ Workbench should be VISIBLE now!', 'background: #4CAF50; color: white; font-size: 16px; font-weight: bold; padding: 8px;');
-    }
+    logger.debug('Workbench state changed', { showWorkbench, chatStarted, hasPreview });
   }, [showWorkbench, chatStarted, hasPreview]);
   const currentDocument = useStore(workbenchStore.currentDocument);
   const unsavedFiles = useStore(workbenchStore.unsavedFiles);

@@ -87,12 +87,12 @@ interface BaseChatProps {
   onFileRemove?: (index: number) => void;
 }
 
-const EXAMPLE_PROMPTS = [
-  { text: 'Créer une application todo en React avec Tailwind' },
-  { text: 'Créer un blog simple avec Astro' },
-  { text: 'Créer un formulaire de consentement cookies avec Material UI' },
-  { text: 'Créer un jeu Space Invaders' },
-  { text: 'Comment centrer une div ?' },
+const CATEGORY_PROMPTS = [
+  { label: 'Landing Page', icon: 'i-ph:browser', prompt: 'Crée-moi une landing page moderne et responsive' },
+  { label: 'E-commerce', icon: 'i-ph:shopping-cart', prompt: 'Développe une boutique e-commerce minimaliste' },
+  { label: 'Dashboard', icon: 'i-ph:chart-line-up', prompt: 'Génère un dashboard analytics avec des graphiques' },
+  { label: 'Portfolio', icon: 'i-ph:images', prompt: 'Construis un portfolio créatif pour un designer' },
+  { label: 'Blog', icon: 'i-ph:article', prompt: 'Crée un blog moderne avec système de posts' },
 ];
 
 const TEXTAREA_MIN_HEIGHT = 76;
@@ -194,7 +194,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               { [styles.chatWithWorkbench]: showWorkbench },
             )}>
             {!chatStarted && (
-              <div id="intro" className="mt-[20vh] max-w-chat mx-auto">
+              <div id="intro" className="mt-[12vh] max-w-chat mx-auto">
                 <h1 className="text-5xl text-center font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-accent-600 dark:from-white dark:via-white dark:to-accent-300 bg-clip-text text-transparent mb-2">
                   Vous imaginez, on réalise
                 </h1>
@@ -349,22 +349,25 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               </div>
             </div>
             {!chatStarted && (
-              <div id="examples" className="relative w-full max-w-xl mx-auto mt-8 flex justify-center">
-                <div className="flex flex-col space-y-2 [mask-image:linear-gradient(to_bottom,black_0%,transparent_180%)] hover:[mask-image:none]">
-                  {EXAMPLE_PROMPTS.map((examplePrompt, index) => {
-                    return (
-                      <button
-                        key={index}
-                        onClick={(event) => {
-                          handleSendMessage(event, examplePrompt.text);
-                        }}
-                        className="group flex items-center w-full gap-2 justify-center bg-transparent text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-theme"
-                      >
-                        {examplePrompt.text}
-                        <div className="i-ph:arrow-bend-down-left" />
-                      </button>
-                    );
-                  })}
+              <div id="categories" className="relative w-full max-w-2xl mx-auto mt-8 pb-12 flex justify-center">
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {CATEGORY_PROMPTS.map((category, index) => (
+                    <button
+                      key={index}
+                      onClick={(event) => {
+                        handleSendMessage(event, category.prompt);
+                      }}
+                      className="group flex items-center gap-2 px-4 py-2 rounded-full border border-bolt-elements-borderColor bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3 hover:border-accent-500 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-all duration-200"
+                    >
+                      <div
+                        className={classNames(
+                          category.icon,
+                          'text-base group-hover:text-accent-500 transition-colors',
+                        )}
+                      />
+                      <span className="text-sm font-medium">{category.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
