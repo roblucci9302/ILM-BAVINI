@@ -40,15 +40,15 @@ export async function getDatabase(): Promise<Database | undefined> {
     return dbInitPromise;
   }
 
-  // Start initialization with timeout (15s for WASM loading)
+  // Start initialization with timeout (30s for WASM loading on slow connections)
   const initPromise = openDatabase();
   const timeoutPromise = new Promise<undefined>((resolve) => {
     setTimeout(() => {
       if (!dbInitComplete) {
-        console.warn('[DB] Database initialization timed out after 15s');
+        console.warn('[DB] Database initialization timed out after 30s');
         resolve(undefined);
       }
-    }, 15000);
+    }, 30000);
   });
 
   dbInitPromise = Promise.race([initPromise, timeoutPromise])
@@ -104,7 +104,7 @@ export function useChatHistory() {
         setReady(true);
 
         if (persistenceEnabled) {
-          toast.error(`La sauvegarde des conversations n'est pas disponible`);
+          toast.error(`La sauvegarde des conversations n'est pas disponible. Rechargez la page pour réessayer.`);
         }
 
         return;

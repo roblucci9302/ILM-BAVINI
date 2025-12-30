@@ -54,9 +54,15 @@ export function markIndexedDBClosed(): void {
  * Open the database, preferring PGlite with IndexedDB fallback.
  */
 export async function openDatabase(): Promise<Database | undefined> {
-  // try PGlite first
+  // try PGlite first with a timeout
   try {
-    const pglite = await initPGlite();
+    // Add internal timeout for PGlite initialization (25s)
+    const pglitePromise = initPGlite();
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('PGlite initialization timeout')), 25000);
+    });
+
+    const pglite = await Promise.race([pglitePromise, timeoutPromise]);
 
     // migrate data from IndexedDB if needed
     await migrateFromIndexedDB(pglite);
@@ -70,6 +76,7 @@ export async function openDatabase(): Promise<Database | undefined> {
   }
 
   // fallback to legacy IndexedDB
+  logger.info('Attempting IndexedDB fallback...');
   return openLegacyDatabase();
 }
 
