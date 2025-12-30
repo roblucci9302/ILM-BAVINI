@@ -153,6 +153,9 @@ const validators: Record<ConnectorId, ValidatorFn> = {
   github: validateGitHub,
   supabase: validateSupabase,
   netlify: validateNetlify,
+  figma: validateGeneric,
+  notion: validateGeneric,
+  stripe: validateGeneric,
 };
 
 /**

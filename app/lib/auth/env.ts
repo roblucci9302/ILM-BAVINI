@@ -19,6 +19,13 @@ export interface CloudflareEnv {
   NETLIFY_CLIENT_SECRET?: string;
   SUPABASE_CLIENT_ID?: string;
   SUPABASE_CLIENT_SECRET?: string;
+  FIGMA_CLIENT_ID?: string;
+  FIGMA_CLIENT_SECRET?: string;
+  NOTION_CLIENT_ID?: string;
+  NOTION_CLIENT_SECRET?: string;
+  STRIPE_CLIENT_ID?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_PUBLISHABLE_KEY?: string;
 
   // API Keys
   ANTHROPIC_API_KEY?: string;
@@ -46,7 +53,7 @@ export interface CloudflareContext {
  */
 export function isProviderConfigured(
   env: CloudflareEnv,
-  provider: 'github' | 'netlify' | 'supabase'
+  provider: 'github' | 'netlify' | 'supabase' | 'figma' | 'notion' | 'stripe'
 ): boolean {
   switch (provider) {
     case 'github':
@@ -55,6 +62,12 @@ export function isProviderConfigured(
       return Boolean(env.NETLIFY_CLIENT_ID && env.NETLIFY_CLIENT_SECRET);
     case 'supabase':
       return Boolean(env.SUPABASE_CLIENT_ID && env.SUPABASE_CLIENT_SECRET);
+    case 'figma':
+      return Boolean(env.FIGMA_CLIENT_ID && env.FIGMA_CLIENT_SECRET);
+    case 'notion':
+      return Boolean(env.NOTION_CLIENT_ID && env.NOTION_CLIENT_SECRET);
+    case 'stripe':
+      return Boolean(env.STRIPE_CLIENT_ID && env.STRIPE_SECRET_KEY);
     default:
       return false;
   }

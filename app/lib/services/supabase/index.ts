@@ -237,7 +237,7 @@ export async function rpc<T>(
 
 // Auth functions
 export async function signUp(client: SupabaseClient, email: string, password: string): Promise<AuthResponse> {
-  return client.auth('/signup', 'POST', { email, password });
+  return client.auth('POST', '/signup', { email, password });
 }
 
 export async function signInWithPassword(
@@ -262,7 +262,7 @@ export async function refreshSession(client: SupabaseClient, refreshToken: strin
 
 // Storage functions
 export async function listBuckets(client: SupabaseClient): Promise<StorageBucket[]> {
-  return client.storage('/bucket', 'GET');
+  return client.storage('GET', '/bucket');
 }
 
 export async function uploadFile(

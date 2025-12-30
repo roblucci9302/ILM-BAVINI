@@ -10,15 +10,21 @@ import type { CloudflareEnv } from '../env';
 import { createGitHubProvider, getGitHubUser, verifyGitHubToken, type GitHubUser } from './github';
 import { createNetlifyProvider, getNetlifyUser, verifyNetlifyToken, type NetlifyUser } from './netlify';
 import { createSupabaseProvider, getSupabaseOrganizations, getSupabaseProjects, verifySupabaseToken } from './supabase';
+import { createFigmaProvider, getFigmaUser, verifyFigmaToken, type FigmaUser } from './figma';
+import { createNotionProvider, getNotionUser, verifyNotionToken, type NotionUser } from './notion';
+import { createStripeProvider, getStripeAccount, verifyStripeToken, type StripeAccount } from './stripe';
 
 // Re-export provider types
 export type { GitHubUser } from './github';
 export type { NetlifyUser } from './netlify';
+export type { FigmaUser } from './figma';
+export type { NotionUser } from './notion';
+export type { StripeAccount } from './stripe';
 
 /**
  * Provider IDs that support OAuth
  */
-export const OAUTH_PROVIDER_IDS = ['github', 'netlify', 'supabase'] as const;
+export const OAUTH_PROVIDER_IDS = ['github', 'netlify', 'supabase', 'figma', 'notion', 'stripe'] as const;
 export type OAuthProviderId = (typeof OAUTH_PROVIDER_IDS)[number];
 
 /**
@@ -31,7 +37,7 @@ export function supportsOAuth(connectorId: string): connectorId is OAuthProvider
 /**
  * Provider user info union type
  */
-export type ProviderUser = GitHubUser | NetlifyUser;
+export type ProviderUser = GitHubUser | NetlifyUser | FigmaUser | NotionUser | StripeAccount;
 
 /**
  * Provider registry - maps provider IDs to their factory functions
@@ -62,6 +68,24 @@ const PROVIDER_REGISTRY = {
       } as unknown as ProviderUser;
     },
     verify: verifySupabaseToken,
+  },
+  figma: {
+    create: (env: CloudflareEnv) =>
+      env.FIGMA_CLIENT_ID ? createFigmaProvider(env.FIGMA_CLIENT_ID, env.FIGMA_CLIENT_SECRET) : null,
+    getUser: getFigmaUser,
+    verify: verifyFigmaToken,
+  },
+  notion: {
+    create: (env: CloudflareEnv) =>
+      env.NOTION_CLIENT_ID ? createNotionProvider(env.NOTION_CLIENT_ID, env.NOTION_CLIENT_SECRET) : null,
+    getUser: getNotionUser,
+    verify: verifyNotionToken,
+  },
+  stripe: {
+    create: (env: CloudflareEnv) =>
+      env.STRIPE_CLIENT_ID ? createStripeProvider(env.STRIPE_CLIENT_ID, env.STRIPE_SECRET_KEY) : null,
+    getUser: getStripeAccount,
+    verify: verifyStripeToken,
   },
 } as const;
 
@@ -124,7 +148,34 @@ export const PROVIDER_DISPLAY_INFO: Record<
     color: '#3ECF8E',
     description: 'Projects, databases, authentication',
   },
+  figma: {
+    name: 'Figma',
+    icon: 'i-ph:figma-logo',
+    color: '#F24E1E',
+    description: 'Designs, composants, styles',
+  },
+  notion: {
+    name: 'Notion',
+    icon: 'i-ph:notebook',
+    color: '#000000',
+    description: 'Pages, bases de données, wiki',
+  },
+  stripe: {
+    name: 'Stripe',
+    icon: 'i-ph:credit-card',
+    color: '#635BFF',
+    description: 'Paiements, abonnements, factures',
+  },
 };
 
 // Export Supabase-specific functions
 export { getSupabaseOrganizations, getSupabaseProjects };
+
+// Export Figma-specific functions
+export { getFigmaFile, getFigmaStyles, getFigmaComponents, exportFigmaImages } from './figma';
+
+// Export Notion-specific functions
+export { searchNotion, type NotionOAuthResponse, type NotionWorkspace } from './notion';
+
+// Export Stripe-specific functions
+export { refreshStripeToken, deauthorizeStripeAccount, type StripeOAuthResponse } from './stripe';

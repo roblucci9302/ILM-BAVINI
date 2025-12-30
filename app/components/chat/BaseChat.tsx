@@ -268,7 +268,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     <AnimatedPlaceholder chatStarted={chatStarted} textareaRef={textareaRef} />
                     <textarea
                       ref={textareaRef}
-                      className="w-full pl-4 pt-4 pr-14 pb-3 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent"
+                      className="w-full pl-4 pt-4 pr-4 pb-3 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent"
                       onFocus={handleTextareaFocus}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
@@ -293,22 +293,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       aria-label="Message à envoyer à BAVINI"
                       translate="no"
                     />
-                    <ClientOnly>
-                      {() => (
-                        <SendButton
-                          show={input.length > 0 || isStreaming || selectedFiles.length > 0}
-                          isStreaming={isStreaming}
-                          onClick={(event) => {
-                            if (isStreaming) {
-                              handleStop?.();
-                              return;
-                            }
-
-                            handleSendMessage(event);
-                          }}
-                        />
-                      )}
-                    </ClientOnly>
                   </div>
                   <div className="flex justify-between items-center text-sm p-4 pt-2">
                     <div className="flex gap-2 items-center">
@@ -343,12 +327,22 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       </IconButton>
                       <ChatModeToggle />
                     </div>
-                    {input.length > 3 ? (
-                      <div className="text-xs text-bolt-elements-textTertiary">
-                        Utilisez <kbd className="kdb">Maj</kbd> + <kbd className="kdb">Entrée</kbd> pour une nouvelle
-                        ligne
-                      </div>
-                    ) : null}
+                    <ClientOnly>
+                      {() => (
+                        <SendButton
+                          hasContent={input.length > 0 || selectedFiles.length > 0}
+                          isStreaming={isStreaming}
+                          onClick={(event) => {
+                            if (isStreaming) {
+                              handleStop?.();
+                              return;
+                            }
+
+                            handleSendMessage(event);
+                          }}
+                        />
+                      )}
+                    </ClientOnly>
                   </div>
                 </div>
                 <div className="pb-6">{/* Ghost Element */}</div>

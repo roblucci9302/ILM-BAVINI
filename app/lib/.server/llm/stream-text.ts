@@ -12,7 +12,7 @@ interface ToolResult<Name extends string, Args, Result> {
 }
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   toolInvocations?: ToolResult<string, unknown, unknown>[];
 }

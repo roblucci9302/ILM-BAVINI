@@ -18,7 +18,7 @@ import {
 } from '~/lib/auth';
 
 // Connector types - Simplified to core services only
-export type ConnectorId = 'github' | 'supabase' | 'netlify';
+export type ConnectorId = 'github' | 'supabase' | 'netlify' | 'figma' | 'notion' | 'stripe';
 
 export type ConnectorCategory = 'shared' | 'personal';
 
@@ -112,6 +112,43 @@ export const CONNECTORS: ConnectorConfig[] = [
     authMethod: 'oauth',
     fields: [
       { key: 'token', label: "Token d'accès personnel", type: 'password', placeholder: 'ghp_...', required: true },
+    ],
+  },
+  {
+    id: 'figma',
+    name: 'Figma',
+    description: 'Import de designs et composants',
+    category: 'personal',
+    icon: 'figma',
+    docsUrl: 'https://www.figma.com/developers/api',
+    authMethod: 'oauth',
+    fields: [
+      { key: 'token', label: "Token d'accès personnel", type: 'password', placeholder: 'figd_...', required: true },
+    ],
+  },
+  {
+    id: 'notion',
+    name: 'Notion',
+    description: 'Pages, bases de données et wiki',
+    category: 'personal',
+    icon: 'notion',
+    docsUrl: 'https://developers.notion.com',
+    authMethod: 'oauth',
+    fields: [
+      { key: 'token', label: "Token d'intégration", type: 'password', placeholder: 'secret_...', required: true },
+    ],
+  },
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    description: 'Paiements, abonnements et factures',
+    category: 'shared',
+    icon: 'stripe',
+    docsUrl: 'https://stripe.com/docs/api',
+    authMethod: 'oauth',
+    fields: [
+      { key: 'secretKey', label: 'Clé secrète API', type: 'password', placeholder: 'sk_...', required: true },
+      { key: 'publishableKey', label: 'Clé publique', type: 'text', placeholder: 'pk_...', required: false },
     ],
   },
 ];
