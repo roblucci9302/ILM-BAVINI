@@ -9,7 +9,7 @@
  * - Mode toggle
  */
 
-import React, { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ActionApprovalModal } from './ActionApprovalModal';
@@ -90,23 +90,35 @@ export const AgentChatIntegration = memo(({
 
   const handleApproveAll = useCallback(() => {
     setIsProcessingApproval(true);
-    approveAllActions();
-    setIsProcessingApproval(false);
-    approvalModalOpenStore.set(false);
+
+    try {
+      approveAllActions();
+    } finally {
+      setIsProcessingApproval(false);
+      approvalModalOpenStore.set(false);
+    }
   }, []);
 
   const handleApproveSelected = useCallback((actionIds: string[]) => {
     setIsProcessingApproval(true);
-    approveSelectedActions(actionIds);
-    setIsProcessingApproval(false);
-    approvalModalOpenStore.set(false);
+
+    try {
+      approveSelectedActions(actionIds);
+    } finally {
+      setIsProcessingApproval(false);
+      approvalModalOpenStore.set(false);
+    }
   }, []);
 
   const handleRejectAll = useCallback(() => {
     setIsProcessingApproval(true);
-    rejectAllActions();
-    setIsProcessingApproval(false);
-    approvalModalOpenStore.set(false);
+
+    try {
+      rejectAllActions();
+    } finally {
+      setIsProcessingApproval(false);
+      approvalModalOpenStore.set(false);
+    }
   }, []);
 
   const handleCloseApprovalModal = useCallback(() => {
@@ -119,25 +131,35 @@ export const AgentChatIntegration = memo(({
     return null;
   }
 
+  // Only show floating UI when agents are actually active
+  const hasActiveAgents = activeCount > 0;
+
   return (
     <>
-      {/* Floating Status Badge & Stop Button */}
-      {showStatusBadge && (
-        <div className={classNames('fixed z-30 flex items-center gap-2', positionClasses[position])}>
-          <AnimatePresence>
-            {activeCount > 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-              >
-                <AgentStopButton onStop={handleStopAll} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <AgentStatusBadge onClick={handleOpenActivityLog} />
-        </div>
-      )}
+      {/* Floating Status Badge & Stop Button - Only visible when agents are working */}
+      <AnimatePresence>
+        {showStatusBadge && hasActiveAgents && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className={classNames('fixed z-30 flex flex-col items-end gap-2', positionClasses[position])}
+          >
+            {/* STOP Button - Prominent and easily accessible */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <AgentStopButton onStop={handleStopAll} className="shadow-lg" />
+            </motion.div>
+
+            {/* Status Badge - Click to open activity log */}
+            <AgentStatusBadge onClick={handleOpenActivityLog} className="shadow-lg" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Activity Log Panel */}
       {showActivityLog && (

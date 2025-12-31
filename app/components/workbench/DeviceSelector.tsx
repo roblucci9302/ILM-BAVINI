@@ -91,3 +91,6 @@ const DeviceButton = memo(({ device, selected, onSelect }: DeviceButtonProps) =>
     </button>
   );
 });
+
+DeviceSelector.displayName = 'DeviceSelector';
+DeviceButton.displayName = 'DeviceButton';

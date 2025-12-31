@@ -275,7 +275,8 @@ export const AgentStatusBadge = memo(({
 AgentStatusBadge.displayName = 'AgentStatusBadge';
 
 /**
- * Bouton STOP global pour arrêter tous les agents
+ * Bouton STOP global pour arrêter tous les agents.
+ * Design proéminent pour une utilisation facile.
  */
 export const AgentStopButton = memo(({
   onStop,
@@ -298,19 +299,22 @@ export const AgentStopButton = memo(({
       onClick={onStop}
       disabled={disabled}
       className={classNames(
-        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors',
-        'bg-red-500/20 hover:bg-red-500/30 border border-red-500/50',
-        'text-red-400 disabled:opacity-50 disabled:cursor-not-allowed',
+        'flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all',
+        'bg-red-500 hover:bg-red-600 active:bg-red-700',
+        'text-white font-semibold',
+        'border-2 border-red-400',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
         className
       )}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
     >
-      <div className="i-ph:stop-circle text-lg" />
-      <span className="text-sm font-medium">STOP</span>
+      <div className="i-ph:stop-circle-fill text-xl" />
+      <span className="text-sm uppercase tracking-wide">Arrêter</span>
+      <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-md">{activeCount}</span>
     </motion.button>
   );
 });

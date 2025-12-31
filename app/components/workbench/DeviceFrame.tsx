@@ -55,3 +55,5 @@ export const DeviceFrame = memo(({ children }: DeviceFrameProps) => {
     </div>
   );
 });
+
+DeviceFrame.displayName = 'DeviceFrame';

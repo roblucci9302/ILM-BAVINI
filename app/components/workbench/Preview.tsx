@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 import { IconButton } from '~/components/ui/IconButton';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { selectedDeviceId } from '~/lib/stores/previews';
@@ -11,9 +12,11 @@ import { DeviceFrame } from './DeviceFrame';
 export const Preview = memo(() => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [isPortDropdownOpen, setIsPortDropdownOpen] = useState(false);
-  const hasSelectedPreview = useRef(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasSelectedPreview, setHasSelectedPreview] = useState(false);
   const previews = useStore(workbenchStore.previews);
   const activePreview = previews[activePreviewIndex];
   const currentDeviceId = useStore(selectedDeviceId);
@@ -22,6 +25,37 @@ export const Preview = memo(() => {
 
   const [url, setUrl] = useState('');
   const [iframeUrl, setIframeUrl] = useState<string | undefined>();
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === fullscreenContainerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const enterFullscreen = useCallback(() => {
+    if (fullscreenContainerRef.current) {
+      fullscreenContainerRef.current.requestFullscreen().catch((err) => {
+        console.error('Erreur plein écran:', err);
+        toast.error('Impossible de passer en plein écran');
+      });
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch((err) => {
+        console.error('Erreur sortie plein écran:', err);
+        toast.error('Impossible de quitter le plein écran');
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!activePreview) {
@@ -35,7 +69,7 @@ export const Preview = memo(() => {
 
     setUrl(baseUrl);
     setIframeUrl(baseUrl);
-  }, [activePreview, iframeUrl]);
+  }, [activePreview]);
 
   const validateUrl = useCallback(
     (value: string) => {
@@ -65,12 +99,12 @@ export const Preview = memo(() => {
 
   // when previews change, display the lowest port if user hasn't selected a preview
   useEffect(() => {
-    if (previews.length > 1 && !hasSelectedPreview.current) {
+    if (previews.length > 1 && !hasSelectedPreview) {
       const minPortIndex = previews.reduce(findMinPortIndex, 0);
 
       setActivePreviewIndex(minPortIndex);
     }
-  }, [previews]);
+  }, [previews, findMinPortIndex, hasSelectedPreview]);
 
   const reloadPreview = () => {
     if (iframeRef.current) {
@@ -85,6 +119,12 @@ export const Preview = memo(() => {
       )}
       <div className="bg-bolt-elements-background-depth-2 p-2 flex items-center gap-1.5">
         <IconButton icon="i-ph:arrow-clockwise" title="Recharger l'aperçu" onClick={reloadPreview} />
+        <IconButton
+          icon="i-ph:arrows-out"
+          title="Plein écran"
+          onClick={enterFullscreen}
+          disabled={!iframeUrl || !activePreview?.ready}
+        />
         <div
           className="flex items-center gap-1 flex-grow bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-3 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive
         focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive"
@@ -114,7 +154,7 @@ export const Preview = memo(() => {
             activePreviewIndex={activePreviewIndex}
             setActivePreviewIndex={setActivePreviewIndex}
             isDropdownOpen={isPortDropdownOpen}
-            setHasSelectedPreview={(value) => (hasSelectedPreview.current = value)}
+            setHasSelectedPreview={setHasSelectedPreview}
             setIsDropdownOpen={setIsPortDropdownOpen}
             previews={previews}
           />
@@ -124,7 +164,10 @@ export const Preview = memo(() => {
         {/* Device selector */}
         <DeviceSelector />
       </div>
-      <div className="flex-1 border-t border-bolt-elements-borderColor overflow-hidden">
+      <div
+        ref={fullscreenContainerRef}
+        className="flex-1 border-t border-bolt-elements-borderColor overflow-hidden relative"
+      >
         {activePreview ? (
           activePreview.ready ? (
             isDesktop ? (
@@ -155,7 +198,20 @@ export const Preview = memo(() => {
         ) : (
           <div className="flex w-full h-full justify-center items-center bg-white">Aucun aperçu disponible</div>
         )}
+
+        {/* Floating exit button - macOS style - only visible in fullscreen */}
+        {isFullscreen && (
+          <button
+            onClick={exitFullscreen}
+            className="group absolute top-4 left-4 z-50 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full transition-all flex items-center justify-center shadow-sm"
+            title="Quitter le plein écran (Échap)"
+          >
+            <div className="i-ph:x-bold text-xs text-red-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+        )}
       </div>
     </div>
   );
 });
+
+Preview.displayName = 'Preview';

@@ -274,7 +274,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                 <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
                 <AgentProgressBanner compact className="ml-2" />
                 <ConnectorQuickLinks />
-                <WorkbenchAgentStatus className="mr-2" />
+                <WorkbenchAgentStatus className="ml-3 mr-2" />
                 <div className="ml-auto" />
                 {selectedView === 'code' && (
                   <>

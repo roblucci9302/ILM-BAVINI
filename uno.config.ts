@@ -104,6 +104,14 @@ export default defineConfig({
     'i-ph:device-tablet',
     'i-ph:device-mobile',
     'i-ph:device-rotate',
+    // multi-agent toggle icons
+    'i-ph:robot',
+    'i-ph:robot-fill',
+    // agent stop button
+    'i-ph:stop-circle-fill',
+    // fullscreen preview
+    'i-ph:arrows-out',
+    'i-ph:x-bold',
   ],
   shortcuts: {
     'bolt-ease-cubic-bezier': 'ease-[cubic-bezier(0.4,0,0.2,1)]',
