@@ -2,7 +2,11 @@ import { useStore } from '@nanostores/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { IconButton } from '~/components/ui/IconButton';
 import { workbenchStore } from '~/lib/stores/workbench';
+import { selectedDeviceId } from '~/lib/stores/previews';
+import { DEVICE_PRESETS } from '~/utils/devices';
 import { PortDropdown } from './PortDropdown';
+import { DeviceSelector } from './DeviceSelector';
+import { DeviceFrame } from './DeviceFrame';
 
 export const Preview = memo(() => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -12,6 +16,9 @@ export const Preview = memo(() => {
   const hasSelectedPreview = useRef(false);
   const previews = useStore(workbenchStore.previews);
   const activePreview = previews[activePreviewIndex];
+  const currentDeviceId = useStore(selectedDeviceId);
+  const currentDevice = DEVICE_PRESETS.find((d) => d.id === currentDeviceId);
+  const isDesktop = currentDevice?.type === 'desktop';
 
   const [url, setUrl] = useState('');
   const [iframeUrl, setIframeUrl] = useState<string | undefined>();
@@ -112,11 +119,31 @@ export const Preview = memo(() => {
             previews={previews}
           />
         )}
+        {/* Separator */}
+        <div className="w-px h-5 bg-bolt-elements-borderColor" />
+        {/* Device selector */}
+        <DeviceSelector />
       </div>
-      <div className="flex-1 border-t border-bolt-elements-borderColor">
+      <div className="flex-1 border-t border-bolt-elements-borderColor overflow-hidden">
         {activePreview ? (
           activePreview.ready ? (
-            <iframe ref={iframeRef} className="border-none w-full h-full bg-white" src={iframeUrl} title="Aperçu de l'application" />
+            isDesktop ? (
+              <iframe
+                ref={iframeRef}
+                className="border-none w-full h-full bg-white"
+                src={iframeUrl}
+                title="Aperçu de l'application"
+              />
+            ) : (
+              <DeviceFrame>
+                <iframe
+                  ref={iframeRef}
+                  className="border-none w-full h-full bg-white"
+                  src={iframeUrl}
+                  title="Aperçu de l'application"
+                />
+              </DeviceFrame>
+            )
           ) : (
             <div className="flex w-full h-full justify-center items-center bg-bolt-elements-background-depth-1">
               <div className="flex flex-col items-center gap-3">

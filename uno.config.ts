@@ -98,6 +98,13 @@ const COLOR_PRIMITIVES = {
 };
 
 export default defineConfig({
+  safelist: [
+    // device preview icons
+    'i-ph:desktop',
+    'i-ph:device-tablet',
+    'i-ph:device-mobile',
+    'i-ph:device-rotate',
+  ],
   shortcuts: {
     'bolt-ease-cubic-bezier': 'ease-[cubic-bezier(0.4,0,0.2,1)]',
     'transition-theme': 'transition-[background-color,border-color,color] duration-150 bolt-ease-cubic-bezier',

@@ -1,5 +1,6 @@
 import type { WebContainer } from '@webcontainer/api';
 import { atom } from 'nanostores';
+import { DEFAULT_DEVICE_ID, type Orientation } from '~/utils/devices';
 
 export interface PreviewInfo {
   port: number;
@@ -47,3 +48,7 @@ export class PreviewsStore {
     });
   }
 }
+
+// device preview state
+export const selectedDeviceId = atom<string>(DEFAULT_DEVICE_ID);
+export const deviceOrientation = atom<Orientation>('portrait');

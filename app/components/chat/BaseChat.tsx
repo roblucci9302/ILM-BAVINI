@@ -9,13 +9,10 @@ import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
 import { chatStore, setChatMode } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
-import {
-  preloadOnTypingStart,
-  preloadOnFirstMessage,
-  preloadOnWorkbenchInteraction,
-} from '~/lib/performance';
+import { preloadOnTypingStart, preloadOnFirstMessage, preloadOnWorkbenchInteraction } from '~/lib/performance';
 import { AnimatedPlaceholder } from './AnimatedPlaceholder';
 import { Messages } from './Messages.client';
+import { MultiAgentToggle } from './MultiAgentToggle';
 import { SendButton } from './SendButton.client';
 import { TemplatePills } from './TemplatePills';
 
@@ -31,13 +28,17 @@ const ChatModeToggle = memo(() => {
   const isChatMode = mode === 'chat';
 
   const handleToggle = useCallback(() => {
-    // Toggle entre 'chat' et 'agent'
+    // toggle entre 'chat' et 'agent'
     setChatMode(isChatMode ? 'agent' : 'chat');
   }, [isChatMode]);
 
   return (
     <IconButton
-      title={isChatMode ? 'Mode Chat actif - Cliquez pour passer en mode Agent' : 'Mode Agent actif - Cliquez pour passer en mode Chat'}
+      title={
+        isChatMode
+          ? 'Mode Chat actif - Cliquez pour passer en mode Agent'
+          : 'Mode Agent actif - Cliquez pour passer en mode Chat'
+      }
       className={classNames(
         'relative transition-colors',
         isChatMode
@@ -48,10 +49,7 @@ const ChatModeToggle = memo(() => {
     >
       <div className="relative">
         <div
-          className={classNames(
-            'text-xl transition-all',
-            isChatMode ? 'i-ph:chat-circle-fill' : 'i-ph:chat-circle',
-          )}
+          className={classNames('text-xl transition-all', isChatMode ? 'i-ph:chat-circle-fill' : 'i-ph:chat-circle')}
         />
         {isChatMode && (
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-bolt-elements-background-depth-1" />
@@ -125,13 +123,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const hasPreloadedOnFirstMessage = useRef(false);
     const showWorkbench = useStore(workbenchStore.showWorkbench);
 
-    // Defer ColorBends loading by 500ms to prioritize UI
+    // defer ColorBends loading by 500ms to prioritize UI
     const [showColorBends, setShowColorBends] = useState(false);
 
     useEffect(() => {
       if (chatStarted) {
-        // Don't show ColorBends if chat already started
-        return;
+        // don't show ColorBends if chat already started
+        return undefined;
       }
 
       const timer = setTimeout(() => {
@@ -141,18 +139,19 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       return () => clearTimeout(timer);
     }, [chatStarted]);
 
-    // Trigger preload when user focuses on textarea (about to type)
+    // trigger preload when user focuses on textarea (about to type)
     const handleTextareaFocus = useCallback(() => {
       preloadOnTypingStart();
     }, []);
 
-    // Wrap sendMessage to trigger preload on first message
+    // wrap sendMessage to trigger preload on first message
     const handleSendMessage = useCallback(
       (event: React.UIEvent, messageInput?: string) => {
         if (!hasPreloadedOnFirstMessage.current) {
           hasPreloadedOnFirstMessage.current = true;
           preloadOnFirstMessage();
         }
+
         sendMessage?.(event, messageInput);
       },
       [sendMessage],
@@ -218,7 +217,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             >
               <ClientOnly>
                 {() => {
-                  if (!chatStarted) return null;
+                  if (!chatStarted) {
+                    return null;
+                  }
 
                   return (
                     <Messages
@@ -329,6 +330,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         )}
                       </IconButton>
                       <ChatModeToggle />
+                      <MultiAgentToggle />
                     </div>
                     <ClientOnly>
                       {() => (
@@ -363,10 +365,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       className="group flex items-center gap-2 px-4 py-2 rounded-full border border-bolt-elements-borderColor bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3 hover:border-accent-500 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-all duration-200"
                     >
                       <div
-                        className={classNames(
-                          category.icon,
-                          'text-base group-hover:text-accent-500 transition-colors',
-                        )}
+                        className={classNames(category.icon, 'text-base group-hover:text-accent-500 transition-colors')}
                       />
                       <span className="text-sm font-medium">{category.label}</span>
                     </button>
