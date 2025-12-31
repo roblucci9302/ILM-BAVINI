@@ -82,6 +82,7 @@ interface ChatRequestBody {
   mode?: ChatMode;
   context?: AgentContext;
   continuationContext?: ContinuationContext | null;
+  multiAgent?: boolean;
 }
 
 /**
@@ -99,9 +100,9 @@ RÈGLES:
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
   const body = await request.json<ChatRequestBody>();
-  const { messages, mode = 'agent', context: agentContext, continuationContext } = body;
+  const { messages, mode = 'agent', context: agentContext, continuationContext, multiAgent = false } = body;
 
-  logger.debug(`Chat mode: ${mode}`);
+  logger.debug(`Chat mode: ${mode}, Multi-Agent: ${multiAgent}`);
 
   // Si un contexte de continuation est fourni, injecter les instructions système
   // Cela permet de guider le LLM sans que l'utilisateur voie ces instructions
@@ -113,6 +114,23 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     messages.unshift({
       role: 'system',
       content: continuationInstruction,
+    });
+  }
+
+  // Mode Multi-Agent : ajouter des instructions pour une exécution structurée
+  if (multiAgent) {
+    logger.info('Multi-Agent mode enabled - structured execution');
+    messages.unshift({
+      role: 'system',
+      content: `[MODE MULTI-AGENT ACTIVÉ]
+Tu travailles en mode orchestrateur avec des sous-agents spécialisés.
+Pour chaque tâche:
+1. ANALYSE d'abord ce qui doit être fait
+2. PLANIFIE les étapes clairement
+3. EXÉCUTE chaque fichier/action de manière structurée
+4. VÉRIFIE que chaque action est complète avant de passer à la suivante
+
+Sois méthodique et explicite sur chaque action que tu entreprends.`,
     });
   }
 

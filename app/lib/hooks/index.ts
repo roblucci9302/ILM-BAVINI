@@ -1,3 +1,4 @@
+export * from './useAgentChat';
 export * from './useCheckpoints';
 export * from './useMessageParser';
 export * from './usePromptEnhancer';

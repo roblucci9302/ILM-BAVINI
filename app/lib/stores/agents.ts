@@ -14,6 +14,9 @@ import type {
   TaskResult,
 } from '../agents/types';
 
+// Re-export types for consumers
+export type { LogEntry, AgentType, AgentStatus, LogLevel } from '../agents/types';
+
 // ============================================================================
 // STORES D'ÉTAT DES AGENTS
 // ============================================================================
@@ -92,6 +95,25 @@ export const completedTasksStore = atom<Array<Task & { result: TaskResult }>>([]
  * Tâche actuellement en cours d'exécution par l'orchestrateur
  */
 export const currentOrchestratorTaskStore = atom<Task | null>(null);
+
+/**
+ * Action en cours d'exécution (pour UI indicators)
+ */
+export interface CurrentAction {
+  type: string;
+  description: string;
+  filePath?: string;
+  agentName?: AgentType;
+}
+
+export const currentActionStore = atom<CurrentAction | null>(null);
+
+/**
+ * Définir l'action en cours
+ */
+export function setCurrentAction(action: CurrentAction | null): void {
+  currentActionStore.set(action);
+}
 
 // ============================================================================
 // STORES CALCULÉS
@@ -343,6 +365,7 @@ export function resetAgentStores(): void {
   taskQueueStore.set([]);
   completedTasksStore.set([]);
   currentOrchestratorTaskStore.set(null);
+  currentActionStore.set(null);
 }
 
 /**

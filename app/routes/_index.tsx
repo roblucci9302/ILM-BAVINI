@@ -4,6 +4,7 @@ import { BaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import { SkipLink } from '~/components/ui/SkipLink';
+import { AgentSystemProvider } from '~/lib/agents/react';
 
 export const meta: MetaFunction = () => {
   return [
@@ -20,7 +21,13 @@ export default function Index() {
       <SkipLink targetId="main-content">Aller au contenu principal</SkipLink>
       <Header />
       <main id="main-content" tabIndex={-1} className="flex-1 overflow-hidden">
-        <ClientOnly fallback={<BaseChat />}>{() => <Chat />}</ClientOnly>
+        <ClientOnly fallback={<BaseChat />}>
+          {() => (
+            <AgentSystemProvider initialControlMode="strict">
+              <Chat />
+            </AgentSystemProvider>
+          )}
+        </ClientOnly>
       </main>
     </div>
   );

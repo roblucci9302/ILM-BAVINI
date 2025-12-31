@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { chatStore } from './chat';
+import { chatStore, pendingBatchStore, approvalModalOpenStore } from './chat';
 
 describe('chatStore', () => {
   beforeEach(() => {
@@ -9,9 +9,12 @@ describe('chatStore', () => {
       aborted: false,
       showChat: true,
       mode: 'agent',
-      pendingActions: [],
+      controlMode: 'strict',
       awaitingAgentApproval: false,
     });
+    // Also reset the separate stores
+    pendingBatchStore.set(null);
+    approvalModalOpenStore.set(false);
   });
 
   describe('initial state', () => {
@@ -25,6 +28,10 @@ describe('chatStore', () => {
 
     it('should have showChat as true by default', () => {
       expect(chatStore.get().showChat).toBe(true);
+    });
+
+    it('should have controlMode as strict by default', () => {
+      expect(chatStore.get().controlMode).toBe('strict');
     });
   });
 
@@ -55,7 +62,7 @@ describe('chatStore', () => {
         aborted: false,
         showChat: true,
         mode: 'agent',
-        pendingActions: [],
+        controlMode: 'strict',
         awaitingAgentApproval: false,
       });
     });
@@ -68,7 +75,7 @@ describe('chatStore', () => {
         aborted: true,
         showChat: false,
         mode: 'agent',
-        pendingActions: [],
+        controlMode: 'moderate',
         awaitingAgentApproval: true,
       });
 
@@ -77,7 +84,7 @@ describe('chatStore', () => {
         aborted: true,
         showChat: false,
         mode: 'agent',
-        pendingActions: [],
+        controlMode: 'moderate',
         awaitingAgentApproval: true,
       });
     });

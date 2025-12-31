@@ -23,6 +23,7 @@ import { isMobile } from '~/utils/mobile';
 import { FileBreadcrumb } from './FileBreadcrumb';
 import { FileTree } from './FileTree';
 import { Terminal, type TerminalRef } from './terminal/Terminal';
+import { EditorAgentOverlay, TerminalAgentIndicator } from './AgentWorkbenchIndicators';
 
 interface EditorPanelProps {
   files?: FileMap;
@@ -194,7 +195,7 @@ export const EditorPanel = memo(
                   </div>
                 )}
               </PanelHeader>
-              <div className="h-full flex-1 overflow-hidden">
+              <div className="h-full flex-1 overflow-hidden relative">
                 <CodeMirrorEditor
                   theme={theme}
                   editable={!isStreaming && editorDocument !== undefined}
@@ -205,6 +206,7 @@ export const EditorPanel = memo(
                   onChange={onEditorChange}
                   onSave={onFileSave}
                 />
+                <EditorAgentOverlay filePath={editorDocument?.filePath} />
               </div>
             </Panel>
           </PanelGroup>
@@ -263,6 +265,7 @@ export const EditorPanel = memo(
                   );
                 })}
                 {terminalCount < MAX_TERMINALS && <IconButton icon="i-ph:plus" size="md" title="Ajouter un terminal" onClick={addTerminal} />}
+                <TerminalAgentIndicator className="mx-2" />
                 <IconButton
                   className="ml-auto"
                   icon="i-ph:caret-down"

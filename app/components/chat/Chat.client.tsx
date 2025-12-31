@@ -2,11 +2,12 @@ import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from 'ai/react';
 import { useAnimate } from 'framer-motion';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState, useCallback } from 'react';
 import { cssTransition, toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from '~/components/ui/ErrorBoundary';
-import { useMessageParser, usePromptEnhancer, useShortcuts, useSnapScroll } from '~/lib/hooks';
+import { AgentChatIntegration } from '~/components/agent';
+import { useMessageParser, usePromptEnhancer, useShortcuts, useSnapScroll, useAgentChat } from '~/lib/hooks';
 import { useChatHistory } from '~/lib/persistence';
 import { chatStore } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -14,6 +15,7 @@ import { fileModificationsToHTML } from '~/utils/diff';
 import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
 import { BaseChat } from './BaseChat';
+import { multiAgentEnabledStore } from './MultiAgentToggle';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -90,6 +92,7 @@ export function Chat() {
   renderLogger.trace('Chat');
 
   const { ready, initialMessages, storeMessageHistory } = useChatHistory();
+  const showWorkbench = useStore(workbenchStore.showWorkbench);
 
   return (
     <>
@@ -146,6 +149,14 @@ export function Chat() {
         pauseOnFocusLoss
         transition={toastAnimation}
       />
+      {/* Agent system integration - only show when project is active */}
+      {showWorkbench && (
+        <AgentChatIntegration
+          showStatusBadge={true}
+          showActivityLog={true}
+          position="bottom-right"
+        />
+      )}
     </>
   );
 }
@@ -185,14 +196,20 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
   const [continuationContext, setContinuationContext] = useState<{ artifactId: string | null } | null>(null);
 
   const { showChat, mode } = useStore(chatStore);
+  const multiAgentEnabled = useStore(multiAgentEnabledStore);
 
   const [animationScope, animate] = useAnimate();
 
-  const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
+  // State for managing messages when using agent mode
+  const [agentMessages, setAgentMessages] = useState<Message[]>(initialMessages);
+  const [agentStreaming, setAgentStreaming] = useState('');
+
+  const { messages: chatMessages, isLoading: chatLoading, input, handleInputChange, setInput, stop, append } = useChat({
     api: '/api/chat',
     body: {
       mode,
       continuationContext,
+      multiAgent: false, // Standard mode always uses /api/chat without multi-agent flag
     },
     onError: (error) => {
       logger.error('Request failed\n\n', error);
@@ -200,11 +217,52 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     },
     onFinish: () => {
       logger.debug('Finished streaming');
-      // Reset continuation context after message is sent
       setContinuationContext(null);
     },
     initialMessages,
   });
+
+  // Agent chat hook for multi-agent mode
+  const {
+    sendMessage: sendAgentMessage,
+    streamingContent,
+    isProcessing: agentProcessing,
+    currentAgent,
+    abort: abortAgent,
+  } = useAgentChat({
+    onStart: () => {
+      logger.info('Multi-agent processing started');
+    },
+    onFinish: (result) => {
+      logger.info('Multi-agent processing finished', { success: result.success });
+      if (result.success && result.content) {
+        // Add the agent response to messages
+        const assistantMessage: Message = {
+          id: `agent-${Date.now()}`,
+          role: 'assistant',
+          content: result.content,
+        };
+        setAgentMessages(prev => [...prev, assistantMessage]);
+        setAgentStreaming('');
+
+        // Store in history
+        storeMessageHistory([...agentMessages, assistantMessage]).catch((error) =>
+          toast.error(error.message)
+        );
+      }
+    },
+    onError: (error) => {
+      logger.error('Multi-agent error:', error);
+      toast.error('Erreur du système multi-agent: ' + error.message);
+    },
+    onStream: (text) => {
+      setAgentStreaming(text);
+    },
+  });
+
+  // Use the appropriate messages and loading state based on mode
+  const messages = multiAgentEnabled ? agentMessages : chatMessages;
+  const isLoading = multiAgentEnabled ? agentProcessing : chatLoading;
 
   const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
   const { parsedMessages, parseMessages } = useMessageParser();
@@ -234,7 +292,11 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
   };
 
   const abort = () => {
-    stop();
+    if (multiAgentEnabled) {
+      abortAgent();
+    } else {
+      stop();
+    }
     chatStore.setKey('aborted', true);
     workbenchStore.abortAllActions();
   };
@@ -351,7 +413,25 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
       }
     } else {
       // no files, send text-only message
-      append({ role: 'user', content: messageContent });
+      if (multiAgentEnabled) {
+        // Add user message to agent messages first
+        const userMessage: Message = {
+          id: `user-${Date.now()}`,
+          role: 'user',
+          content: messageContent,
+        };
+        setAgentMessages(prev => [...prev, userMessage]);
+
+        // Send via multi-agent system
+        logger.info('Sending message via multi-agent system');
+        sendAgentMessage(messageContent, {
+          mode,
+          continuationContext,
+        });
+      } else {
+        // Standard mode - use useChat's append
+        append({ role: 'user', content: messageContent });
+      }
     }
 
     setInput('');
@@ -456,16 +536,30 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
         handleStop={abort}
         onFileSelect={handleFileSelect}
         onFileRemove={handleFileRemove}
-        messages={messages.map((message, i) => {
-          if (message.role === 'user') {
-            return message;
+        messages={(() => {
+          // Map existing messages
+          const mappedMessages = messages.map((message, i) => {
+            if (message.role === 'user') {
+              return message;
+            }
+
+            return {
+              ...message,
+              content: parsedMessages[i] || '',
+            };
+          });
+
+          // If multi-agent is streaming, add streaming message
+          if (multiAgentEnabled && agentStreaming && agentProcessing) {
+            mappedMessages.push({
+              id: 'streaming',
+              role: 'assistant' as const,
+              content: agentStreaming + (currentAgent ? `\n\n_[${currentAgent}]_` : ''),
+            });
           }
 
-          return {
-            ...message,
-            content: parsedMessages[i] || '',
-          };
-        })}
+          return mappedMessages;
+        })()}
         enhancePrompt={() => {
           enhancePrompt(input, (input) => {
             setInput(input);
