@@ -7,15 +7,7 @@
  * - Status monitoring
  */
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useStore } from '@nanostores/react';
 import {
   AgentExecutor,
@@ -43,17 +35,14 @@ import {
   systemLogsStore,
   resetAgentStores,
 } from '~/lib/stores/agents';
-import type {
-  AgentType,
-  ToolExecutionResult,
-  Task,
-  TaskResult,
-} from '../types';
+import type { AgentType, ToolExecutionResult, Task, TaskResult } from '../types';
 import type { PendingActionBatch, ProposedAction } from '../security/action-validator';
 
-// ============================================================================
-// CONTEXT TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * CONTEXT TYPES
+ * ============================================================================
+ */
 
 export interface AgentSystemContextValue {
   // State
@@ -63,13 +52,10 @@ export interface AgentSystemContextValue {
   activeCount: number;
 
   // Executor methods
-  executeTool: (
-    request: ToolCallRequest,
-    context: ExecutionContext
-  ) => Promise<ToolExecutionResult>;
+  executeTool: (request: ToolCallRequest, context: ExecutionContext) => Promise<ToolExecutionResult>;
   executeToolBatch: (
     requests: ToolCallRequest[],
-    context: ExecutionContext
+    context: ExecutionContext,
   ) => Promise<Map<string, ToolExecutionResult>>;
 
   // Task management
@@ -91,35 +77,47 @@ export interface AgentSystemContextValue {
   reset: () => void;
 }
 
-// ============================================================================
-// CONTEXT
-// ============================================================================
+/*
+ * ============================================================================
+ * CONTEXT
+ * ============================================================================
+ */
 
 const AgentSystemContext = createContext<AgentSystemContextValue | null>(null);
 
-// ============================================================================
-// PROVIDER PROPS
-// ============================================================================
+/*
+ * ============================================================================
+ * PROVIDER PROPS
+ * ============================================================================
+ */
 
 export interface AgentSystemProviderProps {
   children: ReactNode;
+
   /** Initial control mode */
   initialControlMode?: AgentControlMode;
+
   /** Global timeout for operations */
   globalTimeout?: number;
+
   /** Callback when batch is approved */
   onBatchApproved?: (batch: PendingActionBatch) => void;
+
   /** Callback when batch is rejected */
   onBatchRejected?: (batch: PendingActionBatch) => void;
+
   /** Callback when action is executed */
   onActionExecuted?: (action: ProposedAction, result: ToolExecutionResult) => void;
+
   /** Callback on error */
   onError?: (error: Error, action?: ProposedAction) => void;
 }
 
-// ============================================================================
-// PROVIDER COMPONENT
-// ============================================================================
+/*
+ * ============================================================================
+ * PROVIDER COMPONENT
+ * ============================================================================
+ */
 
 export function AgentSystemProvider({
   children,
@@ -179,9 +177,10 @@ export function AgentSystemProvider({
           error: 'Agent system not initialized',
         };
       }
+
       return executor.executeTool(request, context);
     },
-    [executor]
+    [executor],
   );
 
   const executeToolBatch = useCallback(
@@ -189,9 +188,10 @@ export function AgentSystemProvider({
       if (!executor) {
         return new Map();
       }
+
       return executor.executeToolBatch(requests, context);
     },
-    [executor]
+    [executor],
   );
 
   const startTask = useCallback(
@@ -200,7 +200,7 @@ export function AgentSystemProvider({
         await executor.startTask(task, agentName);
       }
     },
-    [executor]
+    [executor],
   );
 
   const completeTask = useCallback(
@@ -209,7 +209,7 @@ export function AgentSystemProvider({
         await executor.completeTask(task, agentName, result);
       }
     },
-    [executor]
+    [executor],
   );
 
   // Configuration
@@ -284,19 +284,17 @@ export function AgentSystemProvider({
       rejectAll,
       closeApprovalModal,
       reset,
-    ]
+    ],
   );
 
-  return (
-    <AgentSystemContext.Provider value={contextValue}>
-      {children}
-    </AgentSystemContext.Provider>
-  );
+  return <AgentSystemContext.Provider value={contextValue}>{children}</AgentSystemContext.Provider>;
 }
 
-// ============================================================================
-// HOOKS
-// ============================================================================
+/*
+ * ============================================================================
+ * HOOKS
+ * ============================================================================
+ */
 
 /**
  * Main hook to access the agent system

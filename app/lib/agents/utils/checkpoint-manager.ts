@@ -8,9 +8,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('CheckpointManager');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * État d'un checkpoint
@@ -107,9 +109,11 @@ export interface CheckpointStorage {
   cleanup(maxAge: number): Promise<number>;
 }
 
-// ============================================================================
-// CHECKPOINT MANAGER
-// ============================================================================
+/*
+ * ============================================================================
+ * CHECKPOINT MANAGER
+ * ============================================================================
+ */
 
 /**
  * Gestionnaire de checkpoints pour la sauvegarde/reprise des tâches
@@ -125,16 +129,18 @@ export class CheckpointManager {
     options?: {
       autoSaveInterval?: number;
       maxCheckpoints?: number;
-    }
+    },
   ) {
     this.storage = storage;
     this.autoSaveInterval = options?.autoSaveInterval ?? 30000; // 30 secondes
     this.maxCheckpoints = options?.maxCheckpoints ?? 100;
   }
 
-  // ==========================================================================
-  // PUBLIC API
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * PUBLIC API
+   * ==========================================================================
+   */
 
   /**
    * Sauvegarder un checkpoint
@@ -145,7 +151,7 @@ export class CheckpointManager {
     agentName: string,
     messageHistory: AgentMessage[],
     partialResults?: Partial<TaskResult>,
-    options?: SaveOptions
+    options?: SaveOptions,
   ): Promise<CheckpointState> {
     const checkpointId = this.generateCheckpointId(taskId);
 
@@ -199,7 +205,7 @@ export class CheckpointManager {
    */
   async resumeFromCheckpoint(
     checkpointId: string,
-    options?: ResumeOptions
+    options?: ResumeOptions,
   ): Promise<{
     task: Task;
     messageHistory: AgentMessage[];
@@ -233,9 +239,12 @@ export class CheckpointManager {
 
     // Filtrer les messages si on reprend depuis une étape spécifique
     let messageHistory = [...checkpoint.messageHistory];
+
     if (options?.fromStep !== undefined && checkpoint.currentStep !== undefined) {
-      // Garder les messages jusqu'à l'étape spécifiée
-      // (logique simplifiée, pourrait être plus sophistiquée)
+      /*
+       * Garder les messages jusqu'à l'étape spécifiée
+       * (logique simplifiée, pourrait être plus sophistiquée)
+       */
       const ratio = options.fromStep / (checkpoint.totalSteps ?? 1);
       const messagesToKeep = Math.floor(messageHistory.length * ratio);
       messageHistory = messageHistory.slice(0, messagesToKeep);
@@ -243,6 +252,7 @@ export class CheckpointManager {
 
     // Ignorer les résultats d'erreur si demandé
     let partialResults = checkpoint.partialResults;
+
     if (options?.ignoreErrors && partialResults?.errors) {
       partialResults = {
         ...partialResults,
@@ -302,7 +312,7 @@ export class CheckpointManager {
       agentName: string;
       messageHistory: AgentMessage[];
       partialResults?: Partial<TaskResult>;
-    }
+    },
   ): void {
     // Arrêter le timer existant si présent
     this.stopAutoSave(taskId);
@@ -310,14 +320,9 @@ export class CheckpointManager {
     const timer = setInterval(async () => {
       try {
         const state = getState();
-        await this.saveCheckpoint(
-          taskId,
-          state.task,
-          state.agentName,
-          state.messageHistory,
-          state.partialResults,
-          { reason: 'auto' }
-        );
+        await this.saveCheckpoint(taskId, state.task, state.agentName, state.messageHistory, state.partialResults, {
+          reason: 'auto',
+        });
       } catch (error) {
         logger.error(`Auto-save failed for task ${taskId}:`, error);
       }
@@ -358,6 +363,7 @@ export class CheckpointManager {
     // maxAge en millisecondes (défaut: 24 heures)
     const deleted = await this.storage.cleanup(maxAge);
     logger.info(`Cleanup: ${deleted} old checkpoints deleted`);
+
     return deleted;
   }
 
@@ -369,9 +375,11 @@ export class CheckpointManager {
     return checkpoint !== null;
   }
 
-  // ==========================================================================
-  // HELPERS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * HELPERS
+   * ==========================================================================
+   */
 
   /**
    * Générer un ID de checkpoint unique
@@ -379,13 +387,16 @@ export class CheckpointManager {
   private generateCheckpointId(taskId: string): string {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
+
     return `cp-${taskId}-${timestamp}-${random}`;
   }
 }
 
-// ============================================================================
-// STORAGE EN MÉMOIRE (POUR LES TESTS)
-// ============================================================================
+/*
+ * ============================================================================
+ * STORAGE EN MÉMOIRE (POUR LES TESTS)
+ * ============================================================================
+ */
 
 /**
  * Implémentation en mémoire du stockage de checkpoints
@@ -450,9 +461,11 @@ export class InMemoryCheckpointStorage implements CheckpointStorage {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer un CheckpointManager avec stockage en mémoire
@@ -473,7 +486,7 @@ export function createCheckpointManagerWithStorage(
   options?: {
     autoSaveInterval?: number;
     maxCheckpoints?: number;
-  }
+  },
 ): CheckpointManager {
   return new CheckpointManager(storage, options);
 }

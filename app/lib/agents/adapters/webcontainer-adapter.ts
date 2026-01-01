@@ -28,19 +28,25 @@ import { addAgentLog } from '~/lib/stores/agents';
 
 const logger = createScopedLogger('WebContainerAdapter');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 export interface AdapterConfig {
   /** Mode strict = toute action nécessite approbation */
   strictMode: boolean;
+
   /** Agent qui utilise l'adaptateur */
   agentName: AgentType;
+
   /** ID de la tâche en cours */
   taskId?: string;
+
   /** Callback pour demander approbation */
   onApprovalRequired?: (action: ProposedAction) => Promise<boolean>;
+
   /** Callback pour notifier une action */
   onActionExecuted?: (action: ProposedAction, result: ToolExecutionResult) => void;
 }
@@ -68,9 +74,11 @@ export interface ShellResult {
   stderr: string;
 }
 
-// ============================================================================
-// ADAPTER CLASS
-// ============================================================================
+/*
+ * ============================================================================
+ * ADAPTER CLASS
+ * ============================================================================
+ */
 
 export class WebContainerAdapter {
   private config: AdapterConfig;
@@ -81,9 +89,11 @@ export class WebContainerAdapter {
     this.container = webcontainer;
   }
 
-  // --------------------------------------------------------------------------
-  // FILE OPERATIONS (LECTURE - toujours autorisées)
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * FILE OPERATIONS (LECTURE - toujours autorisées)
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Lire un fichier (toujours autorisé)
@@ -139,7 +149,7 @@ export class WebContainerAdapter {
       const wc = await this.container;
       const entries = await wc.fs.readdir(dirPath, { withFileTypes: true });
 
-      const result: DirectoryEntry[] = entries.map(entry => ({
+      const result: DirectoryEntry[] = entries.map((entry) => ({
         name: entry.name,
         type: entry.isDirectory() ? 'directory' : 'file',
       }));
@@ -171,11 +181,13 @@ export class WebContainerAdapter {
     try {
       const wc = await this.container;
       await wc.fs.readdir(path);
+
       return true;
     } catch {
       try {
         const wc = await this.container;
         await wc.fs.readFile(path);
+
         return true;
       } catch {
         return false;
@@ -183,9 +195,11 @@ export class WebContainerAdapter {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // FILE OPERATIONS (ÉCRITURE - nécessitent validation)
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * FILE OPERATIONS (ÉCRITURE - nécessitent validation)
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Creer un fichier (necessite approbation en mode strict)
@@ -198,18 +212,14 @@ export class WebContainerAdapter {
       lineCount: content.split('\n').length,
     };
 
-    const action = createProposedAction(
-      'file_create',
-      this.config.agentName,
-      `Create file: ${filePath}`,
-      details
-    );
+    const action = createProposedAction('file_create', this.config.agentName, `Create file: ${filePath}`, details);
 
     return this.executeWithApproval(action, async () => {
       const wc = await this.container;
 
       // Create parent folders if needed
       const folder = filePath.substring(0, filePath.lastIndexOf('/'));
+
       if (folder && folder !== '.') {
         await wc.fs.mkdir(folder, { recursive: true });
       }
@@ -229,9 +239,7 @@ export class WebContainerAdapter {
   async writeFile(filePath: string, content: string): Promise<ToolExecutionResult> {
     // Read current content for diff
     const currentResult = await this.readFile(filePath);
-    const currentContent = currentResult.success
-      ? (currentResult.output as FileReadResult).content
-      : '';
+    const currentContent = currentResult.success ? (currentResult.output as FileReadResult).content : '';
 
     const actionType: ActionType = currentContent ? 'file_modify' : 'file_create';
 
@@ -265,6 +273,7 @@ export class WebContainerAdapter {
 
       // Create parent folders if needed
       const folder = filePath.substring(0, filePath.lastIndexOf('/'));
+
       if (folder && folder !== '.') {
         await wc.fs.mkdir(folder, { recursive: true });
       }
@@ -287,12 +296,7 @@ export class WebContainerAdapter {
       path: filePath,
     };
 
-    const action = createProposedAction(
-      'file_delete',
-      this.config.agentName,
-      `Delete file: ${filePath}`,
-      details
-    );
+    const action = createProposedAction('file_delete', this.config.agentName, `Delete file: ${filePath}`, details);
 
     return this.executeWithApproval(action, async () => {
       const wc = await this.container;
@@ -318,7 +322,7 @@ export class WebContainerAdapter {
       'directory_create',
       this.config.agentName,
       `Create directory: ${dirPath}`,
-      details
+      details,
     );
 
     return this.executeWithApproval(action, async () => {
@@ -332,9 +336,11 @@ export class WebContainerAdapter {
     });
   }
 
-  // --------------------------------------------------------------------------
-  // SHELL OPERATIONS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * SHELL OPERATIONS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Exécuter une commande shell (nécessite validation)
@@ -362,15 +368,15 @@ export class WebContainerAdapter {
       'shell_command',
       this.config.agentName,
       `Execute: ${command.substring(0, 50)}${command.length > 50 ? '...' : ''}`,
-      details
+      details,
     );
 
-    // En mode strict, même les commandes "allowed" nécessitent approbation
-    // Sauf lecture seule (ls, cat, etc.)
+    /*
+     * En mode strict, même les commandes "allowed" nécessitent approbation
+     * Sauf lecture seule (ls, cat, etc.)
+     */
     const readOnlyCommands = ['ls', 'cat', 'head', 'tail', 'grep', 'find', 'pwd', 'echo', 'which'];
-    const isReadOnly = readOnlyCommands.some(cmd =>
-      command.trim().startsWith(cmd + ' ') || command.trim() === cmd
-    );
+    const isReadOnly = readOnlyCommands.some((cmd) => command.trim().startsWith(cmd + ' ') || command.trim() === cmd);
 
     if (isReadOnly && !this.config.strictMode) {
       // Exécuter directement sans approbation
@@ -390,7 +396,7 @@ export class WebContainerAdapter {
       const wc = await this.container;
 
       let stdout = '';
-      let stderr = '';
+      const stderr = '';
 
       const process = await wc.spawn('jsh', ['-c', command], {
         env: { npm_config_yes: 'true' },
@@ -401,12 +407,17 @@ export class WebContainerAdapter {
       const readStdout = async () => {
         while (true) {
           const { done, value } = await stdoutReader.read();
-          if (done) break;
+
+          if (done) {
+            break;
+          }
+
           stdout += value;
         }
       };
 
       await readStdout();
+
       const exitCode = await process.exit;
 
       this.log('debug', `Shell command completed: ${command} (exit: ${exitCode})`);
@@ -436,16 +447,18 @@ export class WebContainerAdapter {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // HELPERS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * HELPERS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Execute an action with the approval flow
    */
   private async executeWithApproval(
     action: ProposedAction,
-    executor: () => Promise<ToolExecutionResult>
+    executor: () => Promise<ToolExecutionResult>,
   ): Promise<ToolExecutionResult> {
     const startTime = Date.now();
 
@@ -455,6 +468,7 @@ export class WebContainerAdapter {
     if (!validation.valid) {
       const errorMsg = validation.messages.join(', ') || 'Validation failed';
       this.log('warn', `Action validation failed: ${errorMsg}`);
+
       return {
         success: false,
         output: null,
@@ -541,9 +555,11 @@ export class WebContainerAdapter {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer un adaptateur pour un agent
@@ -562,7 +578,7 @@ const adapterMap = new Map<AgentType, WebContainerAdapter>();
  */
 export function getAdapterForAgent(
   agentName: AgentType,
-  config?: Partial<Omit<AdapterConfig, 'agentName'>>
+  config?: Partial<Omit<AdapterConfig, 'agentName'>>,
 ): WebContainerAdapter {
   let adapter = adapterMap.get(agentName);
 

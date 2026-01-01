@@ -6,21 +6,20 @@
 import { BaseAgent } from '../core/base-agent';
 import type { ToolHandler } from '../core/tool-registry';
 import { READ_TOOLS, createReadToolHandlers, type FileSystem } from '../tools/read-tools';
-import {
-  WRITE_TOOLS,
-  createWriteToolHandlers,
-  type WritableFileSystem,
-} from '../tools/write-tools';
+import { WRITE_TOOLS, createWriteToolHandlers, type WritableFileSystem } from '../tools/write-tools';
 import { FIXER_SYSTEM_PROMPT } from '../prompts/fixer-prompt';
 import type { Task, TaskResult, ToolDefinition, Artifact, AgentError, ToolExecutionResult } from '../types';
+import { getModelForAgent } from '../types';
 import type { CodeIssue } from '../tools/review-tools';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('FixerAgent');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Type d'erreur à corriger
@@ -65,9 +64,11 @@ export interface FixResult {
   potentialImpacts?: string[];
 }
 
-// ============================================================================
-// FIXER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * FIXER AGENT
+ * ============================================================================
+ */
 
 /**
  * Agent de correction automatique
@@ -88,7 +89,7 @@ export class FixerAgent extends BaseAgent {
       description:
         'Agent de correction automatique. Corrige les erreurs de test, de compilation, ' +
         'et les problèmes de sécurité ou qualité identifiés par les autres agents.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('fixer'), // Opus 4.5 pour correction intelligente
       tools: [...READ_TOOLS, ...WRITE_TOOLS],
       systemPrompt: FIXER_SYSTEM_PROMPT,
       maxTokens: 8192,
@@ -206,10 +207,14 @@ export class FixerAgent extends BaseAgent {
       // Ajouter un résumé des corrections
       const summaryArtifact: Artifact = {
         type: 'message',
-        content: JSON.stringify({
-          totalFixes: this.appliedFixes.length,
-          fixes: this.appliedFixes,
-        }, null, 2),
+        content: JSON.stringify(
+          {
+            totalFixes: this.appliedFixes.length,
+            fixes: this.appliedFixes,
+          },
+          null,
+          2,
+        ),
         title: 'Fix Summary',
       };
       result.artifacts.push(summaryArtifact);
@@ -227,11 +232,7 @@ export class FixerAgent extends BaseAgent {
 
     // Enregistrer les outils de lecture
     const readHandlers = createReadToolHandlers(fs);
-    this.registerTools(
-      READ_TOOLS,
-      readHandlers as unknown as Record<string, ToolHandler>,
-      'filesystem'
-    );
+    this.registerTools(READ_TOOLS, readHandlers as unknown as Record<string, ToolHandler>, 'filesystem');
 
     // Créer des handlers d'écriture wrappés pour tracker les corrections
     const writeHandlers = createWriteToolHandlers(fs);
@@ -245,7 +246,7 @@ export class FixerAgent extends BaseAgent {
    * Wrapper les handlers d'écriture pour tracker les corrections
    */
   private wrapWriteHandlersWithTracking(
-    handlers: ReturnType<typeof createWriteToolHandlers>
+    handlers: ReturnType<typeof createWriteToolHandlers>,
   ): Record<string, ToolHandler> {
     const wrapped: Record<string, ToolHandler> = {};
 
@@ -386,9 +387,11 @@ export class FixerAgent extends BaseAgent {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance du Fixer Agent

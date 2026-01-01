@@ -5,9 +5,11 @@
 
 import type { ToolDefinition, ToolExecutionResult } from '../types';
 
-// ============================================================================
-// DÉFINITIONS DES OUTILS GIT
-// ============================================================================
+/*
+ * ============================================================================
+ * DÉFINITIONS DES OUTILS GIT
+ * ============================================================================
+ */
 
 /**
  * Outil pour initialiser un repo Git
@@ -38,11 +40,11 @@ export const GitCloneTool: ToolDefinition = {
     properties: {
       url: {
         type: 'string',
-        description: "URL du dépôt à cloner (HTTPS ou SSH)",
+        description: 'URL du dépôt à cloner (HTTPS ou SSH)',
       },
       directory: {
         type: 'string',
-        description: "Dossier de destination (optionnel)",
+        description: 'Dossier de destination (optionnel)',
       },
       branch: {
         type: 'string',
@@ -255,9 +257,11 @@ export const GitDiffTool: ToolDefinition = {
   },
 };
 
-// ============================================================================
-// LISTE DES OUTILS GIT
-// ============================================================================
+/*
+ * ============================================================================
+ * LISTE DES OUTILS GIT
+ * ============================================================================
+ */
 
 export const GIT_TOOLS: ToolDefinition[] = [
   GitInitTool,
@@ -272,9 +276,11 @@ export const GIT_TOOLS: ToolDefinition[] = [
   GitDiffTool,
 ];
 
-// ============================================================================
-// INTERFACE GIT
-// ============================================================================
+/*
+ * ============================================================================
+ * INTERFACE GIT
+ * ============================================================================
+ */
 
 /**
  * Information sur une branche
@@ -323,7 +329,7 @@ export interface GitInterface {
       directory?: string;
       branch?: string;
       depth?: number;
-    }
+    },
   ): Promise<void>;
 
   /** Obtenir le status */
@@ -342,16 +348,11 @@ export interface GitInterface {
     message: string,
     options?: {
       author?: { name: string; email: string };
-    }
+    },
   ): Promise<GitCommit>;
 
   /** Pousser les commits */
-  push(options?: {
-    remote?: string;
-    branch?: string;
-    setUpstream?: boolean;
-    force?: boolean;
-  }): Promise<void>;
+  push(options?: { remote?: string; branch?: string; setUpstream?: boolean; force?: boolean }): Promise<void>;
 
   /** Tirer les commits */
   pull(options?: { remote?: string; branch?: string; rebase?: boolean }): Promise<void>;
@@ -360,7 +361,7 @@ export interface GitInterface {
   branch(
     action: 'list' | 'create' | 'delete' | 'checkout',
     name?: string,
-    force?: boolean
+    force?: boolean,
   ): Promise<GitBranch[] | void>;
 
   /** Obtenir le log */
@@ -376,15 +377,17 @@ export interface GitInterface {
   isRepository(): Promise<boolean>;
 }
 
-// ============================================================================
-// HANDLERS D'EXÉCUTION
-// ============================================================================
+/*
+ * ============================================================================
+ * HANDLERS D'EXÉCUTION
+ * ============================================================================
+ */
 
 /**
  * Créer les handlers pour les outils Git
  */
 export function createGitToolHandlers(
-  git: GitInterface
+  git: GitInterface,
 ): Record<string, (input: Record<string, unknown>) => Promise<ToolExecutionResult>> {
   return {
     /**
@@ -460,10 +463,7 @@ export function createGitToolHandlers(
           status.behind > 0 ? `Your branch is behind by ${status.behind} commit(s)` : '',
           '',
           status.files.length > 0 ? 'Changes:' : 'Nothing to commit, working tree clean',
-          ...status.files.map(
-            (f) =>
-              `  ${f.staged ? '(staged)' : ''}${f.status}: ${f.path}`
-          ),
+          ...status.files.map((f) => `  ${f.staged ? '(staged)' : ''}${f.status}: ${f.path}`),
         ]
           .filter(Boolean)
           .join('\n');
@@ -598,6 +598,7 @@ export function createGitToolHandlers(
           const output = branches
             .map((b) => `${b.current ? '* ' : '  '}${b.name}${b.tracking ? ` -> ${b.tracking}` : ''}`)
             .join('\n');
+
           return {
             success: true,
             output: output || 'No branches',
@@ -661,7 +662,7 @@ export function createGitToolHandlers(
               '',
               `    ${c.message}`,
               '',
-            ].join('\n')
+            ].join('\n'),
           )
           .join('\n');
 
@@ -704,9 +705,11 @@ export function createGitToolHandlers(
   };
 }
 
-// ============================================================================
-// MOCK GIT (POUR LES TESTS)
-// ============================================================================
+/*
+ * ============================================================================
+ * MOCK GIT (POUR LES TESTS)
+ * ============================================================================
+ */
 
 /**
  * Créer un mock GitInterface pour les tests
@@ -718,7 +721,7 @@ export function createMockGit(
     branches?: GitBranch[];
     commits?: GitCommit[];
     files?: GitFileStatus[];
-  } = {}
+  } = {},
 ): GitInterface {
   const defaultBranch = options.currentBranch || 'main';
   let currentBranch = defaultBranch;
@@ -758,6 +761,7 @@ export function createMockGit(
       };
       commits.unshift(commit);
       stagedFiles.clear();
+
       return commit;
     },
 
@@ -777,10 +781,15 @@ export function createMockGit(
           if (name) {
             branches.push({ name, current: false });
           }
+
           break;
         case 'delete':
           const idx = branches.findIndex((b) => b.name === name);
-          if (idx !== -1) branches.splice(idx, 1);
+
+          if (idx !== -1) {
+            branches.splice(idx, 1);
+          }
+
           break;
         case 'checkout':
           branches.forEach((b) => (b.current = b.name === name));

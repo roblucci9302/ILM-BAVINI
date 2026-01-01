@@ -8,13 +8,16 @@ import type { ToolHandler } from '../core/tool-registry';
 import { TEST_TOOLS, createTestToolHandlers, type TestRunner } from '../tools/test-tools';
 import { TESTER_SYSTEM_PROMPT } from '../prompts/tester-prompt';
 import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
+import { getModelForAgent } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('TesterAgent');
 
-// ============================================================================
-// TESTER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTER AGENT
+ * ============================================================================
+ */
 
 /**
  * Agent de test et validation
@@ -32,9 +35,9 @@ export class TesterAgent extends BaseAgent {
     super({
       name: 'tester',
       description:
-        'Agent de test. Lance les tests unitaires et d\'intégration, ' +
+        "Agent de test. Lance les tests unitaires et d'intégration, " +
         'analyse les résultats, suggère des corrections. Supporte vitest, jest, mocha.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('tester'), // Sonnet 4.5 - rapide pour les tests
       tools: TEST_TOOLS,
       systemPrompt: TESTER_SYSTEM_PROMPT,
       maxTokens: 4096,
@@ -126,7 +129,7 @@ export class TesterAgent extends BaseAgent {
    * Wrapper les handlers de test pour tracker les résultats
    */
   private wrapTestHandlersWithTracking(
-    handlers: ReturnType<typeof createTestToolHandlers>
+    handlers: ReturnType<typeof createTestToolHandlers>,
   ): Record<string, ToolHandler> {
     const wrapped: Record<string, ToolHandler> = {};
 
@@ -192,9 +195,11 @@ export class TesterAgent extends BaseAgent {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance du Tester Agent

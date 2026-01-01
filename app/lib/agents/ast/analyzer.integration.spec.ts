@@ -6,12 +6,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import {
-  ASTAnalyzer,
-  createASTAnalyzer,
-  RuleRegistry,
-  createConsoleReporter,
-} from './index';
+import { ASTAnalyzer, createASTAnalyzer, RuleRegistry, createConsoleReporter } from './index';
 
 describe('ASTAnalyzer Integration', () => {
   let analyzer: ASTAnalyzer;
@@ -22,9 +17,11 @@ describe('ASTAnalyzer Integration', () => {
     analyzer = createASTAnalyzer();
   });
 
-  // ============================================================================
-  // REAL FILE ANALYSIS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * REAL FILE ANALYSIS
+   * ============================================================================
+   */
 
   describe('Real file analysis', () => {
     it('should analyze a real TypeScript file from the project', async () => {
@@ -75,9 +72,11 @@ describe('ASTAnalyzer Integration', () => {
     });
   });
 
-  // ============================================================================
-  // METRICS ACCURACY
-  // ============================================================================
+  /*
+   * ============================================================================
+   * METRICS ACCURACY
+   * ============================================================================
+   */
 
   describe('Metrics accuracy on real code', () => {
     it('should calculate accurate LOC for known file', async () => {
@@ -164,16 +163,16 @@ describe('ASTAnalyzer Integration', () => {
 
       const result = strictAnalyzer.analyzeSource(complexCode);
 
-      const complexityIssues = result.issues.filter(
-        (i) => i.rule === 'maintainability/max-complexity'
-      );
+      const complexityIssues = result.issues.filter((i) => i.rule === 'maintainability/max-complexity');
       expect(complexityIssues.length).toBeGreaterThan(0);
     });
   });
 
-  // ============================================================================
-  // REAL SECURITY PATTERNS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * REAL SECURITY PATTERNS
+   * ============================================================================
+   */
 
   describe('Real-world security pattern detection', () => {
     it('should detect common React XSS patterns', () => {
@@ -221,9 +220,11 @@ describe('ASTAnalyzer Integration', () => {
     });
   });
 
-  // ============================================================================
-  // REAL PERFORMANCE PATTERNS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * REAL PERFORMANCE PATTERNS
+   * ============================================================================
+   */
 
   describe('Real-world performance pattern detection', () => {
     it('should detect inefficient React patterns', () => {
@@ -255,9 +256,7 @@ describe('ASTAnalyzer Integration', () => {
       const result = analyzer.analyzeSource(reactCode, 'ProductList.tsx');
 
       // Should detect inline objects in JSX props
-      const reRenderIssues = result.issues.filter(
-        (i) => i.rule === 'performance/avoid-re-renders'
-      );
+      const reRenderIssues = result.issues.filter((i) => i.rule === 'performance/avoid-re-renders');
       expect(reRenderIssues.length).toBeGreaterThan(0);
     });
 
@@ -281,16 +280,16 @@ describe('ASTAnalyzer Integration', () => {
 
       const result = analyzer.analyzeSource(nodeCode);
 
-      const syncIssues = result.issues.filter(
-        (i) => i.rule === 'performance/no-sync-operations'
-      );
+      const syncIssues = result.issues.filter((i) => i.rule === 'performance/no-sync-operations');
       expect(syncIssues.length).toBeGreaterThanOrEqual(2); // readFileSync and execSync
     });
   });
 
-  // ============================================================================
-  // SUMMARY & REPORTING
-  // ============================================================================
+  /*
+   * ============================================================================
+   * SUMMARY & REPORTING
+   * ============================================================================
+   */
 
   describe('Summary and reporting', () => {
     it('should create accurate summary for multiple files', () => {
@@ -310,10 +309,13 @@ describe('ASTAnalyzer Integration', () => {
     });
 
     it('should format console output correctly', () => {
-      const result = analyzer.analyzeSource(`
+      const result = analyzer.analyzeSource(
+        `
         let x: any = 1;
         eval("dangerous");
-      `, 'test.ts');
+      `,
+        'test.ts',
+      );
 
       const reporter = createConsoleReporter(false); // No colors for testing
       const output = reporter.formatResult(result);
@@ -324,9 +326,11 @@ describe('ASTAnalyzer Integration', () => {
     });
   });
 
-  // ============================================================================
-  // RULE CONFIGURATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * RULE CONFIGURATION
+   * ============================================================================
+   */
 
   describe('Rule configuration integration', () => {
     it('should respect disabled rules in real analysis', () => {

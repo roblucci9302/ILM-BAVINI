@@ -14,14 +14,7 @@ export interface AgentApprovalWrapperProps {
 }
 
 export function AgentApprovalWrapper({ onBatchProcessed }: AgentApprovalWrapperProps) {
-  const {
-    pendingBatch,
-    isModalOpen,
-    approveAll,
-    approveSelected,
-    rejectAll,
-    closeModal,
-  } = useAgentApproval();
+  const { pendingBatch, isModalOpen, approveAll, approveSelected, rejectAll, closeModal } = useAgentApproval();
 
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -41,7 +34,7 @@ export function AgentApprovalWrapper({ onBatchProcessed }: AgentApprovalWrapperP
       closeModal();
       onBatchProcessed?.(actionIds.length > 0);
     },
-    [approveSelected, closeModal, onBatchProcessed]
+    [approveSelected, closeModal, onBatchProcessed],
   );
 
   const handleRejectAll = useCallback(() => {

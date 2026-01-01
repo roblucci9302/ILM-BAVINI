@@ -9,9 +9,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('TypeScriptParser');
 
-// ============================================================================
-// TYPESCRIPT PARSER
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPESCRIPT PARSER
+ * ============================================================================
+ */
 
 /**
  * Parser TypeScript avec support pour l'analyse AST
@@ -21,9 +23,11 @@ export class TypeScriptParser {
   private checker: ts.TypeChecker | null = null;
   private sourceFiles: Map<string, ts.SourceFile> = new Map();
 
-  // ============================================================================
-  // PARSING
-  // ============================================================================
+  /*
+   * ============================================================================
+   * PARSING
+   * ============================================================================
+   */
 
   /**
    * Parser plusieurs fichiers TypeScript et créer un Program
@@ -53,6 +57,7 @@ export class TypeScriptParser {
     }
 
     logger.debug(`Parsed ${files.length} files`);
+
     return this.program;
   }
 
@@ -67,10 +72,11 @@ export class TypeScriptParser {
       code,
       ts.ScriptTarget.ESNext,
       true, // setParentNodes
-      scriptKind
+      scriptKind,
     );
 
     this.sourceFiles.set(fileName, sourceFile);
+
     return sourceFile;
   }
 
@@ -80,12 +86,15 @@ export class TypeScriptParser {
   async parseFile(filePath: string): Promise<ts.SourceFile> {
     const fs = await import('fs/promises');
     const content = await fs.readFile(filePath, 'utf-8');
+
     return this.parseSource(content, filePath);
   }
 
-  // ============================================================================
-  // TYPE INFORMATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TYPE INFORMATION
+   * ============================================================================
+   */
 
   /**
    * Obtenir le type d'un nœud
@@ -95,6 +104,7 @@ export class TypeScriptParser {
       logger.warn('No type checker available - call parse() first');
       return undefined;
     }
+
     return this.checker.getTypeAtLocation(node);
   }
 
@@ -110,7 +120,11 @@ export class TypeScriptParser {
    */
   getTypeString(node: ts.Node): string {
     const type = this.getTypeAtLocation(node);
-    if (!type || !this.checker) return 'unknown';
+
+    if (!type || !this.checker) {
+      return 'unknown';
+    }
+
     return this.checker.typeToString(type);
   }
 
@@ -119,13 +133,19 @@ export class TypeScriptParser {
    */
   isAnyType(node: ts.Node): boolean {
     const type = this.getTypeAtLocation(node);
-    if (!type) return false;
+
+    if (!type) {
+      return false;
+    }
+
     return (type.flags & ts.TypeFlags.Any) !== 0;
   }
 
-  // ============================================================================
-  // TRAVERSAL
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TRAVERSAL
+   * ============================================================================
+   */
 
   /**
    * Traverser l'AST avec un visitor pattern
@@ -133,7 +153,7 @@ export class TypeScriptParser {
   traverse(
     node: ts.Node,
     visitor: (node: ts.Node, context: TraversalContext) => void | boolean,
-    context: TraversalContext = { depth: 0, parent: null, ancestors: [] }
+    context: TraversalContext = { depth: 0, parent: null, ancestors: [] },
   ): void {
     // Appeler le visitor - si retourne false, arrêter la traversée des enfants
     const shouldContinue = visitor(node, context);
@@ -155,14 +175,12 @@ export class TypeScriptParser {
   /**
    * Traverser avec collecte des résultats
    */
-  collect<T>(
-    node: ts.Node,
-    collector: (node: ts.Node, context: TraversalContext) => T | undefined
-  ): T[] {
+  collect<T>(node: ts.Node, collector: (node: ts.Node, context: TraversalContext) => T | undefined): T[] {
     const results: T[] = [];
 
     this.traverse(node, (n, ctx) => {
       const result = collector(n, ctx);
+
       if (result !== undefined) {
         results.push(result);
       }
@@ -174,10 +192,7 @@ export class TypeScriptParser {
   /**
    * Trouver tous les nœuds d'un certain type
    */
-  findNodes<T extends ts.Node>(
-    root: ts.Node,
-    predicate: (node: ts.Node) => node is T
-  ): T[] {
+  findNodes<T extends ts.Node>(root: ts.Node, predicate: (node: ts.Node) => node is T): T[] {
     const results: T[] = [];
 
     this.traverse(root, (node) => {
@@ -192,10 +207,7 @@ export class TypeScriptParser {
   /**
    * Trouver le premier nœud correspondant
    */
-  findFirst<T extends ts.Node>(
-    root: ts.Node,
-    predicate: (node: ts.Node) => node is T
-  ): T | undefined {
+  findFirst<T extends ts.Node>(root: ts.Node, predicate: (node: ts.Node) => node is T): T | undefined {
     let result: T | undefined;
 
     this.traverse(root, (node) => {
@@ -208,9 +220,11 @@ export class TypeScriptParser {
     return result;
   }
 
-  // ============================================================================
-  // LOCATION UTILITIES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * LOCATION UTILITIES
+   * ============================================================================
+   */
 
   /**
    * Obtenir la localisation d'un nœud
@@ -252,6 +266,7 @@ export class TypeScriptParser {
     const lineStarts = sourceFile.getLineStarts();
     const lineStart = lineStarts[line - 1];
     const lineEnd = lineStarts[line] || sourceFile.getEnd();
+
     return sourceFile.text.slice(lineStart, lineEnd).replace(/\n$/, '');
   }
 
@@ -262,9 +277,11 @@ export class TypeScriptParser {
     const location = this.getLocation(node, sourceFile);
     const lines: string[] = [];
 
-    for (let i = Math.max(1, location.start.line - contextLines);
-         i <= Math.min(sourceFile.getLineStarts().length, location.end.line + contextLines);
-         i++) {
+    for (
+      let i = Math.max(1, location.start.line - contextLines);
+      i <= Math.min(sourceFile.getLineStarts().length, location.end.line + contextLines);
+      i++
+    ) {
       const prefix = i === location.start.line ? '> ' : '  ';
       lines.push(`${prefix}${i}: ${this.getLineText(sourceFile, i)}`);
     }
@@ -272,9 +289,11 @@ export class TypeScriptParser {
     return lines.join('\n');
   }
 
-  // ============================================================================
-  // NODE TYPE UTILITIES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * NODE TYPE UTILITIES
+   * ============================================================================
+   */
 
   /**
    * Obtenir le nom d'une fonction/méthode
@@ -283,18 +302,23 @@ export class TypeScriptParser {
     if (ts.isFunctionDeclaration(node) && node.name) {
       return node.name.text;
     }
+
     if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
       return node.name.text;
     }
+
     if (ts.isArrowFunction(node)) {
       const parent = node.parent;
+
       if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
         return parent.name.text;
       }
     }
+
     if (ts.isFunctionExpression(node) && node.name) {
       return node.name.text;
     }
+
     return '<anonymous>';
   }
 
@@ -310,33 +334,41 @@ export class TypeScriptParser {
    */
   isExported(node: ts.Node): boolean {
     // Check if node has modifiers (declarations)
-    if (!('modifiers' in node)) return false;
+    if (!('modifiers' in node)) {
+      return false;
+    }
 
     const modifiers = (node as ts.HasModifiers).modifiers;
-    if (!modifiers) return false;
 
-    return modifiers.some(
-      (m) => m.kind === ts.SyntaxKind.ExportKeyword
-    );
+    if (!modifiers) {
+      return false;
+    }
+
+    return modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
   }
 
   /**
    * Vérifier si un nœud est async
    */
   isAsync(node: ts.Node): boolean {
-    if (!ts.isFunctionLike(node)) return false;
+    if (!ts.isFunctionLike(node)) {
+      return false;
+    }
 
     const modifiers = ts.getModifiers(node as ts.FunctionLikeDeclaration);
-    if (!modifiers) return false;
 
-    return modifiers.some(
-      (m) => m.kind === ts.SyntaxKind.AsyncKeyword
-    );
+    if (!modifiers) {
+      return false;
+    }
+
+    return modifiers.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword);
   }
 
-  // ============================================================================
-  // IMPORT ANALYSIS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * IMPORT ANALYSIS
+   * ============================================================================
+   */
 
   /**
    * Obtenir tous les imports d'un fichier
@@ -347,7 +379,10 @@ export class TypeScriptParser {
     for (const statement of sourceFile.statements) {
       if (ts.isImportDeclaration(statement)) {
         const moduleSpecifier = statement.moduleSpecifier;
-        if (!ts.isStringLiteral(moduleSpecifier)) continue;
+
+        if (!ts.isStringLiteral(moduleSpecifier)) {
+          continue;
+        }
 
         const importInfo: ImportInfo = {
           module: moduleSpecifier.text,
@@ -359,6 +394,7 @@ export class TypeScriptParser {
         };
 
         const clause = statement.importClause;
+
         if (clause) {
           // Default import
           if (clause.name) {
@@ -388,9 +424,11 @@ export class TypeScriptParser {
     return imports;
   }
 
-  // ============================================================================
-  // PRIVATE UTILITIES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * PRIVATE UTILITIES
+   * ============================================================================
+   */
 
   /**
    * Déterminer le type de script basé sur l'extension
@@ -414,9 +452,11 @@ export class TypeScriptParser {
     }
   }
 
-  // ============================================================================
-  // GETTERS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * GETTERS
+   * ============================================================================
+   */
 
   /**
    * Obtenir le Program TypeScript
@@ -449,9 +489,11 @@ export class TypeScriptParser {
   }
 }
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Information sur un import
@@ -459,14 +501,19 @@ export class TypeScriptParser {
 export interface ImportInfo {
   /** Nom du module */
   module: string;
+
   /** Import par défaut */
   defaultImport?: string;
+
   /** Imports nommés */
   namedImports: NamedImportInfo[];
+
   /** Import namespace (import * as X) */
   namespaceImport?: string;
+
   /** Import de type seulement */
   isTypeOnly: boolean;
+
   /** Localisation */
   location: ASTLocation;
 }
@@ -477,15 +524,19 @@ export interface ImportInfo {
 export interface NamedImportInfo {
   /** Nom importé */
   name: string;
+
   /** Alias (si renommé) */
   alias?: string;
+
   /** Import de type seulement */
   isTypeOnly: boolean;
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 /**
  * Créer un nouveau parser
@@ -505,10 +556,7 @@ export function parseSourceFile(code: string, fileName = 'source.ts'): ts.Source
 /**
  * Utilitaire pour trouver rapidement des nœuds
  */
-export function findNodesOfKind<T extends ts.Node>(
-  sourceFile: ts.SourceFile,
-  kind: ts.SyntaxKind
-): T[] {
+export function findNodesOfKind<T extends ts.Node>(sourceFile: ts.SourceFile, kind: ts.SyntaxKind): T[] {
   const parser = new TypeScriptParser();
   return parser.findNodes(sourceFile, (node): node is T => node.kind === kind);
 }

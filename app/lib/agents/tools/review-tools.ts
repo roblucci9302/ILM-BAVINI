@@ -5,9 +5,11 @@
 
 import type { ToolDefinition } from '../types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Type d'analyse de code
@@ -114,9 +116,11 @@ export interface CodeAnalyzer {
   detectCodeSmells(content: string): Promise<CodeSmell[]>;
 }
 
-// ============================================================================
-// OUTILS DE REVIEW
-// ============================================================================
+/*
+ * ============================================================================
+ * OUTILS DE REVIEW
+ * ============================================================================
+ */
 
 /**
  * Outil : Analyser du code
@@ -140,7 +144,7 @@ Retourne un score et une liste de problèmes détectés.`,
       analysisType: {
         type: 'string',
         enum: ['quality', 'security', 'performance', 'best_practices', 'all'],
-        description: 'Type d\'analyse à effectuer (défaut: all)',
+        description: "Type d'analyse à effectuer (défaut: all)",
       },
       language: {
         type: 'string',
@@ -275,14 +279,18 @@ export const REVIEW_TOOLS: ToolDefinition[] = [
   DetectCodeSmellsTool,
 ];
 
-// ============================================================================
-// HANDLERS DE REVIEW
-// ============================================================================
+/*
+ * ============================================================================
+ * HANDLERS DE REVIEW
+ * ============================================================================
+ */
 
 /**
  * Créer les handlers pour les outils de review
  */
-export function createReviewToolHandlers(analyzer: CodeAnalyzer): Record<string, (input: Record<string, unknown>) => Promise<unknown>> {
+export function createReviewToolHandlers(
+  analyzer: CodeAnalyzer,
+): Record<string, (input: Record<string, unknown>) => Promise<unknown>> {
   return {
     analyze_code: async (input: Record<string, unknown>) => {
       const content = input.content as string;
@@ -291,6 +299,7 @@ export function createReviewToolHandlers(analyzer: CodeAnalyzer): Record<string,
       const file = (input.file as string) || 'unknown';
 
       const result = await analyzer.analyzeCode(content, { type: analysisType, language });
+
       return { ...result, file };
     },
 
@@ -334,9 +343,11 @@ export function createReviewToolHandlers(analyzer: CodeAnalyzer): Record<string,
   };
 }
 
-// ============================================================================
-// MOCK ANALYZER
-// ============================================================================
+/*
+ * ============================================================================
+ * MOCK ANALYZER
+ * ============================================================================
+ */
 
 /**
  * Créer un analyseur de code mock pour les tests
@@ -348,7 +359,7 @@ export function createMockAnalyzer(
     complexityResult?: Partial<ComplexityResult>;
     styleIssues?: CodeIssue[];
     codeSmells?: CodeSmell[];
-  } = {}
+  } = {},
 ): CodeAnalyzer {
   return {
     async analyzeCode(content: string, opts?: { type?: AnalysisType; language?: string }): Promise<AnalysisResult> {
@@ -399,7 +410,10 @@ export function createMockAnalyzer(
       // Simple mock: count if/for/while statements as complexity
       const functionMatches = content.match(/function\s+(\w+)|(\w+)\s*=\s*(?:async\s*)?\(/g) || [];
       const functions = functionMatches.map((match, index) => {
-        const name = match.replace(/function\s+/, '').replace(/\s*=.*/, '').trim();
+        const name = match
+          .replace(/function\s+/, '')
+          .replace(/\s*=.*/, '')
+          .trim();
         return {
           name: name || `anonymous_${index}`,
           line: index * 10 + 1,
@@ -457,6 +471,7 @@ export function createMockAnalyzer(
 
       lines.forEach((line, index) => {
         const funcMatch = line.match(/function\s+(\w+)|(\w+)\s*=\s*(?:async\s*)?\(/);
+
         if (funcMatch && line.includes('{')) {
           functionStart = index;
           functionName = funcMatch[1] || funcMatch[2] || 'anonymous';
@@ -467,6 +482,7 @@ export function createMockAnalyzer(
 
           if (braceCount === 0) {
             const functionLength = index - functionStart + 1;
+
             if (functionLength > 50) {
               smells.push({
                 type: 'long_function',
@@ -477,6 +493,7 @@ export function createMockAnalyzer(
                 refactoringAdvice: 'Consider breaking this function into smaller, more focused functions',
               });
             }
+
             functionStart = -1;
           }
         }
@@ -494,15 +511,18 @@ function detectLanguage(content: string): string {
   if (content.includes('import React') || content.includes('from "react"')) {
     return 'tsx';
   }
+
   if (content.includes('interface ') || content.includes(': string') || content.includes(': number')) {
     return 'typescript';
   }
+
   if (content.includes('const ') || content.includes('let ') || content.includes('function ')) {
     return 'javascript';
   }
-  if (content.includes('def ') || content.includes('import ') && content.includes(':')) {
+
+  if (content.includes('def ') || (content.includes('import ') && content.includes(':'))) {
     return 'python';
   }
+
   return 'unknown';
 }
-

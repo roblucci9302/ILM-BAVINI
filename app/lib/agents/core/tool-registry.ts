@@ -31,16 +31,16 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ToolRegistry');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Type d'un handler d'outil
  */
-export type ToolHandler = (
-  input: Record<string, unknown>
-) => Promise<ToolExecutionResult>;
+export type ToolHandler = (input: Record<string, unknown>) => Promise<ToolExecutionResult>;
 
 /**
  * Configuration d'un outil enregistré
@@ -48,12 +48,16 @@ export type ToolHandler = (
 export interface RegisteredTool {
   /** Définition de l'outil (pour le LLM) */
   definition: ToolDefinition;
+
   /** Handler d'exécution */
   handler: ToolHandler;
+
   /** Catégorie de l'outil (filesystem, shell, git, etc.) */
   category?: string;
+
   /** Priorité (pour résolution de conflits) */
   priority?: number;
+
   /** Timestamp d'enregistrement */
   registeredAt: Date;
 }
@@ -64,6 +68,7 @@ export interface RegisteredTool {
 export interface RegisterOptions {
   category?: string;
   priority?: number;
+
   /** Remplacer si existe déjà */
   override?: boolean;
 }
@@ -79,9 +84,11 @@ export interface RegistryStats {
   failureCount: number;
 }
 
-// ============================================================================
-// TOOL REGISTRY
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOL REGISTRY
+ * ============================================================================
+ */
 
 /**
  * Registre centralisé des outils pour les agents BAVINI
@@ -127,24 +134,20 @@ export class ToolRegistry {
     failureCount: 0,
   };
 
-  // ============================================================================
-  // ENREGISTREMENT
-  // ============================================================================
+  /*
+   * ============================================================================
+   * ENREGISTREMENT
+   * ============================================================================
+   */
 
   /**
    * Enregistrer un outil avec son handler
    */
-  register(
-    definition: ToolDefinition,
-    handler: ToolHandler,
-    options: RegisterOptions = {}
-  ): void {
+  register(definition: ToolDefinition, handler: ToolHandler, options: RegisterOptions = {}): void {
     const { category, priority = 0, override = false } = options;
 
     if (this.tools.has(definition.name) && !override) {
-      throw new Error(
-        `Tool '${definition.name}' is already registered. Use override: true to replace it.`
-      );
+      throw new Error(`Tool '${definition.name}' is already registered. Use override: true to replace it.`);
     }
 
     this.tools.set(definition.name, {
@@ -164,11 +167,7 @@ export class ToolRegistry {
    * @param handlers Map nom -> handler
    * @param category Catégorie commune
    */
-  registerBatch(
-    definitions: ToolDefinition[],
-    handlers: Record<string, ToolHandler>,
-    category?: string
-  ): void {
+  registerBatch(definitions: ToolDefinition[], handlers: Record<string, ToolHandler>, category?: string): void {
     let registered = 0;
     let skipped = 0;
 
@@ -219,12 +218,15 @@ export class ToolRegistry {
     }
 
     logger.debug(`Unregistered ${count} tools from category: ${category}`);
+
     return count;
   }
 
-  // ============================================================================
-  // REQUÊTES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * REQUÊTES
+   * ============================================================================
+   */
 
   /**
    * Vérifier si un outil existe
@@ -292,9 +294,11 @@ export class ToolRegistry {
     return Array.from(categories);
   }
 
-  // ============================================================================
-  // EXÉCUTION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * EXÉCUTION
+   * ============================================================================
+   */
 
   /**
    * Exécuter un outil enregistré
@@ -319,10 +323,7 @@ export class ToolRegistry {
    * }
    * ```
    */
-  async execute(
-    name: string,
-    input: Record<string, unknown>
-  ): Promise<ToolExecutionResult> {
+  async execute(name: string, input: Record<string, unknown>): Promise<ToolExecutionResult> {
     this.stats.executionCount++;
 
     const tool = this.tools.get(name);
@@ -363,6 +364,7 @@ export class ToolRegistry {
       };
     } catch (error) {
       this.stats.failureCount++;
+
       const executionTime = Date.now() - startTime;
 
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -381,7 +383,7 @@ export class ToolRegistry {
    * Exécuter plusieurs outils en parallèle
    */
   async executeParallel(
-    calls: Array<{ name: string; input: Record<string, unknown> }>
+    calls: Array<{ name: string; input: Record<string, unknown> }>,
   ): Promise<ToolExecutionResult[]> {
     return Promise.all(calls.map((call) => this.execute(call.name, call.input)));
   }
@@ -391,7 +393,7 @@ export class ToolRegistry {
    */
   async executeSequential(
     calls: Array<{ name: string; input: Record<string, unknown> }>,
-    stopOnError: boolean = true
+    stopOnError: boolean = true,
   ): Promise<ToolExecutionResult[]> {
     const results: ToolExecutionResult[] = [];
 
@@ -407,9 +409,11 @@ export class ToolRegistry {
     return results;
   }
 
-  // ============================================================================
-  // UTILITAIRES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * UTILITAIRES
+   * ============================================================================
+   */
 
   /**
    * Nombre d'outils enregistrés
@@ -474,15 +478,17 @@ export class ToolRegistry {
   }
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 /**
  * Créer un registre avec les outils de lecture (filesystem)
  */
 export async function createReadToolsRegistry(
-  fileSystem: import('../tools/read-tools').FileSystem
+  fileSystem: import('../tools/read-tools').FileSystem,
 ): Promise<ToolRegistry> {
   const { READ_TOOLS, createReadToolHandlers } = await import('../tools/read-tools');
 
@@ -498,7 +504,7 @@ export async function createReadToolsRegistry(
  * Créer un registre avec les outils d'écriture (filesystem)
  */
 export async function createWriteToolsRegistry(
-  fileSystem: import('../tools/write-tools').WritableFileSystem
+  fileSystem: import('../tools/write-tools').WritableFileSystem,
 ): Promise<ToolRegistry> {
   const { WRITE_TOOLS, createWriteToolHandlers } = await import('../tools/write-tools');
 
@@ -514,7 +520,7 @@ export async function createWriteToolsRegistry(
  * Créer un registre avec les outils shell
  */
 export async function createShellToolsRegistry(
-  shell: import('../tools/shell-tools').ShellInterface
+  shell: import('../tools/shell-tools').ShellInterface,
 ): Promise<ToolRegistry> {
   const { SHELL_TOOLS, createShellToolHandlers } = await import('../tools/shell-tools');
 
@@ -529,9 +535,7 @@ export async function createShellToolsRegistry(
 /**
  * Créer un registre avec les outils Git
  */
-export async function createGitToolsRegistry(
-  git: import('../tools/git-tools').GitInterface
-): Promise<ToolRegistry> {
+export async function createGitToolsRegistry(git: import('../tools/git-tools').GitInterface): Promise<ToolRegistry> {
   const { GIT_TOOLS, createGitToolHandlers } = await import('../tools/git-tools');
 
   const registry = new ToolRegistry();

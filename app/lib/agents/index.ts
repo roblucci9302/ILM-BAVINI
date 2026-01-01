@@ -3,15 +3,19 @@
  * Exporte tous les composants nécessaires
  */
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 export * from './types';
 
-// ============================================================================
-// CORE
-// ============================================================================
+/*
+ * ============================================================================
+ * CORE
+ * ============================================================================
+ */
 
 export { BaseAgent } from './core/base-agent';
 export { AgentRegistry, agentRegistry } from './core/agent-registry';
@@ -26,11 +30,18 @@ export {
   createShellToolsRegistry,
   createGitToolsRegistry,
 } from './core/tool-registry';
-export type { ToolHandler, RegisteredTool, RegisterOptions, RegistryStats as ToolRegistryStats } from './core/tool-registry';
+export type {
+  ToolHandler,
+  RegisteredTool,
+  RegisterOptions,
+  RegistryStats as ToolRegistryStats,
+} from './core/tool-registry';
 
-// ============================================================================
-// AGENTS
-// ============================================================================
+/*
+ * ============================================================================
+ * AGENTS
+ * ============================================================================
+ */
 
 export { ExploreAgent, createExploreAgent } from './agents/explore-agent';
 export { Orchestrator, createOrchestrator } from './agents/orchestrator';
@@ -44,9 +55,11 @@ export type { ReviewReport } from './agents/reviewer-agent';
 export { FixerAgent, createFixerAgent } from './agents/fixer-agent';
 export type { FixableError, FixableErrorType, AppliedFix, FixResult } from './agents/fixer-agent';
 
-// ============================================================================
-// TOOLS - LECTURE
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOLS - LECTURE
+ * ============================================================================
+ */
 
 export {
   READ_TOOLS,
@@ -58,9 +71,11 @@ export {
 } from './tools/read-tools';
 export type { FileSystem } from './tools/read-tools';
 
-// ============================================================================
-// TOOLS - ÉCRITURE
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOLS - ÉCRITURE
+ * ============================================================================
+ */
 
 export {
   WRITE_TOOLS,
@@ -74,9 +89,11 @@ export {
 } from './tools/write-tools';
 export type { WritableFileSystem } from './tools/write-tools';
 
-// ============================================================================
-// TOOLS - SHELL
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOLS - SHELL
+ * ============================================================================
+ */
 
 export {
   SHELL_TOOLS,
@@ -91,9 +108,11 @@ export {
 } from './tools/shell-tools';
 export type { ShellInterface, ShellResult, RunningProcess } from './tools/shell-tools';
 
-// ============================================================================
-// TOOLS - TEST
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOLS - TEST
+ * ============================================================================
+ */
 
 export {
   TEST_TOOLS,
@@ -107,9 +126,11 @@ export {
 } from './tools/test-tools';
 export type { TestRunner, TestResult, TestSuiteResult, CoverageReport } from './tools/test-tools';
 
-// ============================================================================
-// TOOLS - GIT
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOLS - GIT
+ * ============================================================================
+ */
 
 export {
   GIT_TOOLS,
@@ -128,9 +149,11 @@ export {
 } from './tools/git-tools';
 export type { GitInterface, GitBranch, GitCommit, GitFileStatus } from './tools/git-tools';
 
-// ============================================================================
-// TOOLS - REVIEW
-// ============================================================================
+/*
+ * ============================================================================
+ * TOOLS - REVIEW
+ * ============================================================================
+ */
 
 export {
   REVIEW_TOOLS,
@@ -154,9 +177,11 @@ export type {
   CodeSmell,
 } from './tools/review-tools';
 
-// ============================================================================
-// EXECUTION - PARALLEL EXECUTOR
-// ============================================================================
+/*
+ * ============================================================================
+ * EXECUTION - PARALLEL EXECUTOR
+ * ============================================================================
+ */
 
 export {
   DependencyGraph,
@@ -176,9 +201,11 @@ export type {
   TaskExecutor,
 } from './execution';
 
-// ============================================================================
-// UTILS
-// ============================================================================
+/*
+ * ============================================================================
+ * UTILS
+ * ============================================================================
+ */
 
 export {
   CheckpointManager,
@@ -191,22 +218,14 @@ export type { CheckpointState, CheckpointStorage, SaveOptions, ResumeOptions } f
 export { ErrorRecovery, createErrorRecovery } from './utils/error-recovery';
 export type { ErrorType, ErrorSeverity, RecoveryAction, ErrorAnalysis, RecoveryConfig } from './utils/error-recovery';
 
-export {
-  SwarmCoordinator,
-  createSwarmCoordinator,
-  PREDEFINED_RULES,
-} from './utils/swarm-coordinator';
-export type {
-  HandoffRule,
-  HandoffCondition,
-  HandoffResult,
-  SwarmChain,
-  SwarmConfig,
-} from './utils/swarm-coordinator';
+export { SwarmCoordinator, createSwarmCoordinator, PREDEFINED_RULES } from './utils/swarm-coordinator';
+export type { HandoffRule, HandoffCondition, HandoffResult, SwarmChain, SwarmConfig } from './utils/swarm-coordinator';
 
-// ============================================================================
-// PROMPTS
-// ============================================================================
+/*
+ * ============================================================================
+ * PROMPTS
+ * ============================================================================
+ */
 
 export { EXPLORE_SYSTEM_PROMPT } from './prompts/explore-prompt';
 export { ORCHESTRATOR_SYSTEM_PROMPT, AGENT_CAPABILITIES } from './prompts/orchestrator-prompt';
@@ -217,27 +236,35 @@ export { DEPLOYER_SYSTEM_PROMPT } from './prompts/deployer-prompt';
 export { REVIEWER_SYSTEM_PROMPT } from './prompts/reviewer-prompt';
 export { FIXER_SYSTEM_PROMPT } from './prompts/fixer-prompt';
 
-// ============================================================================
-// SECURITY
-// ============================================================================
+/*
+ * ============================================================================
+ * SECURITY
+ * ============================================================================
+ */
 
 export * from './security';
 
-// ============================================================================
-// ADAPTERS
-// ============================================================================
+/*
+ * ============================================================================
+ * ADAPTERS
+ * ============================================================================
+ */
 
 export * from './adapters';
 
-// ============================================================================
-// REACT INTEGRATION
-// ============================================================================
+/*
+ * ============================================================================
+ * REACT INTEGRATION
+ * ============================================================================
+ */
 
 export * from './react';
 
-// ============================================================================
-// SYSTÈME D'AGENTS COMPLET
-// ============================================================================
+/*
+ * ============================================================================
+ * SYSTÈME D'AGENTS COMPLET
+ * ============================================================================
+ */
 
 import { AgentRegistry } from './core/agent-registry';
 import { TaskQueue } from './core/task-queue';
@@ -257,12 +284,7 @@ import type { ShellInterface } from './tools/shell-tools';
 import type { TestRunner } from './tools/test-tools';
 import type { GitInterface } from './tools/git-tools';
 import type { Task, TaskResult, AgentEventCallback } from './types';
-import {
-  handleAgentEvent,
-  updateAgentStatus,
-  addAgentLog,
-  resetAgentStores,
-} from '../stores/agents';
+import { handleAgentEvent, updateAgentStatus, addAgentLog, resetAgentStores } from '../stores/agents';
 import { CheckpointManager, createCheckpointManager } from './utils/checkpoint-manager';
 import { ErrorRecovery, createErrorRecovery } from './utils/error-recovery';
 
@@ -447,14 +469,10 @@ export class AgentSystem {
 
     // Créer le SwarmCoordinator si activé
     if (this.enableSwarm) {
-      this.swarmCoordinator = createSwarmCoordinator(
-        this.registry,
-        this.apiKey,
-        {
-          eventCallback: this.eventCallback,
-          enablePredefinedRules: true,
-        }
-      );
+      this.swarmCoordinator = createSwarmCoordinator(this.registry, this.apiKey, {
+        eventCallback: this.eventCallback,
+        enablePredefinedRules: true,
+      });
     }
 
     this.initialized = true;
@@ -534,11 +552,7 @@ export class AgentSystem {
   /**
    * Exécuter directement avec un agent spécifique
    */
-  async executeWithAgent(
-    agentName: string,
-    prompt: string,
-    context?: Record<string, unknown>
-  ): Promise<TaskResult> {
+  async executeWithAgent(agentName: string, prompt: string, context?: Record<string, unknown>): Promise<TaskResult> {
     if (!this.initialized) {
       await this.initialize();
     }

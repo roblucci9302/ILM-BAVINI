@@ -14,13 +14,16 @@ import {
 } from '../tools/git-tools';
 import { DEPLOYER_SYSTEM_PROMPT } from '../prompts/deployer-prompt';
 import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
+import { getModelForAgent } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('DeployerAgent');
 
-// ============================================================================
-// DEPLOYER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * DEPLOYER AGENT
+ * ============================================================================
+ */
 
 /**
  * Agent de déploiement et gestion Git
@@ -45,7 +48,7 @@ export class DeployerAgent extends BaseAgent {
       description:
         'Agent de déploiement. Gère les opérations Git (commit, push, pull, branches), ' +
         'la synchronisation avec les remotes, et prépare les déploiements.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('deployer'), // Sonnet 4.5 - efficace pour Git
       tools: GIT_TOOLS,
       systemPrompt: DEPLOYER_SYSTEM_PROMPT,
       maxTokens: 4096,
@@ -81,6 +84,7 @@ export class DeployerAgent extends BaseAgent {
 
     // Vérifier si on est dans un repo Git
     const isRepo = await this.git.isRepository();
+
     if (!isRepo) {
       return {
         success: false,
@@ -110,6 +114,7 @@ export class DeployerAgent extends BaseAgent {
       if (status.ahead > 0) {
         prompt += `\n- Commits en avance: ${status.ahead}`;
       }
+
       if (status.behind > 0) {
         prompt += `\n- Commits en retard: ${status.behind}`;
       }
@@ -169,9 +174,7 @@ export class DeployerAgent extends BaseAgent {
   /**
    * Wrapper les handlers Git pour tracker les opérations
    */
-  private wrapGitHandlersWithTracking(
-    handlers: ReturnType<typeof createGitToolHandlers>
-  ): Record<string, ToolHandler> {
+  private wrapGitHandlersWithTracking(handlers: ReturnType<typeof createGitToolHandlers>): Record<string, ToolHandler> {
     const wrapped: Record<string, ToolHandler> = {};
 
     for (const [name, handler] of Object.entries(handlers)) {
@@ -289,9 +292,11 @@ export class DeployerAgent extends BaseAgent {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance du Deployer Agent

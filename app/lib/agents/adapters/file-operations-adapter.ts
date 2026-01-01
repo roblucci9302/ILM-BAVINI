@@ -16,17 +16,22 @@ import { addAgentLog } from '~/lib/stores/agents';
 
 const logger = createScopedLogger('FileOperationsAdapter');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 export interface GlobOptions {
   /** Glob pattern like src/components/*.tsx */
   pattern: string;
+
   /** Base directory */
   cwd?: string;
+
   /** Patterns to ignore */
   ignore?: string[];
+
   /** Include hidden files */
   dot?: boolean;
 }
@@ -34,16 +39,22 @@ export interface GlobOptions {
 export interface GrepOptions {
   /** Search pattern (regex or string) */
   pattern: string;
+
   /** Files to search (glob pattern) */
   include?: string;
+
   /** Files to exclude */
   exclude?: string[];
+
   /** Case-insensitive search */
   ignoreCase?: boolean;
+
   /** Lines of context before match */
   contextBefore?: number;
+
   /** Lines of context after match */
   contextAfter?: number;
+
   /** Max results limit */
   maxResults?: number;
 }
@@ -59,10 +70,13 @@ export interface GrepMatch {
 export interface EditOperation {
   /** Operation type */
   type: 'replace' | 'insert' | 'delete';
+
   /** Start line (1-indexed) */
   startLine: number;
+
   /** End line (for replace/delete) */
   endLine?: number;
+
   /** New content */
   content?: string;
 }
@@ -75,9 +89,11 @@ export interface FileInfo {
   isDirectory: boolean;
 }
 
-// ============================================================================
-// FILE OPERATIONS CLASS
-// ============================================================================
+/*
+ * ============================================================================
+ * FILE OPERATIONS CLASS
+ * ============================================================================
+ */
 
 export class FileOperationsAdapter {
   private agentName: AgentType;
@@ -94,9 +110,11 @@ export class FileOperationsAdapter {
     this.container = webcontainer;
   }
 
-  // --------------------------------------------------------------------------
-  // READ OPERATIONS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * READ OPERATIONS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Read a file with caching
@@ -107,6 +125,7 @@ export class FileOperationsAdapter {
     // Check cache
     if (useCache) {
       const cached = this.readCache.get(filePath);
+
       if (cached && Date.now() - cached.timestamp < this.cacheMaxAge) {
         return {
           success: true,
@@ -158,23 +177,20 @@ export class FileOperationsAdapter {
    */
   async readFiles(filePaths: string[]): Promise<Map<string, ToolExecutionResult>> {
     const results = new Map<string, ToolExecutionResult>();
-    const promises = filePaths.map(async path => {
+    const promises = filePaths.map(async (path) => {
       const result = await this.readFile(path);
       results.set(path, result);
     });
 
     await Promise.all(promises);
+
     return results;
   }
 
   /**
    * Extract a code snippet from a file
    */
-  async getCodeSnippet(
-    filePath: string,
-    startLine: number,
-    endLine: number
-  ): Promise<CodeSnippet | null> {
+  async getCodeSnippet(filePath: string, startLine: number, endLine: number): Promise<CodeSnippet | null> {
     const result = await this.readFile(filePath);
 
     if (!result.success || !result.output) {
@@ -213,9 +229,11 @@ export class FileOperationsAdapter {
     };
   }
 
-  // --------------------------------------------------------------------------
-  // SEARCH OPERATIONS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * SEARCH OPERATIONS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Search for files by glob pattern
@@ -238,10 +256,14 @@ export class FileOperationsAdapter {
             const fullPath = `${dir}/${entry.name}`;
 
             // Skip hidden files if dot=false
-            if (!dot && entry.name.startsWith('.')) continue;
+            if (!dot && entry.name.startsWith('.')) {
+              continue;
+            }
 
             // Skip excluded patterns
-            if (ignore.some(ig => fullPath.includes(ig))) continue;
+            if (ignore.some((ig) => fullPath.includes(ig))) {
+              continue;
+            }
 
             if (entry.isDirectory()) {
               await walk(fullPath);
@@ -291,6 +313,7 @@ export class FileOperationsAdapter {
       .replace(/{{GLOBSTAR}}/g, '.*');
 
     const regex = new RegExp(`${regexPattern}$`);
+
     return regex.test(path);
   }
 
@@ -322,10 +345,15 @@ export class FileOperationsAdapter {
       const regex = new RegExp(pattern, ignoreCase ? 'gi' : 'g');
 
       for (const filePath of files) {
-        if (matches.length >= maxResults) break;
+        if (matches.length >= maxResults) {
+          break;
+        }
 
         const fileResult = await this.readFile(filePath);
-        if (!fileResult.success) continue;
+
+        if (!fileResult.success) {
+          continue;
+        }
 
         const content = fileResult.output as string;
         const lines = content.split('\n');
@@ -374,9 +402,11 @@ export class FileOperationsAdapter {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // EDIT OPERATIONS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * EDIT OPERATIONS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Apply edit operations to a file
@@ -393,7 +423,7 @@ export class FileOperationsAdapter {
         return result;
       }
 
-      let lines = (result.output as string).split('\n');
+      const lines = (result.output as string).split('\n');
 
       // Sort operations by line descending to avoid offset issues
       const sortedOps = [...operations].sort((a, b) => b.startLine - a.startLine);
@@ -408,6 +438,7 @@ export class FileOperationsAdapter {
               const newLines = op.content.split('\n');
               lines.splice(startIdx, endIdx - startIdx + 1, ...newLines);
             }
+
             break;
 
           case 'insert':
@@ -415,6 +446,7 @@ export class FileOperationsAdapter {
               const newLines = op.content.split('\n');
               lines.splice(startIdx, 0, ...newLines);
             }
+
             break;
 
           case 'delete':
@@ -488,9 +520,11 @@ export class FileOperationsAdapter {
     return diff;
   }
 
-  // --------------------------------------------------------------------------
-  // UTILITIES
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * UTILITIES
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Get file information
@@ -537,16 +571,15 @@ export class FileOperationsAdapter {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Create an adapter for an agent
  */
-export function createFileOperationsAdapter(
-  agentName: AgentType,
-  taskId?: string
-): FileOperationsAdapter {
+export function createFileOperationsAdapter(agentName: AgentType, taskId?: string): FileOperationsAdapter {
   return new FileOperationsAdapter(agentName, taskId);
 }

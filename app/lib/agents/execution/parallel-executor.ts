@@ -41,9 +41,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ParallelExecutor');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Définition d'une sous-tâche pour l'exécuteur
@@ -85,18 +87,25 @@ export interface ExecutionStats {
 export interface ParallelExecutorOptions {
   /** Nombre max de tâches en parallèle (default: 5) */
   maxConcurrency?: number;
+
   /** Timeout global en ms (default: 300000 = 5 min) */
   globalTimeout?: number;
+
   /** Timeout par tâche en ms (default: 60000 = 1 min) */
   taskTimeout?: number;
+
   /** Continuer même si une tâche échoue (default: false) */
   continueOnError?: boolean;
+
   /** Callback pour le progress */
   onProgress?: (completed: number, total: number, current: SubtaskResult) => void;
+
   /** Callback pour le début d'une tâche */
   onTaskStart?: (subtask: SubtaskDefinition, level: number) => void;
+
   /** Callback pour le début d'un niveau */
   onLevelStart?: (level: number, taskCount: number) => void;
+
   /** Callback pour la fin d'un niveau */
   onLevelComplete?: (level: number, results: SubtaskResult[]) => void;
 }
@@ -106,9 +115,11 @@ export interface ParallelExecutorOptions {
  */
 export type TaskExecutor = (task: Task, agent: AgentType) => Promise<TaskResult>;
 
-// ============================================================================
-// PARALLEL EXECUTOR
-// ============================================================================
+/*
+ * ============================================================================
+ * PARALLEL EXECUTOR
+ * ============================================================================
+ */
 
 /**
  * Exécuteur parallèle de tâches avec gestion des dépendances
@@ -140,7 +151,9 @@ export type TaskExecutor = (task: Task, agent: AgentType) => Promise<TaskResult>
  * ```
  */
 export class ParallelExecutor {
-  private options: Required<Omit<ParallelExecutorOptions, 'onProgress' | 'onTaskStart' | 'onLevelStart' | 'onLevelComplete'>> &
+  private options: Required<
+    Omit<ParallelExecutorOptions, 'onProgress' | 'onTaskStart' | 'onLevelStart' | 'onLevelComplete'>
+  > &
     Pick<ParallelExecutorOptions, 'onProgress' | 'onTaskStart' | 'onLevelStart' | 'onLevelComplete'>;
 
   constructor(options: ParallelExecutorOptions = {}) {
@@ -250,7 +263,7 @@ export class ParallelExecutor {
         (result) => {
           totalCompleted++;
           this.options.onProgress?.(totalCompleted, subtasks.length, result);
-        }
+        },
       );
 
       results.push(...levelResults);
@@ -307,7 +320,7 @@ export class ParallelExecutor {
     level: ExecutionLevel<SubtaskDefinition>,
     executor: TaskExecutor,
     completedIds: Set<string>,
-    onComplete: (result: SubtaskResult) => void
+    onComplete: (result: SubtaskResult) => void,
   ): Promise<SubtaskResult[]> {
     const tasks = level.nodes.map((node) => node.data);
 
@@ -332,7 +345,7 @@ export class ParallelExecutor {
 
           const result = await this.executeWithTimeout(
             () => executor(subtask.task, subtask.agent),
-            subtask.timeout || this.options.taskTimeout
+            subtask.timeout || this.options.taskTimeout,
           );
 
           const subtaskResult: SubtaskResult = {
@@ -344,6 +357,7 @@ export class ParallelExecutor {
           };
 
           onComplete(subtaskResult);
+
           return subtaskResult;
         } catch (error) {
           const subtaskResult: SubtaskResult = {
@@ -365,6 +379,7 @@ export class ParallelExecutor {
           };
 
           onComplete(subtaskResult);
+
           return subtaskResult;
         }
       });
@@ -465,9 +480,11 @@ export class ParallelExecutor {
   }
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 /**
  * Factory pour créer un exécuteur parallèle

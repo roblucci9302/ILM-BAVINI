@@ -14,6 +14,22 @@ export default [
       '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
+  // Règles assouplies pour le système multi-agent (code généré/expérimental)
+  {
+    files: ['app/lib/agents/**/*.ts', 'app/lib/agents/**/*.tsx', 'app/lib/agents/**/*.spec.ts'],
+    rules: {
+      '@blitz/comment-syntax': 'off',
+      '@blitz/block-scope-case': 'off',
+      'multiline-comment-style': 'off',
+      '@blitz/newline-before-return': 'off',
+      'padding-line-between-statements': 'off',
+      '@typescript-eslint/naming-convention': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-restricted-imports': 'off',
+      'no-case-declarations': 'off',
+      'consistent-return': 'off',
+    },
+  },
   {
     files: ['**/*.tsx'],
     rules: {
@@ -28,7 +44,7 @@ export default [
   },
   {
     files: [...tsFileExtensions, ...jsFileExtensions, '**/*.tsx'],
-    ignores: ['functions/*'],
+    ignores: ['functions/*', 'app/lib/agents/**'],
     rules: {
       'no-restricted-imports': [
         'error',

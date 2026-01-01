@@ -7,9 +7,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('DependencyGraph');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Nœud du graphe
@@ -38,9 +40,11 @@ export interface GraphValidation {
   orphanNodes: string[];
 }
 
-// ============================================================================
-// DEPENDENCY GRAPH
-// ============================================================================
+/*
+ * ============================================================================
+ * DEPENDENCY GRAPH
+ * ============================================================================
+ */
 
 /**
  * Graphe de dépendances avec tri topologique
@@ -83,6 +87,7 @@ export class DependencyGraph<T> {
     }
 
     logger.debug(`Removed node: ${id}`);
+
     return true;
   }
 
@@ -179,6 +184,7 @@ export class DependencyGraph<T> {
       }
 
       recursionStack.delete(nodeId);
+
       return false;
     };
 
@@ -214,12 +220,14 @@ export class DependencyGraph<T> {
       const hasDependencies = this.getDependencies(id).length > 0;
       const hasDependents = this.getDependents(id).length > 0;
 
-      // Un nœud est orphelin s'il n'a pas de dépendances ET pas de dépendants
-      // ET s'il y a d'autres nœuds dans le graphe
+      /*
+       * Un nœud est orphelin s'il n'a pas de dépendances ET pas de dépendants
+       * ET s'il y a d'autres nœuds dans le graphe
+       */
       if (!hasDependencies && !hasDependents && this.nodes.size > 1) {
         // Vérifier s'il y a au moins un autre nœud avec des dépendances
         const hasConnectedNodes = Array.from(this.nodes.values()).some(
-          (n) => n.id !== id && (n.dependencies.size > 0 || this.getDependents(n.id).length > 0)
+          (n) => n.id !== id && (n.dependencies.size > 0 || this.getDependents(n.id).length > 0),
         );
 
         if (hasConnectedNodes) {
@@ -413,9 +421,11 @@ export class DependencyGraph<T> {
   }
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 /**
  * Créer un graphe de dépendances vide
@@ -432,7 +442,7 @@ export function createGraphFromDefinitions<T>(
     id: string;
     data: T;
     dependencies?: string[];
-  }>
+  }>,
 ): DependencyGraph<T> {
   const graph = new DependencyGraph<T>();
 

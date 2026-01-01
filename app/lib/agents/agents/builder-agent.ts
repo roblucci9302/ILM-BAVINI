@@ -5,21 +5,19 @@
 
 import { BaseAgent } from '../core/base-agent';
 import type { ToolHandler } from '../core/tool-registry';
-import {
-  SHELL_TOOLS,
-  createShellToolHandlers,
-  type ShellInterface,
-  type RunningProcess,
-} from '../tools/shell-tools';
+import { SHELL_TOOLS, createShellToolHandlers, type ShellInterface, type RunningProcess } from '../tools/shell-tools';
 import { BUILDER_SYSTEM_PROMPT } from '../prompts/builder-prompt';
 import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
+import { getModelForAgent } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('BuilderAgent');
 
-// ============================================================================
-// BUILDER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * BUILDER AGENT
+ * ============================================================================
+ */
 
 /**
  * Agent de build et exécution
@@ -39,7 +37,7 @@ export class BuilderAgent extends BaseAgent {
       description:
         'Agent de build et exécution. Lance les commandes npm, les scripts shell, ' +
         'démarre les serveurs de développement. Gère les dépendances.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('builder'), // Sonnet 4.5 - efficace pour les commandes
       tools: SHELL_TOOLS,
       systemPrompt: BUILDER_SYSTEM_PROMPT,
       maxTokens: 4096,
@@ -134,7 +132,7 @@ export class BuilderAgent extends BaseAgent {
    * Wrapper les handlers shell pour tracker les commandes exécutées
    */
   private wrapShellHandlersWithTracking(
-    handlers: ReturnType<typeof createShellToolHandlers>
+    handlers: ReturnType<typeof createShellToolHandlers>,
   ): Record<string, ToolHandler> {
     const wrapped: Record<string, ToolHandler> = {};
 
@@ -178,7 +176,7 @@ export class BuilderAgent extends BaseAgent {
   private trackCommand(
     toolName: string,
     input: Record<string, unknown>,
-    result: { success: boolean; output: unknown; error?: string }
+    result: { success: boolean; output: unknown; error?: string },
   ): void {
     let command = toolName;
 
@@ -232,9 +230,11 @@ export class BuilderAgent extends BaseAgent {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance du Builder Agent

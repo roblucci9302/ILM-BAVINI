@@ -5,9 +5,11 @@
 
 import type { ToolDefinition, ToolExecutionResult } from '../types';
 
-// ============================================================================
-// DÉFINITIONS DES OUTILS
-// ============================================================================
+/*
+ * ============================================================================
+ * DÉFINITIONS DES OUTILS
+ * ============================================================================
+ */
 
 /**
  * Outil pour écrire/créer un fichier
@@ -15,7 +17,7 @@ import type { ToolDefinition, ToolExecutionResult } from '../types';
 export const WriteFileTool: ToolDefinition = {
   name: 'write_file',
   description:
-    'Créer un nouveau fichier ou remplacer entièrement le contenu d\'un fichier existant. ' +
+    "Créer un nouveau fichier ou remplacer entièrement le contenu d'un fichier existant. " +
     'Utilise cet outil pour créer de nouveaux fichiers ou réécrire complètement un fichier.',
   inputSchema: {
     type: 'object',
@@ -43,7 +45,7 @@ export const WriteFileTool: ToolDefinition = {
 export const EditFileTool: ToolDefinition = {
   name: 'edit_file',
   description:
-    'Modifier une portion spécifique d\'un fichier existant. ' +
+    "Modifier une portion spécifique d'un fichier existant. " +
     'Utilise le pattern old_content → new_content pour des modifications précises. ' +
     'Préférer cet outil à write_file pour des modifications partielles.',
   inputSchema: {
@@ -75,9 +77,7 @@ export const EditFileTool: ToolDefinition = {
  */
 export const DeleteFileTool: ToolDefinition = {
   name: 'delete_file',
-  description:
-    'Supprimer un fichier du projet. ' +
-    'ATTENTION: Cette action est irréversible.',
+  description: 'Supprimer un fichier du projet. ' + 'ATTENTION: Cette action est irréversible.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -130,9 +130,11 @@ export const MoveFileTool: ToolDefinition = {
   },
 };
 
-// ============================================================================
-// LISTE DES OUTILS D'ÉCRITURE
-// ============================================================================
+/*
+ * ============================================================================
+ * LISTE DES OUTILS D'ÉCRITURE
+ * ============================================================================
+ */
 
 export const WRITE_TOOLS: ToolDefinition[] = [
   WriteFileTool,
@@ -142,9 +144,11 @@ export const WRITE_TOOLS: ToolDefinition[] = [
   MoveFileTool,
 ];
 
-// ============================================================================
-// INTERFACE FILESYSTEM ÉTENDUE POUR L'ÉCRITURE
-// ============================================================================
+/*
+ * ============================================================================
+ * INTERFACE FILESYSTEM ÉTENDUE POUR L'ÉCRITURE
+ * ============================================================================
+ */
 
 /**
  * Interface pour les capacités d'écriture du système de fichiers
@@ -172,15 +176,17 @@ export interface WritableFileSystem {
   readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean; size?: number }>>;
 }
 
-// ============================================================================
-// HANDLERS D'EXÉCUTION
-// ============================================================================
+/*
+ * ============================================================================
+ * HANDLERS D'EXÉCUTION
+ * ============================================================================
+ */
 
 /**
  * Créer les handlers pour les outils d'écriture
  */
 export function createWriteToolHandlers(
-  fs: WritableFileSystem
+  fs: WritableFileSystem,
 ): Record<string, (input: Record<string, unknown>) => Promise<ToolExecutionResult>> {
   return {
     /**
@@ -250,9 +256,7 @@ export function createWriteToolHandlers(
         // Écrire le fichier modifié
         await fs.writeFile(path, updatedContent);
 
-        const replacements = replaceAll
-          ? currentContent.split(oldContent).length - 1
-          : 1;
+        const replacements = replaceAll ? currentContent.split(oldContent).length - 1 : 1;
 
         return {
           success: true,
@@ -365,15 +369,17 @@ export function createWriteToolHandlers(
   };
 }
 
-// ============================================================================
-// MOCK FILESYSTEM AVEC ÉCRITURE (POUR LES TESTS)
-// ============================================================================
+/*
+ * ============================================================================
+ * MOCK FILESYSTEM AVEC ÉCRITURE (POUR LES TESTS)
+ * ============================================================================
+ */
 
 /**
  * Créer un mock FileSystem avec capacités d'écriture pour les tests
  */
 export function createMockWritableFileSystem(
-  initialFiles: Record<string, string> = {}
+  initialFiles: Record<string, string> = {},
 ): WritableFileSystem & { getFiles(): Record<string, string> } {
   const files = new Map<string, string>(Object.entries(initialFiles));
   const directories = new Set<string>();

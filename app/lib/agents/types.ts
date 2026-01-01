@@ -3,14 +3,20 @@
  * Tous les agents utilisent Claude Sonnet
  */
 
-// ============================================================================
-// TYPES DE BASE
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES DE BASE
+ * ============================================================================
+ */
 
 /**
- * Modèle utilisé par les agents (Sonnet uniquement pour l'instant)
+ * Modèle utilisé par les agents
+ * - Sonnet 4.5: Rapide et économique, pour les tâches simples
+ * - Opus 4.5: Plus puissant, pour le raisonnement complexe et le code critique
  */
-export type AgentModel = 'claude-sonnet-4-5-20250929';
+export type AgentModel =
+  | 'claude-sonnet-4-5-20250929' // Sonnet 4.5 - rapide, économique
+  | 'claude-opus-4-5-20251101'; // Opus 4.5 - puissant, raisonnement avancé
 
 /**
  * Statut d'un agent
@@ -38,15 +44,7 @@ export type TaskStatus =
 /**
  * Type d'agent disponible
  */
-export type AgentType =
-  | 'orchestrator'
-  | 'explore'
-  | 'coder'
-  | 'builder'
-  | 'tester'
-  | 'deployer'
-  | 'reviewer'
-  | 'fixer';
+export type AgentType = 'orchestrator' | 'explore' | 'coder' | 'builder' | 'tester' | 'deployer' | 'reviewer' | 'fixer';
 
 /**
  * Type d'outil disponible
@@ -65,9 +63,11 @@ export type ToolType =
   | 'git_command'
   | 'run_tests';
 
-// ============================================================================
-// CONFIGURATION DES AGENTS
-// ============================================================================
+/*
+ * ============================================================================
+ * CONFIGURATION DES AGENTS
+ * ============================================================================
+ */
 
 /**
  * Configuration d'un agent
@@ -101,9 +101,11 @@ export interface AgentConfig {
   maxRetries?: number;
 }
 
-// ============================================================================
-// DÉFINITION DES OUTILS
-// ============================================================================
+/*
+ * ============================================================================
+ * DÉFINITION DES OUTILS
+ * ============================================================================
+ */
 
 /**
  * Définition d'un outil utilisable par un agent
@@ -151,9 +153,11 @@ export interface ToolExecutionResult {
   executionTime?: number;
 }
 
-// ============================================================================
-// TÂCHES
-// ============================================================================
+/*
+ * ============================================================================
+ * TÂCHES
+ * ============================================================================
+ */
 
 /**
  * Tâche à exécuter par un agent
@@ -255,9 +259,11 @@ export interface TaskMetadata {
   tags?: string[];
 }
 
-// ============================================================================
-// RÉSULTATS
-// ============================================================================
+/*
+ * ============================================================================
+ * RÉSULTATS
+ * ============================================================================
+ */
 
 /**
  * Résultat d'une tâche
@@ -354,9 +360,11 @@ export interface TaskMetrics {
   toolExecutionTime: number;
 }
 
-// ============================================================================
-// MESSAGES ET COMMUNICATION
-// ============================================================================
+/*
+ * ============================================================================
+ * MESSAGES ET COMMUNICATION
+ * ============================================================================
+ */
 
 /**
  * Message dans la conversation avec un agent
@@ -409,9 +417,11 @@ export interface ToolResult {
   isError?: boolean;
 }
 
-// ============================================================================
-// ORCHESTRATION
-// ============================================================================
+/*
+ * ============================================================================
+ * ORCHESTRATION
+ * ============================================================================
+ */
 
 /**
  * Décision de l'orchestrateur
@@ -476,9 +486,11 @@ export interface ExecutionStep {
   dependsOn?: number[];
 }
 
-// ============================================================================
-// ÉVÉNEMENTS
-// ============================================================================
+/*
+ * ============================================================================
+ * ÉVÉNEMENTS
+ * ============================================================================
+ */
 
 /**
  * Type d'événement du système d'agents
@@ -522,9 +534,11 @@ export interface AgentEvent {
  */
 export type AgentEventCallback = (event: AgentEvent) => void;
 
-// ============================================================================
-// LOGGING
-// ============================================================================
+/*
+ * ============================================================================
+ * LOGGING
+ * ============================================================================
+ */
 
 /**
  * Niveau de log
@@ -554,14 +568,53 @@ export interface LogEntry {
   data?: Record<string, unknown>;
 }
 
-// ============================================================================
-// CONSTANTES
-// ============================================================================
+/*
+ * ============================================================================
+ * CONSTANTES
+ * ============================================================================
+ */
 
 /**
  * Modèle par défaut pour tous les agents
  */
 export const DEFAULT_MODEL: AgentModel = 'claude-sonnet-4-5-20250929';
+
+/**
+ * Configuration hybride des modèles par agent
+ *
+ * Stratégie:
+ * - Opus 4.5: Agents nécessitant un raisonnement complexe (orchestration, code, review, correction)
+ * - Sonnet 4.5: Agents effectuant des tâches plus simples (exploration, build, test, deploy)
+ */
+export const MODEL_ASSIGNMENT: Record<AgentType, AgentModel> = {
+  // Agents utilisant Opus 4.5 (raisonnement avancé)
+  orchestrator: 'claude-opus-4-5-20251101',
+  coder: 'claude-opus-4-5-20251101',
+  reviewer: 'claude-opus-4-5-20251101',
+  fixer: 'claude-opus-4-5-20251101',
+
+  // Agents utilisant Sonnet 4.5 (tâches simples, rapidité)
+  explore: 'claude-sonnet-4-5-20250929',
+  builder: 'claude-sonnet-4-5-20250929',
+  tester: 'claude-sonnet-4-5-20250929',
+  deployer: 'claude-sonnet-4-5-20250929',
+};
+
+/**
+ * Obtient le modèle approprié pour un type d'agent
+ *
+ * @param agent - Type d'agent
+ * @returns Le modèle Claude à utiliser
+ *
+ * @example
+ * ```typescript
+ * const model = getModelForAgent('coder'); // 'claude-opus-4-5-20251101'
+ * const model = getModelForAgent('explore'); // 'claude-sonnet-4-5-20250929'
+ * ```
+ */
+export function getModelForAgent(agent: AgentType): AgentModel {
+  return MODEL_ASSIGNMENT[agent] || DEFAULT_MODEL;
+}
 
 /**
  * Configuration par défaut
@@ -583,19 +636,19 @@ export const AGENT_DESCRIPTIONS: Record<AgentType, string> = {
     'décompose les tâches complexes, et délègue aux agents spécialisés.',
 
   explore:
-    'Agent d\'exploration en LECTURE SEULE. Spécialisé dans la recherche de fichiers, ' +
-    'l\'analyse de code, la navigation dans le codebase. Utilise grep, glob, read.',
+    "Agent d'exploration en LECTURE SEULE. Spécialisé dans la recherche de fichiers, " +
+    "l'analyse de code, la navigation dans le codebase. Utilise grep, glob, read.",
 
   coder:
     'Agent de développement. Peut créer, modifier, et supprimer des fichiers de code. ' +
-    'Spécialisé dans l\'écriture de code propre et fonctionnel.',
+    "Spécialisé dans l'écriture de code propre et fonctionnel.",
 
   builder:
     'Agent de build et exécution. Lance les commandes npm, les scripts shell, ' +
     'démarre les serveurs de développement. Gère les dépendances.',
 
   tester:
-    'Agent de test. Lance les tests unitaires, d\'intégration, E2E. ' +
+    "Agent de test. Lance les tests unitaires, d'intégration, E2E. " +
     'Analyse les résultats et rapporte la couverture de code.',
 
   deployer:

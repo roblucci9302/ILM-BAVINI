@@ -55,6 +55,17 @@ function filterOrchestratorMessages(content: string): string {
 // TYPES
 // ============================================================================
 
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+interface FileContext {
+  path: string;
+  content?: string;
+  type?: 'file' | 'folder';
+}
+
 export interface AgentChatOptions {
   /** Callback when agent starts processing */
   onStart?: () => void;
@@ -80,9 +91,18 @@ export interface AgentArtifact {
   action?: 'created' | 'modified' | 'deleted' | 'executed';
 }
 
+export interface SendMessageOptions {
+  /** Full conversation history (recommended for context) */
+  messages?: ChatMessage[];
+  /** Additional context */
+  context?: Record<string, unknown>;
+  /** Existing files in the project (auto-fetched from workbench if not provided) */
+  files?: FileContext[];
+}
+
 export interface UseAgentChatReturn {
-  /** Send a message to the agent system */
-  sendMessage: (content: string, context?: Record<string, unknown>) => Promise<AgentChatResult>;
+  /** Send a message to the agent system with full context */
+  sendMessage: (content: string, options?: SendMessageOptions) => Promise<AgentChatResult>;
   /** Current response being streamed */
   streamingContent: string;
   /** Is the agent processing? */
@@ -202,10 +222,40 @@ export function useAgentChat(options: AgentChatOptions = {}): UseAgentChatReturn
   }, [activeAgents, agentStatuses]);
 
   /**
-   * Send a message to the multi-agent system
+   * Get files from workbench store
+   */
+  const getProjectFiles = useCallback((): FileContext[] => {
+    const files: FileContext[] = [];
+
+    try {
+      // Get files from workbench store
+      const workbenchFiles = workbenchStore.files.get();
+
+      if (workbenchFiles && typeof workbenchFiles === 'object') {
+        for (const [path, fileData] of Object.entries(workbenchFiles)) {
+          if (fileData && typeof fileData === 'object' && 'content' in fileData) {
+            files.push({
+              path,
+              content: (fileData as { content: string }).content,
+              type: 'file',
+            });
+          }
+        }
+      }
+
+      logger.debug(`Retrieved ${files.length} files from workbench`);
+    } catch (error) {
+      logger.warn('Could not get files from workbench:', error);
+    }
+
+    return files;
+  }, []);
+
+  /**
+   * Send a message to the multi-agent system with full context
    */
   const sendMessage = useCallback(
-    async (content: string, context?: Record<string, unknown>): Promise<AgentChatResult> => {
+    async (content: string, options?: SendMessageOptions): Promise<AgentChatResult> => {
       if (isProcessing) {
         return {
           success: false,
@@ -213,6 +263,8 @@ export function useAgentChat(options: AgentChatOptions = {}): UseAgentChatReturn
           error: 'Agent is already processing a request',
         };
       }
+
+      const { messages: providedMessages, context, files: providedFiles } = options || {};
 
       // Create abort controller
       abortControllerRef.current = new AbortController();
@@ -224,19 +276,28 @@ export function useAgentChat(options: AgentChatOptions = {}): UseAgentChatReturn
       setStreamingContent('');
       onStart?.();
 
-      logger.info('Sending message to multi-agent system:', content.substring(0, 100));
+      // Build messages array - use provided or create from current message
+      const messages: ChatMessage[] = providedMessages
+        ? [...providedMessages, { role: 'user' as const, content }]
+        : [{ role: 'user' as const, content }];
+
+      // Get project files - use provided or fetch from workbench
+      const files = providedFiles || getProjectFiles();
+
+      logger.info(`Sending message to multi-agent system with ${messages.length} messages and ${files.length} files`);
+      logger.debug('Message preview:', content.substring(0, 100));
       updateAgentStatus('orchestrator', 'thinking');
 
       try {
-        // For now, we'll use the server API with a special flag for multi-agent mode
-        // In the future, this could be fully client-side with WebContainer integration
+        // Send to agent API with full context
         const response = await fetch('/api/agent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message: content,
+            messages,
+            files,
             context,
             controlMode: chatState.controlMode,
             multiAgent: true,
@@ -356,7 +417,7 @@ export function useAgentChat(options: AgentChatOptions = {}): UseAgentChatReturn
         abortControllerRef.current = null;
       }
     },
-    [isProcessing, chatState.controlMode, messageParser, onStart, onFinish, onError, onStream]
+    [isProcessing, chatState.controlMode, messageParser, getProjectFiles, onStart, onFinish, onError, onStream]
   );
 
   /**

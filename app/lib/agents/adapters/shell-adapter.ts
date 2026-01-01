@@ -12,34 +12,31 @@ import type { WebContainer, WebContainerProcess } from '@webcontainer/api';
 import { webcontainer } from '~/lib/webcontainer';
 import { createScopedLogger } from '~/utils/logger';
 import type { AgentType, ToolExecutionResult } from '../types';
-import {
-  checkCommand,
-  isBlocked,
-  requiresApproval,
-  type CommandCheckResult,
-} from '../security/command-whitelist';
-import {
-  createProposedAction,
-  type ProposedAction,
-  type ShellCommandDetails,
-} from '../security/action-validator';
+import { checkCommand, isBlocked, requiresApproval, type CommandCheckResult } from '../security/command-whitelist';
+import { createProposedAction, type ProposedAction, type ShellCommandDetails } from '../security/action-validator';
 import { addAgentLog } from '~/lib/stores/agents';
 
 const logger = createScopedLogger('ShellAdapter');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 export interface ShellConfig {
   /** Agent propriétaire */
   agentName: AgentType;
+
   /** ID de tâche */
   taskId?: string;
+
   /** Mode strict (approbation requise) */
   strictMode: boolean;
+
   /** Timeout par défaut en ms */
   defaultTimeout?: number;
+
   /** Callback d'approbation */
   onApprovalRequired?: (action: ProposedAction) => Promise<boolean>;
 }
@@ -47,16 +44,22 @@ export interface ShellConfig {
 export interface ProcessHandle {
   /** ID unique du processus */
   id: string;
+
   /** Commande exécutée */
   command: string;
+
   /** Processus WebContainer */
   process: WebContainerProcess;
+
   /** Output accumulé */
   output: string;
+
   /** Est-il terminé ? */
   completed: boolean;
+
   /** Code de sortie */
   exitCode?: number;
+
   /** Callback de kill */
   kill: () => void;
 }
@@ -64,10 +67,13 @@ export interface ProcessHandle {
 export interface NpmRunOptions {
   /** Script à exécuter */
   script: string;
+
   /** Arguments additionnels */
   args?: string[];
+
   /** Timeout en ms */
   timeout?: number;
+
   /** Working directory */
   cwd?: string;
 }
@@ -75,8 +81,10 @@ export interface NpmRunOptions {
 export interface NpmInstallOptions {
   /** Packages à installer */
   packages?: string[];
+
   /** Dev dependencies */
   dev?: boolean;
+
   /** Timeout en ms */
   timeout?: number;
 }
@@ -84,15 +92,19 @@ export interface NpmInstallOptions {
 export interface GitCommandOptions {
   /** Opération git */
   operation: 'status' | 'add' | 'commit' | 'push' | 'pull' | 'diff' | 'log' | 'branch';
+
   /** Arguments */
   args?: string[];
+
   /** Timeout */
   timeout?: number;
 }
 
-// ============================================================================
-// SHELL ADAPTER CLASS
-// ============================================================================
+/*
+ * ============================================================================
+ * SHELL ADAPTER CLASS
+ * ============================================================================
+ */
 
 export class ShellAdapter {
   private config: ShellConfig;
@@ -108,9 +120,11 @@ export class ShellAdapter {
     this.container = webcontainer;
   }
 
-  // --------------------------------------------------------------------------
-  // COMMANDES NPM
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * COMMANDES NPM
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * npm install
@@ -119,8 +133,14 @@ export class ShellAdapter {
     const { packages = [], dev = false, timeout = 120000 } = options;
 
     let command = 'npm install';
-    if (dev) command += ' --save-dev';
-    if (packages.length > 0) command += ` ${packages.join(' ')}`;
+
+    if (dev) {
+      command += ' --save-dev';
+    }
+
+    if (packages.length > 0) {
+      command += ` ${packages.join(' ')}`;
+    }
 
     return this.executeCommand(command, timeout);
   }
@@ -132,7 +152,10 @@ export class ShellAdapter {
     const { script, args = [], timeout = this.config.defaultTimeout } = options;
 
     let command = `npm run ${script}`;
-    if (args.length > 0) command += ` -- ${args.join(' ')}`;
+
+    if (args.length > 0) {
+      command += ` -- ${args.join(' ')}`;
+    }
 
     return this.executeCommand(command, timeout);
   }
@@ -155,8 +178,10 @@ export class ShellAdapter {
    * Démarrer un serveur de développement (processus long-running)
    */
   async startDevServer(command = 'npm run dev'): Promise<ProcessHandle | null> {
-    // Les serveurs de dev ne passent pas par l'approbation normale
-    // car ils sont gérés différemment
+    /*
+     * Les serveurs de dev ne passent pas par l'approbation normale
+     * car ils sont gérés différemment
+     */
     const check = checkCommand(command);
 
     if (check.level === 'blocked') {
@@ -188,7 +213,11 @@ export class ShellAdapter {
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+
+            if (done) {
+              break;
+            }
+
             output += value;
             handle.output = output;
           }
@@ -200,7 +229,7 @@ export class ShellAdapter {
       readOutput();
 
       // Surveiller la terminaison
-      process.exit.then(code => {
+      process.exit.then((code) => {
         handle.completed = true;
         handle.exitCode = code;
         this.runningProcesses.delete(id);
@@ -213,13 +242,16 @@ export class ShellAdapter {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.log('error', `Failed to start process: ${message}`);
+
       return null;
     }
   }
 
-  // --------------------------------------------------------------------------
-  // COMMANDES GIT
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * COMMANDES GIT
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Exécuter une commande git
@@ -229,7 +261,10 @@ export class ShellAdapter {
 
     // Construire la commande
     let command = `git ${operation}`;
-    if (args.length > 0) command += ` ${args.join(' ')}`;
+
+    if (args.length > 0) {
+      command += ` ${args.join(' ')}`;
+    }
 
     // git push nécessite toujours une approbation
     if (operation === 'push') {
@@ -268,18 +303,16 @@ export class ShellAdapter {
     return this.gitCommand({ operation: 'commit', args: ['-m', `"${message}"`] });
   }
 
-  // --------------------------------------------------------------------------
-  // COMMANDES GÉNÉRIQUES
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * COMMANDES GÉNÉRIQUES
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Exécuter une commande shell arbitraire
    */
-  async executeCommand(
-    command: string,
-    timeout?: number,
-    forceApproval = false
-  ): Promise<ToolExecutionResult> {
+  async executeCommand(command: string, timeout?: number, forceApproval = false): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const effectiveTimeout = timeout || this.config.defaultTimeout || 60000;
 
@@ -296,10 +329,7 @@ export class ShellAdapter {
     const check = checkCommand(command);
 
     // Déterminer si approbation nécessaire
-    const needsApproval =
-      forceApproval ||
-      this.config.strictMode ||
-      check.level === 'approval_required';
+    const needsApproval = forceApproval || this.config.strictMode || check.level === 'approval_required';
 
     if (needsApproval) {
       const approved = await this.requestApproval(command, check);
@@ -327,7 +357,11 @@ export class ShellAdapter {
       const readOutput = async () => {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+
+          if (done) {
+            break;
+          }
+
           output += value;
         }
       };
@@ -341,13 +375,14 @@ export class ShellAdapter {
       });
 
       await readOutput();
+
       const exitCode = await Promise.race([process.exit, timeoutPromise]);
 
       const executionTime = Date.now() - startTime;
 
       this.log(
         exitCode === 0 ? 'debug' : 'warn',
-        `Command completed: ${command} (exit: ${exitCode}, ${executionTime}ms)`
+        `Command completed: ${command} (exit: ${exitCode}, ${executionTime}ms)`,
       );
 
       return {
@@ -376,10 +411,7 @@ export class ShellAdapter {
   /**
    * Request approval for a command
    */
-  private async requestApproval(
-    command: string,
-    check: CommandCheckResult
-  ): Promise<boolean> {
+  private async requestApproval(command: string, check: CommandCheckResult): Promise<boolean> {
     if (!this.config.onApprovalRequired) {
       this.log('warn', 'No approval handler configured');
       return false;
@@ -395,7 +427,7 @@ export class ShellAdapter {
       'shell_command',
       this.config.agentName,
       `Execute: ${command.substring(0, 50)}${command.length > 50 ? '...' : ''}`,
-      details
+      details,
     );
 
     this.log('info', `Requesting approval for: ${command}`);
@@ -403,9 +435,11 @@ export class ShellAdapter {
     return this.config.onApprovalRequired(action);
   }
 
-  // --------------------------------------------------------------------------
-  // GESTION DES PROCESSUS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * GESTION DES PROCESSUS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Obtenir un processus en cours
@@ -431,6 +465,7 @@ export class ShellAdapter {
       handle.kill();
       this.runningProcesses.delete(id);
       this.log('info', `Killed process: ${id}`);
+
       return true;
     }
 
@@ -448,9 +483,11 @@ export class ShellAdapter {
     this.log('info', 'Killed all processes');
   }
 
-  // --------------------------------------------------------------------------
-  // UTILITAIRES
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * UTILITAIRES
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Vérifier si une commande est safe (lecture seule)
@@ -471,7 +508,7 @@ export class ShellAdapter {
       /^git\s+(status|log|diff|branch|show)/,
     ];
 
-    return safePatterns.some(pattern => pattern.test(command.trim()));
+    return safePatterns.some((pattern) => pattern.test(command.trim()));
   }
 
   /**
@@ -495,9 +532,11 @@ export class ShellAdapter {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer un adaptateur shell pour un agent
@@ -516,7 +555,7 @@ const shellAdapterMap = new Map<AgentType, ShellAdapter>();
  */
 export function getShellAdapterForAgent(
   agentName: AgentType,
-  config?: Partial<Omit<ShellConfig, 'agentName'>>
+  config?: Partial<Omit<ShellConfig, 'agentName'>>,
 ): ShellAdapter {
   let adapter = shellAdapterMap.get(agentName);
 

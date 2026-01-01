@@ -14,13 +14,6 @@ export {
   type AgentSystemContextValue,
 } from './AgentSystemProvider';
 
-export {
-  AgentApprovalWrapper,
-  type AgentApprovalWrapperProps,
-} from './AgentApprovalWrapper';
+export { AgentApprovalWrapper, type AgentApprovalWrapperProps } from './AgentApprovalWrapper';
 
-export {
-  AgentActivityWrapper,
-  AgentStatusIndicator,
-  type AgentActivityWrapperProps,
-} from './AgentActivityWrapper';
+export { AgentActivityWrapper, AgentStatusIndicator, type AgentActivityWrapperProps } from './AgentActivityWrapper';

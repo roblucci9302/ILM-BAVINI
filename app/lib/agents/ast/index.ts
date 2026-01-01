@@ -5,16 +5,13 @@
  * avec détection de problèmes de sécurité, performance et maintenabilité.
  */
 
-// ============================================================================
-// CORE
-// ============================================================================
+/*
+ * ============================================================================
+ * CORE
+ * ============================================================================
+ */
 
-export {
-  ASTAnalyzer,
-  createASTAnalyzer,
-  quickAnalyze,
-  quickAnalyzeFile,
-} from './analyzer';
+export { ASTAnalyzer, createASTAnalyzer, quickAnalyze, quickAnalyzeFile } from './analyzer';
 
 export {
   TypeScriptParser,
@@ -25,9 +22,11 @@ export {
   type NamedImportInfo,
 } from './parser';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 export type {
   RuleCategory,
@@ -50,9 +49,11 @@ export type {
 
 export { DEFAULT_ANALYZER_CONFIG } from './types';
 
-// ============================================================================
-// RULES
-// ============================================================================
+/*
+ * ============================================================================
+ * RULES
+ * ============================================================================
+ */
 
 export {
   RuleRegistry,
@@ -66,13 +67,7 @@ export {
 } from './rules';
 
 // Rule classes for extension
-export {
-  SECURITY_RULES,
-  NoEvalRule,
-  NoInnerHTMLRule,
-  SQLInjectionRule,
-  XSSPreventionRule,
-} from './rules/security';
+export { SECURITY_RULES, NoEvalRule, NoInnerHTMLRule, SQLInjectionRule, XSSPreventionRule } from './rules/security';
 
 export {
   PERFORMANCE_RULES,
@@ -91,11 +86,10 @@ export {
   MaxFileLengthRule,
 } from './rules/maintainability';
 
-// ============================================================================
-// REPORTERS
-// ============================================================================
+/*
+ * ============================================================================
+ * REPORTERS
+ * ============================================================================
+ */
 
-export {
-  ConsoleReporter,
-  createConsoleReporter,
-} from './reporters/console-reporter';
+export { ConsoleReporter, createConsoleReporter } from './reporters/console-reporter';

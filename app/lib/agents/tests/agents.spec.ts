@@ -251,6 +251,7 @@ describe('MockFileSystem', () => {
 describe('Integration', () => {
   it('should register multiple agents', () => {
     AgentRegistry.resetInstance();
+
     const registry = AgentRegistry.getInstance();
 
     const explore = createExploreAgent();

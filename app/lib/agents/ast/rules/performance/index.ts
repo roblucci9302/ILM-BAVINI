@@ -5,9 +5,11 @@
 import ts from 'typescript';
 import { BaseRule, type RuleContext, type RuleExample, type OptionSchema } from '../base-rule';
 
-// ============================================================================
-// NO SYNC OPERATIONS RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * NO SYNC OPERATIONS RULE
+ * ============================================================================
+ */
 
 /**
  * Éviter les opérations synchrones bloquantes
@@ -15,7 +17,7 @@ import { BaseRule, type RuleContext, type RuleExample, type OptionSchema } from 
 export class NoSyncOperationsRule extends BaseRule {
   readonly id = 'performance/no-sync-operations';
   readonly name = 'No Synchronous Operations';
-  readonly description = 'Évite les opérations de fichiers et processus synchrones qui bloquent l\'event loop';
+  readonly description = "Évite les opérations de fichiers et processus synchrones qui bloquent l'event loop";
   readonly category = 'performance' as const;
   readonly defaultSeverity = 'warning' as const;
 
@@ -42,10 +44,12 @@ export class NoSyncOperationsRule extends BaseRule {
     'readSync',
     'writeSync',
     'truncateSync',
+
     // Child process
     'execSync',
     'execFileSync',
     'spawnSync',
+
     // Crypto
     'randomFillSync',
     'pbkdf2Sync',
@@ -53,7 +57,9 @@ export class NoSyncOperationsRule extends BaseRule {
   ]);
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     if (ts.isCallExpression(node)) {
       const expression = node.expression;
@@ -68,12 +74,11 @@ export class NoSyncOperationsRule extends BaseRule {
       if (methodName && this.syncMethods.has(methodName)) {
         const asyncVersion = methodName.replace('Sync', '');
 
-        context.report(this.createIssue(node, context.sourceFile,
-          `L'opération synchrone '${methodName}' bloque l'event loop.`,
-          {
+        context.report(
+          this.createIssue(node, context.sourceFile, `L'opération synchrone '${methodName}' bloque l'event loop.`, {
             suggestion: `Utilisez la version asynchrone: await ${asyncVersion}() avec les promises fs.`,
-          }
-        ));
+          }),
+        );
       }
     }
   }
@@ -87,9 +92,11 @@ export class NoSyncOperationsRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// MEMO DEPENDENCIES RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * MEMO DEPENDENCIES RULE
+ * ============================================================================
+ */
 
 /**
  * Vérifier les dépendances de useMemo et useCallback
@@ -104,9 +111,13 @@ export class MemoDependenciesRule extends BaseRule {
   private memoHooks = new Set(['useMemo', 'useCallback', 'useEffect', 'useLayoutEffect']);
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
-    if (!ts.isCallExpression(node)) return;
+    if (!ts.isCallExpression(node)) {
+      return;
+    }
 
     const expression = node.expression;
     let hookName: string | undefined;
@@ -115,20 +126,27 @@ export class MemoDependenciesRule extends BaseRule {
       hookName = expression.text;
     }
 
-    if (!hookName || !this.memoHooks.has(hookName)) return;
+    if (!hookName || !this.memoHooks.has(hookName)) {
+      return;
+    }
 
     const args = node.arguments;
 
     // Check if dependencies array is provided
     if (args.length < 2) {
       if (hookName === 'useEffect' || hookName === 'useLayoutEffect') {
-        context.report(this.createIssue(node, context.sourceFile,
-          `${hookName} sans tableau de dépendances s'exécutera à chaque rendu.`,
-          {
-            suggestion: 'Ajoutez un tableau de dépendances, ou [] pour exécuter une seule fois.',
-          }
-        ));
+        context.report(
+          this.createIssue(
+            node,
+            context.sourceFile,
+            `${hookName} sans tableau de dépendances s'exécutera à chaque rendu.`,
+            {
+              suggestion: 'Ajoutez un tableau de dépendances, ou [] pour exécuter une seule fois.',
+            },
+          ),
+        );
       }
+
       return;
     }
 
@@ -142,17 +160,36 @@ export class MemoDependenciesRule extends BaseRule {
         const usedVariables = this.findUsedVariables(callback, context);
 
         // Filter out known safe globals
-        const safeGlobals = new Set(['console', 'window', 'document', 'Math', 'JSON', 'Date', 'Array', 'Object', 'String', 'Number', 'Boolean', 'Promise', 'Set', 'Map']);
+        const safeGlobals = new Set([
+          'console',
+          'window',
+          'document',
+          'Math',
+          'JSON',
+          'Date',
+          'Array',
+          'Object',
+          'String',
+          'Number',
+          'Boolean',
+          'Promise',
+          'Set',
+          'Map',
+        ]);
         const externalVars = usedVariables.filter((v) => !safeGlobals.has(v));
 
         if (externalVars.length > 0) {
-          context.report(this.createIssue(node, context.sourceFile,
-            `${hookName} avec dépendances vides utilise des variables externes: ${externalVars.slice(0, 3).join(', ')}${externalVars.length > 3 ? '...' : ''}`,
-            {
-              severity: 'info',
-              suggestion: `Considérez ajouter ces variables au tableau de dépendances: [${externalVars.join(', ')}]`,
-            }
-          ));
+          context.report(
+            this.createIssue(
+              node,
+              context.sourceFile,
+              `${hookName} avec dépendances vides utilise des variables externes: ${externalVars.slice(0, 3).join(', ')}${externalVars.length > 3 ? '...' : ''}`,
+              {
+                severity: 'info',
+                suggestion: `Considérez ajouter ces variables au tableau de dépendances: [${externalVars.join(', ')}]`,
+              },
+            ),
+          );
         }
       }
     }
@@ -161,31 +198,43 @@ export class MemoDependenciesRule extends BaseRule {
     if (ts.isArrayLiteralExpression(depsArg)) {
       for (const element of depsArg.elements) {
         if (ts.isObjectLiteralExpression(element)) {
-          context.report(this.createIssue(element, context.sourceFile,
-            'Objet littéral dans les dépendances crée une nouvelle référence à chaque rendu.',
-            {
-              suggestion: 'Utilisez useMemo pour l\'objet, ou déstructurez les propriétés individuelles.',
-            }
-          ));
+          context.report(
+            this.createIssue(
+              element,
+              context.sourceFile,
+              'Objet littéral dans les dépendances crée une nouvelle référence à chaque rendu.',
+              {
+                suggestion: "Utilisez useMemo pour l'objet, ou déstructurez les propriétés individuelles.",
+              },
+            ),
+          );
         }
 
         if (ts.isArrayLiteralExpression(element)) {
-          context.report(this.createIssue(element, context.sourceFile,
-            'Tableau littéral dans les dépendances crée une nouvelle référence à chaque rendu.',
-            {
-              suggestion: 'Utilisez useMemo pour le tableau, ou listez les éléments individuellement.',
-            }
-          ));
+          context.report(
+            this.createIssue(
+              element,
+              context.sourceFile,
+              'Tableau littéral dans les dépendances crée une nouvelle référence à chaque rendu.',
+              {
+                suggestion: 'Utilisez useMemo pour le tableau, ou listez les éléments individuellement.',
+              },
+            ),
+          );
         }
 
         // Check for inline arrow functions
         if (ts.isArrowFunction(element) || ts.isFunctionExpression(element)) {
-          context.report(this.createIssue(element, context.sourceFile,
-            'Fonction inline dans les dépendances crée une nouvelle référence à chaque rendu.',
-            {
-              suggestion: 'Utilisez useCallback pour mémoriser la fonction.',
-            }
-          ));
+          context.report(
+            this.createIssue(
+              element,
+              context.sourceFile,
+              'Fonction inline dans les dépendances crée une nouvelle référence à chaque rendu.',
+              {
+                suggestion: 'Utilisez useCallback pour mémoriser la fonction.',
+              },
+            ),
+          );
         }
       }
     }
@@ -200,9 +249,11 @@ export class MemoDependenciesRule extends BaseRule {
       if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) {
         localVars.add(n.name.text);
       }
+
       if (ts.isParameter(n) && ts.isIdentifier(n.name)) {
         localVars.add(n.name.text);
       }
+
       ts.forEachChild(n, collectLocals);
     };
 
@@ -236,6 +287,7 @@ export class MemoDependenciesRule extends BaseRule {
           variables.push(name);
         }
       }
+
       ts.forEachChild(n, collectUsed);
     };
 
@@ -254,9 +306,11 @@ export class MemoDependenciesRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// BUNDLE SIZE RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * BUNDLE SIZE RULE
+ * ============================================================================
+ */
 
 /**
  * Détecter les imports qui augmentent la taille du bundle
@@ -270,19 +324,20 @@ export class BundleSizeRule extends BaseRule {
 
   // Large packages that should be tree-shaken or avoided
   private largePackages: Record<string, { suggestion: string; severity: 'error' | 'warning' | 'info' }> = {
-    'lodash': {
-      suggestion: 'Utilisez lodash-es avec tree-shaking ou importez les fonctions individuellement: import debounce from "lodash/debounce"',
+    lodash: {
+      suggestion:
+        'Utilisez lodash-es avec tree-shaking ou importez les fonctions individuellement: import debounce from "lodash/debounce"',
       severity: 'warning',
     },
-    'moment': {
+    moment: {
       suggestion: 'Utilisez date-fns ou dayjs qui sont plus légers et supportent le tree-shaking.',
       severity: 'warning',
     },
-    'jquery': {
-      suggestion: 'jQuery n\'est plus nécessaire avec les APIs DOM modernes. Utilisez document.querySelector et fetch.',
+    jquery: {
+      suggestion: "jQuery n'est plus nécessaire avec les APIs DOM modernes. Utilisez document.querySelector et fetch.",
       severity: 'info',
     },
-    'underscore': {
+    underscore: {
       suggestion: 'Underscore est obsolète. Utilisez les méthodes natives ES6+ ou lodash-es.',
       severity: 'info',
     },
@@ -290,36 +345,64 @@ export class BundleSizeRule extends BaseRule {
 
   // Patterns for imports that should be avoided
   private badImportPatterns = [
-    { pattern: /^@material-ui\/core$/, message: 'Import tout MUI', suggestion: 'Importez les composants individuellement: @material-ui/core/Button' },
-    { pattern: /^@mui\/material$/, message: 'Import tout MUI v5', suggestion: 'Importez les composants individuellement: @mui/material/Button' },
-    { pattern: /^antd$/, message: 'Import tout Ant Design', suggestion: 'Utilisez babel-plugin-import pour le tree-shaking automatique' },
-    { pattern: /^rxjs$/, message: 'Import tout RxJS', suggestion: 'Importez les opérateurs individuellement: rxjs/operators' },
+    {
+      pattern: /^@material-ui\/core$/,
+      message: 'Import tout MUI',
+      suggestion: 'Importez les composants individuellement: @material-ui/core/Button',
+    },
+    {
+      pattern: /^@mui\/material$/,
+      message: 'Import tout MUI v5',
+      suggestion: 'Importez les composants individuellement: @mui/material/Button',
+    },
+    {
+      pattern: /^antd$/,
+      message: 'Import tout Ant Design',
+      suggestion: 'Utilisez babel-plugin-import pour le tree-shaking automatique',
+    },
+    {
+      pattern: /^rxjs$/,
+      message: 'Import tout RxJS',
+      suggestion: 'Importez les opérateurs individuellement: rxjs/operators',
+    },
   ];
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
-    if (!ts.isImportDeclaration(node)) return;
+    if (!ts.isImportDeclaration(node)) {
+      return;
+    }
 
     const moduleSpecifier = node.moduleSpecifier;
-    if (!ts.isStringLiteral(moduleSpecifier)) return;
+
+    if (!ts.isStringLiteral(moduleSpecifier)) {
+      return;
+    }
 
     const moduleName = moduleSpecifier.text;
 
     // Check for large packages
     const largePackage = this.largePackages[moduleName];
+
     if (largePackage) {
       // Check if it's a full import (import X from 'package')
       const clause = node.importClause;
 
       if (clause && (clause.name || (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)))) {
-        context.report(this.createIssue(node, context.sourceFile,
-          `Import complet de '${moduleName}' augmente significativement la taille du bundle.`,
-          {
-            severity: largePackage.severity,
-            suggestion: largePackage.suggestion,
-          }
-        ));
+        context.report(
+          this.createIssue(
+            node,
+            context.sourceFile,
+            `Import complet de '${moduleName}' augmente significativement la taille du bundle.`,
+            {
+              severity: largePackage.severity,
+              suggestion: largePackage.suggestion,
+            },
+          ),
+        );
       }
     }
 
@@ -329,31 +412,35 @@ export class BundleSizeRule extends BaseRule {
         const clause = node.importClause;
 
         // Check for namespace imports or full imports
-        if (clause && (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings))) {
-          context.report(this.createIssue(node, context.sourceFile,
-            `${message}: '${moduleName}'`,
-            { suggestion }
-          ));
+        if (clause && clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+          context.report(this.createIssue(node, context.sourceFile, `${message}: '${moduleName}'`, { suggestion }));
         }
 
         // Check for import * as X
         if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
           const imports = clause.namedBindings.elements;
+
           if (imports.length > 10) {
-            context.report(this.createIssue(node, context.sourceFile,
-              `Import de ${imports.length} éléments depuis '${moduleName}' - considérez regrouper ou lazy load.`,
-              {
-                severity: 'info',
-                suggestion: 'Utilisez le code splitting ou des imports dynamiques pour les gros modules.',
-              }
-            ));
+            context.report(
+              this.createIssue(
+                node,
+                context.sourceFile,
+                `Import de ${imports.length} éléments depuis '${moduleName}' - considérez regrouper ou lazy load.`,
+                {
+                  severity: 'info',
+                  suggestion: 'Utilisez le code splitting ou des imports dynamiques pour les gros modules.',
+                },
+              ),
+            );
           }
         }
       }
     }
 
-    // Check for dynamic imports that could be static
-    // (Not applicable to import declarations, but we can add later for call expressions)
+    /*
+     * Check for dynamic imports that could be static
+     * (Not applicable to import declarations, but we can add later for call expressions)
+     */
   }
 
   protected getExamples(): RuleExample[] {
@@ -366,9 +453,11 @@ export class BundleSizeRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// AVOID RE-RENDERS RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * AVOID RE-RENDERS RULE
+ * ============================================================================
+ */
 
 /**
  * Détecter les patterns causant des re-renders React inutiles
@@ -381,7 +470,9 @@ export class AvoidReRendersRule extends BaseRule {
   readonly defaultSeverity = 'warning' as const;
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     // Check for inline object/array props in JSX
     if (ts.isJsxAttribute(node)) {
@@ -396,23 +487,31 @@ export class AvoidReRendersRule extends BaseRule {
 
           // Ignore style prop (common pattern)
           if (attrName !== 'style' && attrName !== 'key') {
-            context.report(this.createIssue(node, context.sourceFile,
-              `Objet inline dans la prop '${attrName}' cause un re-render à chaque cycle.`,
-              {
-                suggestion: 'Utilisez useMemo ou définissez l\'objet en dehors du composant.',
-              }
-            ));
+            context.report(
+              this.createIssue(
+                node,
+                context.sourceFile,
+                `Objet inline dans la prop '${attrName}' cause un re-render à chaque cycle.`,
+                {
+                  suggestion: "Utilisez useMemo ou définissez l'objet en dehors du composant.",
+                },
+              ),
+            );
           }
         }
 
         // Inline array literal
         if (ts.isArrayLiteralExpression(expr)) {
-          context.report(this.createIssue(node, context.sourceFile,
-            'Tableau inline dans les props cause un re-render à chaque cycle.',
-            {
-              suggestion: 'Utilisez useMemo ou définissez le tableau en dehors du composant.',
-            }
-          ));
+          context.report(
+            this.createIssue(
+              node,
+              context.sourceFile,
+              'Tableau inline dans les props cause un re-render à chaque cycle.',
+              {
+                suggestion: 'Utilisez useMemo ou définissez le tableau en dehors du composant.',
+              },
+            ),
+          );
         }
 
         // Inline arrow function (except for event handlers)
@@ -421,12 +520,16 @@ export class AvoidReRendersRule extends BaseRule {
           const isEventHandler = attrName.startsWith('on');
 
           if (!isEventHandler) {
-            context.report(this.createIssue(node, context.sourceFile,
-              `Fonction inline dans la prop '${attrName}' cause un re-render à chaque cycle.`,
-              {
-                suggestion: 'Utilisez useCallback pour mémoriser la fonction.',
-              }
-            ));
+            context.report(
+              this.createIssue(
+                node,
+                context.sourceFile,
+                `Fonction inline dans la prop '${attrName}' cause un re-render à chaque cycle.`,
+                {
+                  suggestion: 'Utilisez useCallback pour mémoriser la fonction.',
+                },
+              ),
+            );
           }
         }
       }
@@ -439,15 +542,12 @@ export class AvoidReRendersRule extends BaseRule {
       if (ts.isCallExpression(expr)) {
         const callee = expr.expression;
 
-        if (ts.isPropertyAccessExpression(callee) &&
-            ts.isIdentifier(callee.name) &&
-            callee.name.text === 'bind') {
-          context.report(this.createIssue(node, context.sourceFile,
-            '.bind() dans JSX crée une nouvelle fonction à chaque render.',
-            {
+        if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.name) && callee.name.text === 'bind') {
+          context.report(
+            this.createIssue(node, context.sourceFile, '.bind() dans JSX crée une nouvelle fonction à chaque render.', {
               suggestion: 'Utilisez une arrow function dans le constructeur ou useCallback.',
-            }
-          ));
+            }),
+          );
         }
       }
     }
@@ -463,13 +563,10 @@ export class AvoidReRendersRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
+/*
+ * ============================================================================
+ * EXPORTS
+ * ============================================================================
+ */
 
-export const PERFORMANCE_RULES = [
-  NoSyncOperationsRule,
-  MemoDependenciesRule,
-  BundleSizeRule,
-  AvoidReRendersRule,
-];
+export const PERFORMANCE_RULES = [NoSyncOperationsRule, MemoDependenciesRule, BundleSizeRule, AvoidReRendersRule];

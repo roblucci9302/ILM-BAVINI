@@ -12,10 +12,13 @@ export type CommandAuthorizationLevel = 'allowed' | 'approval_required' | 'block
 export interface CommandRule {
   /** Pattern de la commande (regex ou string exacte) */
   pattern: string | RegExp;
+
   /** Niveau d'autorisation */
   level: CommandAuthorizationLevel;
+
   /** Description pour l'utilisateur */
   description: string;
+
   /** Raison du niveau d'autorisation */
   reason: string;
 }
@@ -25,9 +28,11 @@ export interface CommandRule {
  * L'ordre est important : première règle qui matche gagne
  */
 export const DEFAULT_COMMAND_RULES: CommandRule[] = [
-  // ============================================================================
-  // COMMANDES BLOQUÉES (dangereuses)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * COMMANDES BLOQUÉES (dangereuses)
+   * ============================================================================
+   */
   {
     pattern: /^rm\s+(-rf?|--recursive)/i,
     level: 'blocked',
@@ -77,14 +82,16 @@ export const DEFAULT_COMMAND_RULES: CommandRule[] = [
     reason: 'Tentative de sortir du projet détectée',
   },
 
-  // ============================================================================
-  // COMMANDES NÉCESSITANT APPROBATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * COMMANDES NÉCESSITANT APPROBATION
+   * ============================================================================
+   */
   {
     pattern: /^git\s+(push|reset|rebase|merge|checkout\s+-)/i,
     level: 'approval_required',
     description: 'Commande Git sensible',
-    reason: 'Cette commande Git peut modifier l\'historique ou pousser du code',
+    reason: "Cette commande Git peut modifier l'historique ou pousser du code",
   },
   {
     pattern: /^git\s+/i,
@@ -117,9 +124,11 @@ export const DEFAULT_COMMAND_RULES: CommandRule[] = [
     reason: 'Opération de fichiers - vérification recommandée',
   },
 
-  // ============================================================================
-  // COMMANDES AUTORISÉES (sûres)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * COMMANDES AUTORISÉES (sûres)
+   * ============================================================================
+   */
   {
     pattern: /^npm\s+install(\s+|$)/i,
     level: 'allowed',
@@ -218,12 +227,16 @@ export const DEFAULT_COMMAND_RULES: CommandRule[] = [
 export interface CommandCheckResult {
   /** La commande est-elle autorisée ? */
   allowed: boolean;
+
   /** Niveau d'autorisation */
   level: CommandAuthorizationLevel;
+
   /** Message explicatif */
   message: string;
+
   /** Règle qui a matché (si applicable) */
   matchedRule?: CommandRule;
+
   /** La commande originale */
   command: string;
 }
@@ -255,11 +268,12 @@ export function checkCommand(command: string, rules: CommandRule[] = DEFAULT_COM
       return {
         allowed: rule.level === 'allowed',
         level: rule.level,
-        message: rule.level === 'blocked'
-          ? `Commande bloquée: ${rule.reason}`
-          : rule.level === 'approval_required'
-            ? `Approbation requise: ${rule.reason}`
-            : `Commande autorisée: ${rule.description}`,
+        message:
+          rule.level === 'blocked'
+            ? `Commande bloquée: ${rule.reason}`
+            : rule.level === 'approval_required'
+              ? `Approbation requise: ${rule.reason}`
+              : `Commande autorisée: ${rule.description}`,
         matchedRule: rule,
         command: trimmedCommand,
       };

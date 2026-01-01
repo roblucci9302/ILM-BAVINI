@@ -22,9 +22,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ASTAnalyzer');
 
-// ============================================================================
-// AST ANALYZER
-// ============================================================================
+/*
+ * ============================================================================
+ * AST ANALYZER
+ * ============================================================================
+ */
 
 /**
  * Analyseur AST principal
@@ -55,9 +57,11 @@ export class ASTAnalyzer {
     logger.info(`ASTAnalyzer initialized with ${this.registry.getEnabled().length} enabled rules`);
   }
 
-  // ============================================================================
-  // MAIN ANALYSIS METHODS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * MAIN ANALYSIS METHODS
+   * ============================================================================
+   */
 
   /**
    * Analyser un fichier
@@ -82,7 +86,7 @@ export class ASTAnalyzer {
           file: filePath,
           issues: [],
           metrics: this.getEmptyMetrics(),
-          parseErrors: [{ message: 'Fichier trop volumineux pour l\'analyse' }],
+          parseErrors: [{ message: "Fichier trop volumineux pour l'analyse" }],
         };
       }
 
@@ -91,13 +95,17 @@ export class ASTAnalyzer {
 
       // Collecter les erreurs de parsing
       const diagnostics = this.getParserDiagnostics(sourceFile);
+
       for (const diag of diagnostics) {
         parseErrors.push({
           message: ts.flattenDiagnosticMessageText(diag.messageText, '\n'),
-          location: diag.start !== undefined ? this.parser.getLocation(
-            { getStart: () => diag.start!, getEnd: () => diag.start! + (diag.length || 0) } as ts.Node,
-            sourceFile
-          ) : undefined,
+          location:
+            diag.start !== undefined
+              ? this.parser.getLocation(
+                  { getStart: () => diag.start!, getEnd: () => diag.start! + (diag.length || 0) } as ts.Node,
+                  sourceFile,
+                )
+              : undefined,
         });
       }
 
@@ -175,9 +183,11 @@ export class ASTAnalyzer {
 
     // Analyse séquentielle
     const results: AnalysisResult[] = [];
+
     for (const file of files) {
       results.push(await this.analyzeFile(file));
     }
+
     return results;
   }
 
@@ -223,9 +233,11 @@ export class ASTAnalyzer {
     return this.analyzeFiles(this.config.include, dir);
   }
 
-  // ============================================================================
-  // SUMMARY & REPORTING
-  // ============================================================================
+  /*
+   * ============================================================================
+   * SUMMARY & REPORTING
+   * ============================================================================
+   */
 
   /**
    * Créer un résumé d'analyse
@@ -264,6 +276,7 @@ export class ASTAnalyzer {
       if (result.issues.some((i) => i.severity === 'error') || result.parseErrors.length > 0) {
         filesWithErrors++;
       }
+
       if (result.issues.some((i) => i.severity === 'warning')) {
         filesWithWarnings++;
       }
@@ -293,9 +306,11 @@ export class ASTAnalyzer {
     };
   }
 
-  // ============================================================================
-  // METRICS CALCULATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * METRICS CALCULATION
+   * ============================================================================
+   */
 
   /**
    * Calculer les métriques du code
@@ -328,11 +343,15 @@ export class ASTAnalyzer {
 
         case ts.SyntaxKind.BinaryExpression:
           const binary = node as ts.BinaryExpression;
-          if (binary.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
-              binary.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
-              binary.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken) {
+
+          if (
+            binary.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+            binary.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+            binary.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+          ) {
             cyclomaticComplexity++;
           }
+
           break;
       }
     });
@@ -344,15 +363,22 @@ export class ASTAnalyzer {
       return trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*');
     }).length;
 
-    // Calculer l'index de maintenabilité (formule simplifiée)
-    // MI = 171 - 5.2 * ln(HV) - 0.23 * CC - 16.2 * ln(LOC)
+    /*
+     * Calculer l'index de maintenabilité (formule simplifiée)
+     * MI = 171 - 5.2 * ln(HV) - 0.23 * CC - 16.2 * ln(LOC)
+     */
     const halsteadVolume = Math.log2(Math.max(linesOfCode, 1)) * linesOfCode;
     const maintainabilityIndex = Math.max(
       0,
       Math.min(
         100,
-        Math.round(171 - 5.2 * Math.log(Math.max(halsteadVolume, 1)) - 0.23 * cyclomaticComplexity - 16.2 * Math.log(Math.max(linesOfCode, 1)))
-      )
+        Math.round(
+          171 -
+            5.2 * Math.log(Math.max(halsteadVolume, 1)) -
+            0.23 * cyclomaticComplexity -
+            16.2 * Math.log(Math.max(linesOfCode, 1)),
+        ),
+      ),
     );
 
     // Complexité cognitive (approximation)
@@ -384,9 +410,11 @@ export class ASTAnalyzer {
     };
   }
 
-  // ============================================================================
-  // UTILITIES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * UTILITIES
+   * ============================================================================
+   */
 
   /**
    * Trier les issues par sévérité puis position
@@ -402,7 +430,10 @@ export class ASTAnalyzer {
     return issues.sort((a, b) => {
       // Par sévérité d'abord
       const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
-      if (severityDiff !== 0) return severityDiff;
+
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
 
       // Puis par position
       return a.location.start.offset - b.location.start.offset;
@@ -413,14 +444,18 @@ export class ASTAnalyzer {
    * Obtenir les diagnostics du parser
    */
   private getParserDiagnostics(sourceFile: ts.SourceFile): readonly ts.Diagnostic[] {
-    // Les erreurs syntaxiques sont stockées dans le sourceFile
-    // Note: parseDiagnostics is an internal property, use type assertion
+    /*
+     * Les erreurs syntaxiques sont stockées dans le sourceFile
+     * Note: parseDiagnostics is an internal property, use type assertion
+     */
     return (sourceFile as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics || [];
   }
 
-  // ============================================================================
-  // CONFIGURATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * CONFIGURATION
+   * ============================================================================
+   */
 
   /**
    * Obtenir la configuration actuelle
@@ -455,9 +490,11 @@ export class ASTAnalyzer {
   }
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 /**
  * Créer un analyseur AST

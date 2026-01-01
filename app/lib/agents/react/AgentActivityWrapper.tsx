@@ -48,12 +48,7 @@ export function AgentActivityWrapper({ onStopAll }: AgentActivityWrapperProps) {
       </div>
 
       {/* Activity Log Panel */}
-      <AgentActivityLog
-        isOpen={isLogOpen}
-        onClose={handleCloseLog}
-        maxLogs={200}
-        autoScroll={true}
-      />
+      <AgentActivityLog isOpen={isLogOpen} onClose={handleCloseLog} maxLogs={200} autoScroll={true} />
     </>
   );
 }
@@ -61,13 +56,7 @@ export function AgentActivityWrapper({ onStopAll }: AgentActivityWrapperProps) {
 /**
  * Minimal status indicator for header/toolbar
  */
-export function AgentStatusIndicator({
-  onClick,
-  compact = true,
-}: {
-  onClick?: () => void;
-  compact?: boolean;
-}) {
+export function AgentStatusIndicator({ onClick, compact = true }: { onClick?: () => void; compact?: boolean }) {
   const isAgentMode = useIsAgentMode();
 
   if (!isAgentMode) {

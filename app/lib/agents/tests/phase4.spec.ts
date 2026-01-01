@@ -8,12 +8,14 @@ import { AgentRegistry } from '../core/agent-registry';
 import { ReviewerAgent, createReviewerAgent } from '../agents/reviewer-agent';
 import { FixerAgent, createFixerAgent } from '../agents/fixer-agent';
 import { createReviewToolHandlers, createMockAnalyzer } from '../tools/review-tools';
-import type { CodeAnalyzer, AnalysisResult, CodeIssue, ChangeReviewResult, ComplexityResult } from '../tools/review-tools';
-import {
-  SwarmCoordinator,
-  createSwarmCoordinator,
-  PREDEFINED_RULES,
-} from '../utils/swarm-coordinator';
+import type {
+  CodeAnalyzer,
+  AnalysisResult,
+  CodeIssue,
+  ChangeReviewResult,
+  ComplexityResult,
+} from '../tools/review-tools';
+import { SwarmCoordinator, createSwarmCoordinator, PREDEFINED_RULES } from '../utils/swarm-coordinator';
 import type { HandoffRule, SwarmChain } from '../utils/swarm-coordinator';
 import type { Task, TaskResult } from '../types';
 import { createMockWritableFileSystem } from '../tools/write-tools';
@@ -45,9 +47,11 @@ vi.mock('@anthropic-ai/sdk', () => {
   };
 });
 
-// ============================================================================
-// TESTS REVIEW TOOLS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS REVIEW TOOLS
+ * ============================================================================
+ */
 
 describe('ReviewTools', () => {
   let mockAnalyzer: CodeAnalyzer;
@@ -191,9 +195,11 @@ describe('ReviewTools', () => {
   });
 });
 
-// ============================================================================
-// TESTS REVIEWER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS REVIEWER AGENT
+ * ============================================================================
+ */
 
 describe('ReviewerAgent', () => {
   let agent: ReviewerAgent;
@@ -201,7 +207,7 @@ describe('ReviewerAgent', () => {
 
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry['instance'] = null as any;
+    AgentRegistry.instance = null as any;
 
     mockAnalyzer = createMockAnalyzer({
       analysisResult: {
@@ -238,6 +244,7 @@ describe('ReviewerAgent', () => {
 
   it('should clear review history', () => {
     agent.clearReviewHistory();
+
     const history = agent.getReviewHistory();
     expect(history).toHaveLength(0);
   });
@@ -248,9 +255,7 @@ describe('ReviewerAgent', () => {
         file: 'file1.ts',
         language: 'typescript',
         linesAnalyzed: 100,
-        issues: [
-          { severity: 'high', type: 'security', file: 'file1.ts', line: 10, message: 'SQL injection' },
-        ],
+        issues: [{ severity: 'high', type: 'security', file: 'file1.ts', line: 10, message: 'SQL injection' }],
         metrics: { linesOfCode: 100 },
         score: { overall: 70, quality: 65, security: 60, performance: 80, maintainability: 75 },
       },
@@ -280,9 +285,11 @@ describe('ReviewerAgent', () => {
   });
 });
 
-// ============================================================================
-// TESTS FIXER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS FIXER AGENT
+ * ============================================================================
+ */
 
 describe('FixerAgent', () => {
   let agent: FixerAgent;
@@ -290,7 +297,7 @@ describe('FixerAgent', () => {
 
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry['instance'] = null as any;
+    AgentRegistry.instance = null as any;
 
     mockFs = createMockWritableFileSystem({
       '/project/test.ts': 'const x = 1;',
@@ -324,6 +331,7 @@ describe('FixerAgent', () => {
 
   it('should clear fix history', () => {
     agent.clearFixHistory();
+
     const history = agent.getFixHistory();
     expect(history).toHaveLength(0);
   });
@@ -340,10 +348,7 @@ describe('FixerAgent', () => {
 
   describe('static parseError', () => {
     it('should parse error with file and line', () => {
-      const error = FixerAgent.parseError(
-        'Error at src/test.ts:42:10 - something failed',
-        'compilation'
-      );
+      const error = FixerAgent.parseError('Error at src/test.ts:42:10 - something failed', 'compilation');
 
       expect(error.type).toBe('compilation');
       expect(error.file).toBe('src/test.ts');
@@ -392,9 +397,11 @@ describe('FixerAgent', () => {
   });
 });
 
-// ============================================================================
-// TESTS SWARM COORDINATOR
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS SWARM COORDINATOR
+ * ============================================================================
+ */
 
 describe('SwarmCoordinator', () => {
   let registry: AgentRegistry;
@@ -402,7 +409,7 @@ describe('SwarmCoordinator', () => {
 
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry['instance'] = null as any;
+    AgentRegistry.instance = null as any;
     registry = AgentRegistry.getInstance();
     coordinator = new SwarmCoordinator(registry, 'test-api-key', { verbose: false });
   });
@@ -418,6 +425,7 @@ describe('SwarmCoordinator', () => {
       };
 
       coordinator.addRule(rule);
+
       const rules = coordinator.getRulesFor('tester');
 
       expect(rules).toHaveLength(1);
@@ -564,9 +572,11 @@ describe('SwarmCoordinator', () => {
   });
 });
 
-// ============================================================================
-// TESTS MOCK ANALYZER
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS MOCK ANALYZER
+ * ============================================================================
+ */
 
 describe('MockAnalyzer', () => {
   it('should create analyzer with default results', () => {
@@ -620,14 +630,16 @@ describe('MockAnalyzer', () => {
   });
 });
 
-// ============================================================================
-// TESTS INTEGRATION PHASE 4
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS INTEGRATION PHASE 4
+ * ============================================================================
+ */
 
 describe('Integration Phase 4', () => {
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry['instance'] = null as any;
+    AgentRegistry.instance = null as any;
   });
 
   it('should register all Phase 4 agents', () => {

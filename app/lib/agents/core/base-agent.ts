@@ -124,9 +124,11 @@ export abstract class BaseAgent {
     this.logger = createScopedLogger(`Agent:${config.name}`);
   }
 
-  // ============================================================================
-  // MÉTHODES ABSTRAITES (à implémenter par chaque agent)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * MÉTHODES ABSTRAITES (à implémenter par chaque agent)
+   * ============================================================================
+   */
 
   /**
    * Exécute la logique spécifique de l'agent
@@ -168,9 +170,11 @@ export abstract class BaseAgent {
    */
   abstract getSystemPrompt(): string;
 
-  // ============================================================================
-  // MÉTHODES PUBLIQUES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * MÉTHODES PUBLIQUES
+   * ============================================================================
+   */
 
   /**
    * Lance l'exécution d'une tâche avec gestion complète du cycle de vie
@@ -244,6 +248,7 @@ export abstract class BaseAgent {
       return result;
     } catch (error) {
       this.status = 'failed';
+
       const agentError = this.createError(error);
 
       this.log('error', `Task failed: ${task.id}`, { error: agentError });
@@ -348,9 +353,11 @@ export abstract class BaseAgent {
     return () => this.eventCallbacks.delete(callback);
   }
 
-  // ============================================================================
-  // GESTION DES OUTILS (Tool Registry)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * GESTION DES OUTILS (Tool Registry)
+   * ============================================================================
+   */
 
   /**
    * Enregistrer un outil avec son handler d'exécution
@@ -393,11 +400,7 @@ export abstract class BaseAgent {
   /**
    * Enregistrer plusieurs outils d'un coup
    */
-  registerTools(
-    definitions: ToolDefinition[],
-    handlers: Record<string, ToolHandler>,
-    category?: string
-  ): void {
+  registerTools(definitions: ToolDefinition[], handlers: Record<string, ToolHandler>, category?: string): void {
     this.toolRegistry.registerBatch(definitions, handlers, category);
 
     // Ajouter à la config
@@ -419,6 +422,7 @@ export abstract class BaseAgent {
     if (removed) {
       // Retirer de la config
       const index = this.config.tools.findIndex((t) => t.name === name);
+
       if (index !== -1) {
         this.config.tools.splice(index, 1);
       }
@@ -441,9 +445,11 @@ export abstract class BaseAgent {
     return this.toolRegistry.getDefinitions();
   }
 
-  // ============================================================================
-  // MÉTHODES PROTÉGÉES (utilisables par les sous-classes)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * MÉTHODES PROTÉGÉES (utilisables par les sous-classes)
+   * ============================================================================
+   */
 
   /**
    * Appelle le LLM Claude avec les messages fournis
@@ -468,7 +474,7 @@ export abstract class BaseAgent {
       tools?: ToolDefinition[];
       maxTokens?: number;
       temperature?: number;
-    }
+    },
   ): Promise<Anthropic.Message> {
     if (!this.anthropicClient) {
       throw new Error('Anthropic client not initialized');
@@ -518,10 +524,7 @@ export abstract class BaseAgent {
   /**
    * Exécute un outil et retourne le résultat
    */
-  protected async executeTool(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<ToolExecutionResult> {
+  protected async executeTool(toolName: string, input: Record<string, unknown>): Promise<ToolExecutionResult> {
     this.status = 'waiting_for_tool';
     this.metrics.toolCalls++;
 
@@ -538,9 +541,11 @@ export abstract class BaseAgent {
         throw new Error(`Tool not found: ${toolName}`);
       }
 
-      // L'exécution réelle sera gérée par les handlers spécifiques
-      // Pour l'instant, on retourne un placeholder
-      // Les sous-classes doivent override cette méthode ou fournir des handlers
+      /*
+       * L'exécution réelle sera gérée par les handlers spécifiques
+       * Pour l'instant, on retourne un placeholder
+       * Les sous-classes doivent override cette méthode ou fournir des handlers
+       */
       const result = await this.executeToolHandler(toolName, input);
 
       const executionTime = Date.now() - startTime;
@@ -578,10 +583,7 @@ export abstract class BaseAgent {
    * Handler d'exécution des outils
    * Utilise le ToolRegistry pour trouver et exécuter le handler approprié
    */
-  protected async executeToolHandler(
-    toolName: string,
-    input: Record<string, unknown>
-  ): Promise<unknown> {
+  protected async executeToolHandler(toolName: string, input: Record<string, unknown>): Promise<unknown> {
     // 1. Chercher dans le registre d'outils
     if (this.toolRegistry.has(toolName)) {
       const result = await this.toolRegistry.execute(toolName, input);
@@ -601,19 +603,13 @@ export abstract class BaseAgent {
    * Handler pour les outils personnalisés non enregistrés dans le registry
    * Les sous-classes peuvent override cette méthode pour gérer des cas spéciaux
    */
-  protected async handleCustomTool(
-    toolName: string,
-    _input: Record<string, unknown>
-  ): Promise<unknown> {
+  protected async handleCustomTool(toolName: string, _input: Record<string, unknown>): Promise<unknown> {
     // Par défaut, retourne une erreur si l'outil n'est pas trouvé
     const availableTools = this.toolRegistry.getToolNames();
-    const toolList = availableTools.length > 0
-      ? `Available tools: ${availableTools.join(', ')}`
-      : 'No tools registered';
+    const toolList =
+      availableTools.length > 0 ? `Available tools: ${availableTools.join(', ')}` : 'No tools registered';
 
-    throw new Error(
-      `Tool '${toolName}' not found in registry and no custom handler provided. ${toolList}`
-    );
+    throw new Error(`Tool '${toolName}' not found in registry and no custom handler provided. ${toolList}`);
   }
 
   /**
@@ -715,11 +711,7 @@ export abstract class BaseAgent {
   /**
    * Logging centralisé
    */
-  protected log(
-    level: LogLevel,
-    message: string,
-    data?: Record<string, unknown>
-  ): void {
+  protected log(level: LogLevel, message: string, data?: Record<string, unknown>): void {
     const entry: LogEntry = {
       level,
       message,
@@ -745,9 +737,11 @@ export abstract class BaseAgent {
     }
   }
 
-  // ============================================================================
-  // MÉTHODES PRIVÉES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * MÉTHODES PRIVÉES
+   * ============================================================================
+   */
 
   /**
    * Exécute avec timeout
@@ -768,9 +762,7 @@ export abstract class BaseAgent {
   /**
    * Convertit nos messages au format Anthropic
    */
-  private convertToAnthropicMessages(
-    messages: AgentMessage[]
-  ): Anthropic.MessageParam[] {
+  private convertToAnthropicMessages(messages: AgentMessage[]): Anthropic.MessageParam[] {
     return messages.map((msg) => {
       if (msg.role === 'system') {
         // Les messages system sont gérés séparément
@@ -906,10 +898,7 @@ export abstract class BaseAgent {
   /**
    * Émet un événement
    */
-  protected emitEvent(
-    type: AgentEvent['type'],
-    data: Record<string, unknown>
-  ): void {
+  protected emitEvent(type: AgentEvent['type'], data: Record<string, unknown>): void {
     const event: AgentEvent = {
       type,
       timestamp: new Date(),

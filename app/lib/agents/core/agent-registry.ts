@@ -107,6 +107,7 @@ export class AgentRegistry {
     if (!AgentRegistry.instance) {
       AgentRegistry.instance = new AgentRegistry();
     }
+
     return AgentRegistry.instance;
   }
 
@@ -117,12 +118,15 @@ export class AgentRegistry {
     if (AgentRegistry.instance) {
       AgentRegistry.instance.clear();
     }
+
     AgentRegistry.instance = new AgentRegistry();
   }
 
-  // ============================================================================
-  // ENREGISTREMENT
-  // ============================================================================
+  /*
+   * ============================================================================
+   * ENREGISTREMENT
+   * ============================================================================
+   */
 
   /**
    * Enregistrer un agent dans le registre
@@ -205,9 +209,11 @@ export class AgentRegistry {
     logger.info('Registry cleared');
   }
 
-  // ============================================================================
-  // RÉCUPÉRATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * RÉCUPÉRATION
+   * ============================================================================
+   */
 
   /**
    * Obtenir un agent par son nom
@@ -232,6 +238,7 @@ export class AgentRegistry {
     if (registered) {
       registered.lastUsedAt = new Date();
       registered.usageCount++;
+
       return registered.agent;
     }
 
@@ -250,9 +257,11 @@ export class AgentRegistry {
    */
   getAll(): Map<AgentType, BaseAgent> {
     const result = new Map<AgentType, BaseAgent>();
+
     for (const [name, registered] of this.agents) {
       result.set(name, registered.agent);
     }
+
     return result;
   }
 
@@ -270,9 +279,11 @@ export class AgentRegistry {
     return this.agents.get(name);
   }
 
-  // ============================================================================
-  // FILTRAGE
-  // ============================================================================
+  /*
+   * ============================================================================
+   * FILTRAGE
+   * ============================================================================
+   */
 
   /**
    * Obtenir les agents disponibles (idle)
@@ -326,16 +337,16 @@ export class AgentRegistry {
     const available = this.getAvailable();
 
     // Filtrer l'orchestrateur si demandé
-    const candidates = excludeOrchestrator
-      ? available.filter((a) => a.getName() !== 'orchestrator')
-      : available;
+    const candidates = excludeOrchestrator ? available.filter((a) => a.getName() !== 'orchestrator') : available;
 
     if (candidates.length === 0) {
       return null;
     }
 
-    // Pour l'instant, retourner le premier disponible
-    // TODO: Implémenter un scoring basé sur la description
+    /*
+     * Pour l'instant, retourner le premier disponible
+     * TODO: Implémenter un scoring basé sur la description
+     */
     return candidates[0];
   }
 
@@ -357,9 +368,11 @@ export class AgentRegistry {
     return result;
   }
 
-  // ============================================================================
-  // STATISTIQUES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * STATISTIQUES
+   * ============================================================================
+   */
 
   /**
    * Obtenir les statistiques du registre
@@ -412,9 +425,11 @@ export class AgentRegistry {
     return info;
   }
 
-  // ============================================================================
-  // ÉVÉNEMENTS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * ÉVÉNEMENTS
+   * ============================================================================
+   */
 
   /**
    * S'abonner aux événements du registre

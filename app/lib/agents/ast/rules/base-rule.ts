@@ -6,9 +6,11 @@ import ts from 'typescript';
 import type { ASTIssue, ASTLocation, RuleCategory, Severity, RuleConfig, ASTFix } from '../types';
 import { TypeScriptParser } from '../parser';
 
-// ============================================================================
-// RULE CONTEXT
-// ============================================================================
+/*
+ * ============================================================================
+ * RULE CONTEXT
+ * ============================================================================
+ */
 
 /**
  * Contexte d'exécution d'une règle
@@ -16,29 +18,38 @@ import { TypeScriptParser } from '../parser';
 export interface RuleContext {
   /** Fichier source */
   sourceFile: ts.SourceFile;
+
   /** Programme TypeScript (optionnel, pour analyse de types) */
   program?: ts.Program;
+
   /** Type checker (optionnel, pour analyse de types) */
   checker?: ts.TypeChecker;
+
   /** Parser pour utilitaires */
   parser: TypeScriptParser;
+
   /** Reporter d'issues */
   report: (issue: Omit<ASTIssue, 'rule'>) => void;
+
   /** Options de configuration de la règle */
   options: Record<string, unknown>;
 }
 
-// ============================================================================
-// BASE RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * BASE RULE
+ * ============================================================================
+ */
 
 /**
  * Classe de base pour les règles d'analyse
  */
 export abstract class BaseRule {
-  // ============================================================================
-  // METADATA (à implémenter par les sous-classes)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * METADATA (à implémenter par les sous-classes)
+   * ============================================================================
+   */
 
   /** Identifiant unique de la règle (format: category/name) */
   abstract readonly id: string;
@@ -55,9 +66,11 @@ export abstract class BaseRule {
   /** Sévérité par défaut */
   abstract readonly defaultSeverity: Severity;
 
-  // ============================================================================
-  // CONFIGURATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * CONFIGURATION
+   * ============================================================================
+   */
 
   /** Configuration de la règle */
   protected config: RuleConfig = { enabled: true };
@@ -93,9 +106,11 @@ export abstract class BaseRule {
     return this.config.options ?? {};
   }
 
-  // ============================================================================
-  // ANALYSE (à implémenter par les sous-classes)
-  // ============================================================================
+  /*
+   * ============================================================================
+   * ANALYSE (à implémenter par les sous-classes)
+   * ============================================================================
+   */
 
   /**
    * Analyser un nœud AST
@@ -104,9 +119,11 @@ export abstract class BaseRule {
    */
   abstract analyze(node: ts.Node, context: RuleContext): void;
 
-  // ============================================================================
-  // UTILITAIRES PROTÉGÉS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * UTILITAIRES PROTÉGÉS
+   * ============================================================================
+   */
 
   /**
    * Vérifier si la règle doit s'exécuter
@@ -142,7 +159,7 @@ export abstract class BaseRule {
       fixable: boolean;
       fix: ASTFix;
       code: string;
-    }> = {}
+    }> = {},
   ): Omit<ASTIssue, 'rule'> {
     const location = this.getLocation(node, sourceFile);
 
@@ -201,9 +218,11 @@ export abstract class BaseRule {
     };
   }
 
-  // ============================================================================
-  // TYPE GUARDS UTILITAIRES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TYPE GUARDS UTILITAIRES
+   * ============================================================================
+   */
 
   /**
    * Vérifier si le nœud est dans un contexte JSX
@@ -212,11 +231,10 @@ export abstract class BaseRule {
     let current: ts.Node | undefined = node;
 
     while (current) {
-      if (ts.isJsxElement(current) ||
-          ts.isJsxFragment(current) ||
-          ts.isJsxSelfClosingElement(current)) {
+      if (ts.isJsxElement(current) || ts.isJsxFragment(current) || ts.isJsxSelfClosingElement(current)) {
         return true;
       }
+
       current = current.parent;
     }
 
@@ -234,6 +252,7 @@ export abstract class BaseRule {
         const modifiers = ts.getModifiers(current as ts.FunctionLikeDeclaration);
         return modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) ?? false;
       }
+
       current = current.parent;
     }
 
@@ -250,6 +269,7 @@ export abstract class BaseRule {
       if (ts.isFunctionLike(current)) {
         return current as ts.FunctionLikeDeclaration;
       }
+
       current = current.parent;
     }
 
@@ -266,6 +286,7 @@ export abstract class BaseRule {
       if (ts.isClassDeclaration(current) || ts.isClassExpression(current)) {
         return current;
       }
+
       current = current.parent;
     }
 
@@ -282,6 +303,7 @@ export abstract class BaseRule {
       if (ts.isTryStatement(current)) {
         return true;
       }
+
       current = current.parent;
     }
 
@@ -292,7 +314,9 @@ export abstract class BaseRule {
    * Vérifier si le nœud est un appel de fonction avec un nom donné
    */
   protected isCallTo(node: ts.Node, ...names: string[]): node is ts.CallExpression {
-    if (!ts.isCallExpression(node)) return false;
+    if (!ts.isCallExpression(node)) {
+      return false;
+    }
 
     const expression = node.expression;
 
@@ -327,9 +351,11 @@ export abstract class BaseRule {
     return parts;
   }
 
-  // ============================================================================
-  // DOCUMENTATION
-  // ============================================================================
+  /*
+   * ============================================================================
+   * DOCUMENTATION
+   * ============================================================================
+   */
 
   /**
    * Obtenir la documentation de la règle
@@ -361,9 +387,11 @@ export abstract class BaseRule {
   }
 }
 
-// ============================================================================
-// TYPES DE DOCUMENTATION
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES DE DOCUMENTATION
+ * ============================================================================
+ */
 
 /**
  * Documentation d'une règle

@@ -6,20 +6,19 @@
 import { BaseAgent } from '../core/base-agent';
 import type { ToolHandler } from '../core/tool-registry';
 import { READ_TOOLS, createReadToolHandlers } from '../tools/read-tools';
-import {
-  WRITE_TOOLS,
-  createWriteToolHandlers,
-  type WritableFileSystem,
-} from '../tools/write-tools';
+import { WRITE_TOOLS, createWriteToolHandlers, type WritableFileSystem } from '../tools/write-tools';
 import { CODER_SYSTEM_PROMPT } from '../prompts/coder-prompt';
 import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
+import { getModelForAgent } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('CoderAgent');
 
-// ============================================================================
-// TYPE FILESYSTEM POUR CODER
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPE FILESYSTEM POUR CODER
+ * ============================================================================
+ */
 
 /**
  * Type pour le système de fichiers complet (lecture + écriture)
@@ -27,9 +26,11 @@ const logger = createScopedLogger('CoderAgent');
  */
 export type CoderFileSystem = WritableFileSystem;
 
-// ============================================================================
-// CODER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * CODER AGENT
+ * ============================================================================
+ */
 
 /**
  * Agent de développement pour l'écriture de code
@@ -43,8 +44,8 @@ export class CoderAgent extends BaseAgent {
       name: 'coder',
       description:
         'Agent de développement. Peut créer, modifier, et supprimer des fichiers de code. ' +
-        'Spécialisé dans l\'écriture de code propre et fonctionnel.',
-      model: 'claude-sonnet-4-5-20250929',
+        "Spécialisé dans l'écriture de code propre et fonctionnel.",
+      model: getModelForAgent('coder'), // Opus 4.5 pour code de haute qualité
       tools: [...READ_TOOLS, ...WRITE_TOOLS],
       systemPrompt: CODER_SYSTEM_PROMPT,
       maxTokens: 8192,
@@ -134,11 +135,7 @@ export class CoderAgent extends BaseAgent {
 
     // Enregistrer les outils de lecture
     const readHandlers = createReadToolHandlers(fs);
-    this.registerTools(
-      READ_TOOLS,
-      readHandlers as unknown as Record<string, ToolHandler>,
-      'filesystem'
-    );
+    this.registerTools(READ_TOOLS, readHandlers as unknown as Record<string, ToolHandler>, 'filesystem');
 
     // Créer des handlers d'écriture wrappés pour tracker les modifications
     const writeHandlers = createWriteToolHandlers(fs);
@@ -152,7 +149,7 @@ export class CoderAgent extends BaseAgent {
    * Wrapper les handlers d'écriture pour tracker les modifications
    */
   private wrapWriteHandlersWithTracking(
-    handlers: ReturnType<typeof createWriteToolHandlers>
+    handlers: ReturnType<typeof createWriteToolHandlers>,
   ): Record<string, ToolHandler> {
     const wrapped: Record<string, ToolHandler> = {};
 
@@ -224,9 +221,11 @@ export class CoderAgent extends BaseAgent {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance du Coder Agent

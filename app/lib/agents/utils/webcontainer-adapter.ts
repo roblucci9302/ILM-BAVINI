@@ -12,7 +12,7 @@ interface WebContainerFS {
   readFile(path: string, encoding?: string): Promise<string>;
   readdir(
     path: string,
-    options?: { withFileTypes?: boolean }
+    options?: { withFileTypes?: boolean },
   ): Promise<string[] | Array<{ name: string; isDirectory(): boolean }>>;
   stat?(path: string): Promise<{ size: number; isDirectory(): boolean }>;
 }
@@ -24,9 +24,7 @@ interface WebContainerInstance {
 /**
  * Créer un adaptateur FileSystem à partir de WebContainer
  */
-export function createWebContainerAdapter(
-  webcontainer: WebContainerInstance
-): FileSystem {
+export function createWebContainerAdapter(webcontainer: WebContainerInstance): FileSystem {
   return {
     async readFile(path: string): Promise<string> {
       try {
@@ -34,17 +32,14 @@ export function createWebContainerAdapter(
         const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
 
         const content = await webcontainer.fs.readFile(normalizedPath, 'utf-8');
+
         return content;
       } catch (error) {
-        throw new Error(
-          `Failed to read file ${path}: ${error instanceof Error ? error.message : String(error)}`
-        );
+        throw new Error(`Failed to read file ${path}: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
 
-    async readdir(
-      path: string
-    ): Promise<Array<{ name: string; isDirectory: boolean; size?: number }>> {
+    async readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean; size?: number }>> {
       try {
         // Normaliser le chemin
         const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
@@ -55,18 +50,15 @@ export function createWebContainerAdapter(
         });
 
         // Convertir au format attendu
-        return (entries as Array<{ name: string; isDirectory(): boolean }>).map(
-          (entry) => ({
-            name: entry.name,
-            isDirectory: entry.isDirectory(),
-            // La taille n'est pas toujours disponible dans WebContainer
-            size: undefined,
-          })
-        );
+        return (entries as Array<{ name: string; isDirectory(): boolean }>).map((entry) => ({
+          name: entry.name,
+          isDirectory: entry.isDirectory(),
+
+          // La taille n'est pas toujours disponible dans WebContainer
+          size: undefined,
+        }));
       } catch (error) {
-        throw new Error(
-          `Failed to read directory ${path}: ${error instanceof Error ? error.message : String(error)}`
-        );
+        throw new Error(`Failed to read directory ${path}: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
 
@@ -74,12 +66,14 @@ export function createWebContainerAdapter(
       try {
         const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
         await webcontainer.fs.readFile(normalizedPath, 'utf-8');
+
         return true;
       } catch {
         // Essayer comme dossier
         try {
           const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
           await webcontainer.fs.readdir(normalizedPath);
+
           return true;
         } catch {
           return false;
@@ -92,9 +86,7 @@ export function createWebContainerAdapter(
 /**
  * FileSystem mock pour les tests
  */
-export function createMockFileSystem(
-  files: Record<string, string>
-): FileSystem {
+export function createMockFileSystem(files: Record<string, string>): FileSystem {
   const fileMap = new Map(Object.entries(files));
 
   // Construire la structure de dossiers
@@ -111,14 +103,17 @@ export function createMockFileSystem(
       if (!directories.has(parent)) {
         directories.set(parent, new Set());
       }
+
       directories.get(parent)!.add(parts[i]);
     }
 
     // Ajouter le fichier au dossier parent
     const parentDir = parts.slice(0, -1).join('/');
+
     if (!directories.has(parentDir)) {
       directories.set(parentDir, new Set());
     }
+
     directories.get(parentDir)!.add(parts[parts.length - 1]);
   }
 
@@ -134,9 +129,7 @@ export function createMockFileSystem(
       return content;
     },
 
-    async readdir(
-      path: string
-    ): Promise<Array<{ name: string; isDirectory: boolean; size?: number }>> {
+    async readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean; size?: number }>> {
       const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
       const dirPath = normalizedPath || '';
 

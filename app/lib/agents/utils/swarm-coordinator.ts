@@ -11,9 +11,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('SwarmCoordinator');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Règle de handoff entre agents
@@ -21,14 +23,19 @@ const logger = createScopedLogger('SwarmCoordinator');
 export interface HandoffRule {
   /** Agent source du handoff */
   from: AgentType;
+
   /** Agent destination du handoff */
   to: AgentType;
+
   /** Condition pour déclencher le handoff */
   condition: HandoffCondition;
+
   /** Priorité de la règle (plus élevé = prioritaire) */
   priority: number;
+
   /** Transformer la tâche avant le handoff */
   transformTask?: (task: Task, result: TaskResult) => Task;
+
   /** Description de la règle */
   description?: string;
 }
@@ -76,17 +83,22 @@ export interface SwarmChain {
 export interface SwarmConfig {
   /** Nombre maximum de handoffs dans une chaîne */
   maxHandoffs: number;
+
   /** Timeout par handoff en ms */
   handoffTimeout: number;
+
   /** Activer les logs détaillés */
   verbose: boolean;
+
   /** Permettre les cycles (même agent plusieurs fois) */
   allowCycles: boolean;
 }
 
-// ============================================================================
-// SWARM COORDINATOR
-// ============================================================================
+/*
+ * ============================================================================
+ * SWARM COORDINATOR
+ * ============================================================================
+ */
 
 /**
  * Coordinateur de swarm pour les handoffs directs
@@ -103,7 +115,7 @@ export class SwarmCoordinator {
     registry: AgentRegistry,
     apiKey: string,
     config: Partial<SwarmConfig> = {},
-    eventCallback?: AgentEventCallback
+    eventCallback?: AgentEventCallback,
   ) {
     this.registry = registry;
     this.apiKey = apiKey;
@@ -122,6 +134,7 @@ export class SwarmCoordinator {
   addRule(rule: HandoffRule): void {
     const rules = this.rules.get(rule.from) || [];
     rules.push(rule);
+
     // Trier par priorité décroissante
     rules.sort((a, b) => b.priority - a.priority);
     this.rules.set(rule.from, rules);
@@ -146,6 +159,7 @@ export class SwarmCoordinator {
     }
 
     rules.splice(index, 1);
+
     return true;
   }
 
@@ -172,10 +186,7 @@ export class SwarmCoordinator {
   /**
    * Exécuter une tâche avec handoffs automatiques
    */
-  async executeWithHandoffs(
-    startAgent: AgentType,
-    task: Task
-  ): Promise<{ chain: SwarmChain; result: TaskResult }> {
+  async executeWithHandoffs(startAgent: AgentType, task: Task): Promise<{ chain: SwarmChain; result: TaskResult }> {
     const chainId = `swarm-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const chain: SwarmChain = {
@@ -216,6 +227,7 @@ export class SwarmCoordinator {
 
         const startTime = Date.now();
         lastResult = await agent.run(currentTask, this.apiKey);
+
         const duration = Date.now() - startTime;
 
         this.emitEvent('agent_completed', chainId, {
@@ -308,7 +320,7 @@ export class SwarmCoordinator {
     fromAgent: AgentType,
     toAgent: AgentType,
     task: Task,
-    previousResult?: TaskResult
+    previousResult?: TaskResult,
   ): Promise<HandoffResult> {
     const startTime = Date.now();
 
@@ -327,9 +339,7 @@ export class SwarmCoordinator {
       }
 
       // Transformer la tâche avec le contexte du résultat précédent
-      const transformedTask = previousResult
-        ? this.defaultTransformTask(task, previousResult, toAgent)
-        : task;
+      const transformedTask = previousResult ? this.defaultTransformTask(task, previousResult, toAgent) : task;
 
       // Exécuter l'agent
       const result = await agent.run(transformedTask, this.apiKey);
@@ -358,11 +368,7 @@ export class SwarmCoordinator {
   /**
    * Trouver la règle de handoff correspondante
    */
-  private findMatchingRule(
-    agentType: AgentType,
-    task: Task,
-    result: TaskResult
-  ): HandoffRule | null {
+  private findMatchingRule(agentType: AgentType, task: Task, result: TaskResult): HandoffRule | null {
     const rules = this.rules.get(agentType);
 
     if (!rules || rules.length === 0) {
@@ -381,11 +387,7 @@ export class SwarmCoordinator {
   /**
    * Évaluer une condition de handoff
    */
-  private evaluateCondition(
-    condition: HandoffCondition,
-    task: Task,
-    result: TaskResult
-  ): boolean {
+  private evaluateCondition(condition: HandoffCondition, task: Task, result: TaskResult): boolean {
     switch (condition.type) {
       case 'always':
         return true;
@@ -410,11 +412,7 @@ export class SwarmCoordinator {
   /**
    * Transformation de tâche par défaut pour un handoff
    */
-  private defaultTransformTask(
-    originalTask: Task,
-    previousResult: TaskResult,
-    targetAgent: AgentType
-  ): Task {
+  private defaultTransformTask(originalTask: Task, previousResult: TaskResult, targetAgent: AgentType): Task {
     // Construire un nouveau prompt avec le contexte du résultat précédent
     let prompt = originalTask.prompt;
 
@@ -452,10 +450,7 @@ export class SwarmCoordinator {
       prompt,
       context: {
         ...originalTask.context,
-        previousResults: [
-          ...(originalTask.context?.previousResults || []),
-          previousResult,
-        ],
+        previousResults: [...(originalTask.context?.previousResults || []), previousResult],
       },
     };
   }
@@ -477,11 +472,7 @@ export class SwarmCoordinator {
   /**
    * Émettre un événement
    */
-  private emitEvent(
-    type: string,
-    chainId: string,
-    data: Record<string, unknown>
-  ): void {
+  private emitEvent(type: string, chainId: string, data: Record<string, unknown>): void {
     if (this.eventCallback) {
       const event: AgentEvent = {
         type: type as AgentEvent['type'],
@@ -496,20 +487,18 @@ export class SwarmCoordinator {
   /**
    * Logger helper
    */
-  private log(
-    level: 'info' | 'warn' | 'error',
-    message: string,
-    data?: Record<string, unknown>
-  ): void {
+  private log(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>): void {
     if (this.config.verbose || level === 'error') {
       logger[level](message, data);
     }
   }
 }
 
-// ============================================================================
-// RÈGLES PRÉDÉFINIES
-// ============================================================================
+/*
+ * ============================================================================
+ * RÈGLES PRÉDÉFINIES
+ * ============================================================================
+ */
 
 /**
  * Règles prédéfinies pour des workflows courants
@@ -615,9 +604,11 @@ export const PREDEFINED_RULES = {
   }),
 };
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer un SwarmCoordinator avec les règles prédéfinies
@@ -629,14 +620,9 @@ export function createSwarmCoordinator(
     config?: Partial<SwarmConfig>;
     eventCallback?: AgentEventCallback;
     enablePredefinedRules?: boolean;
-  } = {}
+  } = {},
 ): SwarmCoordinator {
-  const coordinator = new SwarmCoordinator(
-    registry,
-    apiKey,
-    options.config,
-    options.eventCallback
-  );
+  const coordinator = new SwarmCoordinator(registry, apiKey, options.config, options.eventCallback);
 
   // Ajouter les règles prédéfinies si demandé
   if (options.enablePredefinedRules) {

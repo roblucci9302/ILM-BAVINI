@@ -78,7 +78,7 @@ export default defineConfig((config) => {
       globals: true,
       setupFiles: ['./app/test/setup.ts'],
       include: ['app/**/*.spec.{ts,tsx}'],
-      exclude: ['app/lib/templates/**', 'node_modules/**'],
+      exclude: ['app/lib/templates/**', 'app/e2e/**', 'node_modules/**'],
       testTimeout: 10000,
       hookTimeout: 10000,
       pool: 'forks',

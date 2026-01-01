@@ -9,11 +9,7 @@ import { TesterAgent, createTesterAgent } from '../agents/tester-agent';
 import { DeployerAgent, createDeployerAgent } from '../agents/deployer-agent';
 import { createTestToolHandlers, createMockTestRunner } from '../tools/test-tools';
 import { createGitToolHandlers, createMockGit } from '../tools/git-tools';
-import {
-  CheckpointManager,
-  InMemoryCheckpointStorage,
-  createCheckpointManager,
-} from '../utils/checkpoint-manager';
+import { CheckpointManager, InMemoryCheckpointStorage, createCheckpointManager } from '../utils/checkpoint-manager';
 import { ErrorRecovery, createErrorRecovery } from '../utils/error-recovery';
 import type { Task } from '../types';
 
@@ -44,9 +40,11 @@ vi.mock('@anthropic-ai/sdk', () => {
   };
 });
 
-// ============================================================================
-// TESTS TEST TOOLS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS TEST TOOLS
+ * ============================================================================
+ */
 
 describe('TestTools', () => {
   let mockRunner: ReturnType<typeof createMockTestRunner>;
@@ -140,9 +138,11 @@ describe('TestTools', () => {
   });
 });
 
-// ============================================================================
-// TESTS GIT TOOLS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS GIT TOOLS
+ * ============================================================================
+ */
 
 describe('GitTools', () => {
   let mockGit: ReturnType<typeof createMockGit>;
@@ -280,9 +280,11 @@ describe('GitTools', () => {
   });
 });
 
-// ============================================================================
-// TESTS TESTER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS TESTER AGENT
+ * ============================================================================
+ */
 
 describe('TesterAgent', () => {
   let agent: TesterAgent;
@@ -337,9 +339,11 @@ describe('TesterAgent', () => {
   });
 });
 
-// ============================================================================
-// TESTS DEPLOYER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS DEPLOYER AGENT
+ * ============================================================================
+ */
 
 describe('DeployerAgent', () => {
   let agent: DeployerAgent;
@@ -410,9 +414,11 @@ describe('DeployerAgent', () => {
   });
 });
 
-// ============================================================================
-// TESTS CHECKPOINT MANAGER
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS CHECKPOINT MANAGER
+ * ============================================================================
+ */
 
 describe('CheckpointManager', () => {
   let manager: CheckpointManager;
@@ -438,7 +444,7 @@ describe('CheckpointManager', () => {
       'coder',
       [{ role: 'user', content: 'test' }],
       undefined,
-      { reason: 'pause' }
+      { reason: 'pause' },
     );
 
     expect(checkpoint.id).toBeDefined();
@@ -489,9 +495,7 @@ describe('CheckpointManager', () => {
       createdAt: new Date(),
     };
 
-    const saved = await manager.saveCheckpoint(task.id, task, 'tester', [
-      { role: 'user', content: 'run tests' },
-    ]);
+    const saved = await manager.saveCheckpoint(task.id, task, 'tester', [{ role: 'user', content: 'run tests' }]);
 
     const resumed = await manager.resumeFromCheckpoint(saved.id);
 
@@ -560,9 +564,11 @@ describe('CheckpointManager', () => {
   });
 });
 
-// ============================================================================
-// TESTS ERROR RECOVERY
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS ERROR RECOVERY
+ * ============================================================================
+ */
 
 describe('ErrorRecovery', () => {
   let registry: AgentRegistry;
@@ -677,14 +683,17 @@ describe('ErrorRecovery', () => {
 
     it('should reset all retry counts', () => {
       recovery.resetAllRetryCounts();
+
       // Should not throw
     });
   });
 });
 
-// ============================================================================
-// TESTS MOCK TEST RUNNER
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS MOCK TEST RUNNER
+ * ============================================================================
+ */
 
 describe('MockTestRunner', () => {
   it('should run tests with default results', async () => {
@@ -742,9 +751,11 @@ describe('MockTestRunner', () => {
   });
 });
 
-// ============================================================================
-// TESTS MOCK GIT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS MOCK GIT
+ * ============================================================================
+ */
 
 describe('MockGit', () => {
   it('should check if repository', async () => {
@@ -787,19 +798,23 @@ describe('MockGit', () => {
     });
 
     await git.branch('create', 'new-branch');
+
     const branches = (await git.branch('list')) as Array<{ name: string }>;
 
     expect(branches.some((b) => b.name === 'new-branch')).toBe(true);
   });
 });
 
-// ============================================================================
-// TESTS INTEGRATION
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS INTEGRATION
+ * ============================================================================
+ */
 
 describe('Integration Phase 3', () => {
   it('should register all Phase 3 agents', () => {
     AgentRegistry.resetInstance();
+
     const registry = AgentRegistry.getInstance();
 
     const mockRunner = createMockTestRunner();
@@ -818,6 +833,7 @@ describe('Integration Phase 3', () => {
 
   it('should find agents by capability', () => {
     AgentRegistry.resetInstance();
+
     const registry = AgentRegistry.getInstance();
 
     const mockRunner = createMockTestRunner();
@@ -837,6 +853,7 @@ describe('Integration Phase 3', () => {
 
   it('should create error recovery with factory', () => {
     AgentRegistry.resetInstance();
+
     const registry = AgentRegistry.getInstance();
     const recovery = createErrorRecovery(registry);
 

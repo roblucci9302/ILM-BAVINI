@@ -34,9 +34,11 @@ describe('ToolRegistry', () => {
     vi.clearAllMocks();
   });
 
-  // ==========================================================================
-  // REGISTRATION TESTS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * REGISTRATION TESTS
+   * ==========================================================================
+   */
 
   describe('register', () => {
     it('should register a tool successfully', () => {
@@ -71,9 +73,7 @@ describe('ToolRegistry', () => {
     it('should throw if tool already registered without override', () => {
       registry.register(mockTool, mockHandler);
 
-      expect(() => registry.register(mockTool, mockHandler)).toThrow(
-        "Tool 'test_tool' is already registered"
-      );
+      expect(() => registry.register(mockTool, mockHandler)).toThrow("Tool 'test_tool' is already registered");
     });
 
     it('should allow override with override option', () => {
@@ -88,6 +88,7 @@ describe('ToolRegistry', () => {
     it('should set registeredAt timestamp', () => {
       const before = new Date();
       registry.register(mockTool, mockHandler);
+
       const after = new Date();
 
       const registered = registry.get('test_tool');
@@ -143,6 +144,7 @@ describe('ToolRegistry', () => {
 
       const handlers = {
         tool1: mockHandler,
+
         // tool2 has no handler
       };
 
@@ -186,9 +188,11 @@ describe('ToolRegistry', () => {
     });
   });
 
-  // ==========================================================================
-  // QUERY TESTS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * QUERY TESTS
+   * ==========================================================================
+   */
 
   describe('has', () => {
     it('should return true for existing tool', () => {
@@ -310,9 +314,11 @@ describe('ToolRegistry', () => {
     });
   });
 
-  // ==========================================================================
-  // EXECUTION TESTS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * EXECUTION TESTS
+   * ==========================================================================
+   */
 
   describe('execute', () => {
     it('should execute registered tool', async () => {
@@ -354,6 +360,7 @@ describe('ToolRegistry', () => {
       const result = await registry.execute('test_tool', {});
 
       expect(result.executionTime).toBeDefined();
+
       // Use 40ms tolerance to account for timing variations
       expect(result.executionTime).toBeGreaterThanOrEqual(40);
     });
@@ -418,6 +425,7 @@ describe('ToolRegistry', () => {
         { name: 'tool1', input: {} },
         { name: 'tool2', input: {} },
       ]);
+
       const duration = Date.now() - start;
 
       // Should take ~50ms (parallel), not ~100ms (sequential)
@@ -478,7 +486,7 @@ describe('ToolRegistry', () => {
           { name: 'tool1', input: {} },
           { name: 'tool2', input: {} },
         ],
-        false
+        false,
       );
 
       expect(results).toHaveLength(2);
@@ -486,9 +494,11 @@ describe('ToolRegistry', () => {
     });
   });
 
-  // ==========================================================================
-  // UTILITY TESTS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * UTILITY TESTS
+   * ==========================================================================
+   */
 
   describe('size', () => {
     it('should return number of registered tools', () => {

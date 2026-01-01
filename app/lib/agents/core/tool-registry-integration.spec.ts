@@ -16,9 +16,11 @@ import { WRITE_TOOLS, createWriteToolHandlers, createMockWritableFileSystem } fr
 import { SHELL_TOOLS, createShellToolHandlers, createMockShell } from '../tools/shell-tools';
 import type { ToolHandler } from './tool-registry';
 
-// ============================================================================
-// MOCK FILESYSTEM
-// ============================================================================
+/*
+ * ============================================================================
+ * MOCK FILESYSTEM
+ * ============================================================================
+ */
 
 function createMockFileSystem(): FileSystem {
   return {
@@ -26,9 +28,11 @@ function createMockFileSystem(): FileSystem {
       if (path === '/test/file.ts') {
         return 'export const test = "hello";';
       }
+
       if (path === '/test/package.json') {
         return JSON.stringify({ name: 'test-project', version: '1.0.0' });
       }
+
       throw new Error(`File not found: ${path}`);
     },
     async readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean; size?: number }>> {
@@ -39,24 +43,35 @@ function createMockFileSystem(): FileSystem {
           { name: 'src', isDirectory: true },
         ];
       }
+
       if (path === '/test/src') {
         return [
           { name: 'index.ts', isDirectory: false, size: 200 },
           { name: 'utils.ts', isDirectory: false, size: 150 },
         ];
       }
+
       return [];
     },
     async exists(path: string): Promise<boolean> {
-      const existingPaths = ['/test', '/test/file.ts', '/test/package.json', '/test/src', '/test/src/index.ts', '/test/src/utils.ts'];
+      const existingPaths = [
+        '/test',
+        '/test/file.ts',
+        '/test/package.json',
+        '/test/src',
+        '/test/src/index.ts',
+        '/test/src/utils.ts',
+      ];
       return existingPaths.includes(path);
     },
   };
 }
 
-// ============================================================================
-// TESTS D'INTÉGRATION - FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS D'INTÉGRATION - FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 describe('Tool Registry Integration', () => {
   describe('createReadToolsRegistry', () => {
@@ -80,6 +95,7 @@ describe('Tool Registry Integration', () => {
 
       expect(result.success).toBe(true);
       expect(result.output).toBeDefined();
+
       // Output is an object with content property
       const output = result.output as { content: string; path: string };
       expect(output.content).toContain('export const test');
@@ -94,6 +110,7 @@ describe('Tool Registry Integration', () => {
       // list_directory returns structured output with entries
       expect(result.success).toBe(true);
       expect(result.output).toBeDefined();
+
       const output = result.output as { entries: unknown[] };
       expect(output.entries).toBeDefined();
     });
@@ -113,7 +130,7 @@ describe('Tool Registry Integration', () => {
       const registry = await createReadToolsRegistry(fs);
 
       const stats = registry.getStats();
-      expect(stats.byCategory['filesystem']).toBe(READ_TOOLS.length);
+      expect(stats.byCategory.filesystem).toBe(READ_TOOLS.length);
     });
   });
 
@@ -229,15 +246,17 @@ describe('Tool Registry Integration', () => {
       const registry = await createStandardToolRegistry({ fileSystem: fs, shell });
 
       const stats = registry.getStats();
-      expect(stats.byCategory['filesystem']).toBeGreaterThan(0);
-      expect(stats.byCategory['shell']).toBeGreaterThan(0);
+      expect(stats.byCategory.filesystem).toBeGreaterThan(0);
+      expect(stats.byCategory.shell).toBeGreaterThan(0);
     });
   });
 });
 
-// ============================================================================
-// TESTS D'INTÉGRATION - HANDLERS RÉELS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS D'INTÉGRATION - HANDLERS RÉELS
+ * ============================================================================
+ */
 
 describe('Tool Registry with Real Handlers', () => {
   let registry: ToolRegistry;
@@ -254,6 +273,7 @@ describe('Tool Registry with Real Handlers', () => {
     // Enregistrer manuellement
     for (const tool of READ_TOOLS) {
       const handler = handlers[tool.name as keyof typeof handlers];
+
       if (handler) {
         registry.register(tool, handler as unknown as ToolHandler);
       }
@@ -268,6 +288,7 @@ describe('Tool Registry with Real Handlers', () => {
 
     for (const tool of READ_TOOLS) {
       const handler = handlers[tool.name as keyof typeof handlers];
+
       if (handler) {
         registry.register(tool, handler as unknown as ToolHandler);
       }
@@ -289,6 +310,7 @@ describe('Tool Registry with Real Handlers', () => {
 
     for (const tool of READ_TOOLS) {
       const handler = handlers[tool.name as keyof typeof handlers];
+
       if (handler) {
         registry.register(tool, handler as unknown as ToolHandler);
       }
@@ -310,6 +332,7 @@ describe('Tool Registry with Real Handlers', () => {
 
     for (const tool of READ_TOOLS) {
       const handler = handlers[tool.name as keyof typeof handlers];
+
       if (handler) {
         registry.register(tool, handler as unknown as ToolHandler);
       }
@@ -326,9 +349,11 @@ describe('Tool Registry with Real Handlers', () => {
   });
 });
 
-// ============================================================================
-// TESTS D'INTÉGRATION - EDGE CASES
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS D'INTÉGRATION - EDGE CASES
+ * ============================================================================
+ */
 
 describe('Tool Registry Edge Cases', () => {
   it('should handle empty registry gracefully', async () => {

@@ -15,13 +15,16 @@ import {
 import { READ_TOOLS, createReadToolHandlers, type FileSystem } from '../tools/read-tools';
 import { REVIEWER_SYSTEM_PROMPT } from '../prompts/reviewer-prompt';
 import type { Task, TaskResult, ToolDefinition, Artifact, ToolExecutionResult } from '../types';
+import { getModelForAgent } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ReviewerAgent');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Rapport de review complet
@@ -45,9 +48,11 @@ export interface ReviewReport {
   };
 }
 
-// ============================================================================
-// REVIEWER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * REVIEWER AGENT
+ * ============================================================================
+ */
 
 /**
  * Agent de review de code
@@ -68,7 +73,7 @@ export class ReviewerAgent extends BaseAgent {
       description:
         'Agent de review de code. Analyse la qualité, la sécurité, la performance. ' +
         'Détecte les code smells, calcule la complexité, suggère des améliorations.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('reviewer'), // Opus 4.5 pour analyse approfondie
       tools: [...REVIEW_TOOLS, ...READ_TOOLS],
       systemPrompt: REVIEWER_SYSTEM_PROMPT,
       maxTokens: 8192,
@@ -156,11 +161,7 @@ export class ReviewerAgent extends BaseAgent {
     this.fileSystem = fs;
 
     const handlers = createReadToolHandlers(fs);
-    this.registerTools(
-      READ_TOOLS,
-      handlers as unknown as Record<string, ToolHandler>,
-      'filesystem'
-    );
+    this.registerTools(READ_TOOLS, handlers as unknown as Record<string, ToolHandler>, 'filesystem');
 
     this.log('info', 'FileSystem initialized for ReviewerAgent with ToolRegistry');
   }
@@ -169,7 +170,7 @@ export class ReviewerAgent extends BaseAgent {
    * Wrapper les handlers de review pour tracker les résultats
    */
   private wrapReviewHandlersWithTracking(
-    handlers: ReturnType<typeof createReviewToolHandlers>
+    handlers: ReturnType<typeof createReviewToolHandlers>,
   ): Record<string, ToolHandler> {
     const wrapped: Record<string, ToolHandler> = {};
 
@@ -317,17 +318,16 @@ export class ReviewerAgent extends BaseAgent {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance du Reviewer Agent
  */
-export function createReviewerAgent(
-  analyzer?: CodeAnalyzer,
-  fileSystem?: FileSystem
-): ReviewerAgent {
+export function createReviewerAgent(analyzer?: CodeAnalyzer, fileSystem?: FileSystem): ReviewerAgent {
   const agent = new ReviewerAgent();
 
   if (analyzer) {

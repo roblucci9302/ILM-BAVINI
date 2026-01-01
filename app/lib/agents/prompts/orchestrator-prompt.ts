@@ -156,31 +156,16 @@ export const AGENT_CAPABILITIES = {
   coder: {
     name: 'coder',
     description: 'Création et modification de code',
-    capabilities: [
-      'Lire des fichiers',
-      'Créer des fichiers',
-      'Modifier des fichiers',
-      'Supprimer des fichiers',
-    ],
+    capabilities: ['Lire des fichiers', 'Créer des fichiers', 'Modifier des fichiers', 'Supprimer des fichiers'],
     limitations: ['Ne peut pas exécuter de commandes', 'Ne peut pas déployer'],
-    useCases: [
-      'Créer un composant',
-      'Modifier une fonction',
-      'Refactorer du code',
-      'Ajouter une feature',
-    ],
+    useCases: ['Créer un composant', 'Modifier une fonction', 'Refactorer du code', 'Ajouter une feature'],
   },
   builder: {
     name: 'builder',
     description: 'Build et exécution de commandes',
     capabilities: ['Exécuter des commandes shell', 'Gérer npm', 'Démarrer des serveurs'],
     limitations: ['Ne peut pas modifier le code directement', 'Ne peut pas déployer'],
-    useCases: [
-      'Installer des dépendances',
-      'Lancer le build',
-      'Démarrer le dev server',
-      'Exécuter des scripts',
-    ],
+    useCases: ['Installer des dépendances', 'Lancer le build', 'Démarrer le dev server', 'Exécuter des scripts'],
   },
   tester: {
     name: 'tester',
@@ -206,16 +191,11 @@ export const AGENT_CAPABILITIES = {
       'Identifier les code smells',
     ],
     limitations: ['Ne peut pas modifier le code', 'Analyse statique uniquement'],
-    useCases: [
-      'Review de code',
-      'Analyse de sécurité',
-      'Audit de qualité',
-      'Détection de problèmes',
-    ],
+    useCases: ['Review de code', 'Analyse de sécurité', 'Audit de qualité', 'Détection de problèmes'],
   },
   fixer: {
     name: 'fixer',
-    description: 'Correction automatique d\'erreurs',
+    description: "Correction automatique d'erreurs",
     capabilities: [
       'Corriger les erreurs de test',
       'Corriger les erreurs de compilation',

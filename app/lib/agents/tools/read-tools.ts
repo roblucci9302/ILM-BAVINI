@@ -5,9 +5,11 @@
 
 import type { ToolDefinition, ToolExecutionResult } from '../types';
 
-// ============================================================================
-// DÉFINITIONS DES OUTILS
-// ============================================================================
+/*
+ * ============================================================================
+ * DÉFINITIONS DES OUTILS
+ * ============================================================================
+ */
 
 /**
  * Outil pour lire le contenu d'un fichier
@@ -15,7 +17,7 @@ import type { ToolDefinition, ToolExecutionResult } from '../types';
 export const ReadFileTool: ToolDefinition = {
   name: 'read_file',
   description:
-    'Lire le contenu d\'un fichier. Retourne le contenu avec les numéros de ligne. ' +
+    "Lire le contenu d'un fichier. Retourne le contenu avec les numéros de ligne. " +
     'Peut lire une portion du fichier avec startLine et endLine.',
   inputSchema: {
     type: 'object',
@@ -43,8 +45,7 @@ export const ReadFileTool: ToolDefinition = {
 export const GrepTool: ToolDefinition = {
   name: 'grep',
   description:
-    'Rechercher un pattern (regex) dans les fichiers. ' +
-    'Retourne les lignes correspondantes avec le contexte.',
+    'Rechercher un pattern (regex) dans les fichiers. ' + 'Retourne les lignes correspondantes avec le contexte.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -83,8 +84,7 @@ export const GrepTool: ToolDefinition = {
 export const GlobTool: ToolDefinition = {
   name: 'glob',
   description:
-    'Trouver des fichiers correspondant à un pattern glob. ' +
-    'Exemples: "**/*.ts", "src/**/*.tsx", "*.json"',
+    'Trouver des fichiers correspondant à un pattern glob. ' + 'Exemples: "**/*.ts", "src/**/*.tsx", "*.json"',
   inputSchema: {
     type: 'object',
     properties: {
@@ -116,7 +116,7 @@ export const GlobTool: ToolDefinition = {
 export const ListDirectoryTool: ToolDefinition = {
   name: 'list_directory',
   description:
-    'Lister le contenu d\'un dossier. Retourne les fichiers et sous-dossiers ' +
+    "Lister le contenu d'un dossier. Retourne les fichiers et sous-dossiers " +
     'avec leurs métadonnées (type, taille).',
   inputSchema: {
     type: 'object',
@@ -142,9 +142,11 @@ export const ListDirectoryTool: ToolDefinition = {
   },
 };
 
-// ============================================================================
-// HANDLERS D'EXÉCUTION
-// ============================================================================
+/*
+ * ============================================================================
+ * HANDLERS D'EXÉCUTION
+ * ============================================================================
+ */
 
 /**
  * Interface pour le système de fichiers (abstraction pour WebContainer)
@@ -163,11 +165,7 @@ export function createReadToolHandlers(fs: FileSystem) {
     /**
      * Handler pour read_file
      */
-    async read_file(input: {
-      path: string;
-      startLine?: number;
-      endLine?: number;
-    }): Promise<ToolExecutionResult> {
+    async read_file(input: { path: string; startLine?: number; endLine?: number }): Promise<ToolExecutionResult> {
       try {
         const content = await fs.readFile(input.path);
         const lines = content.split('\n');
@@ -230,12 +228,16 @@ export function createReadToolHandlers(fs: FileSystem) {
 
         // Fonction récursive pour parcourir les fichiers
         const searchInDirectory = async (dirPath: string) => {
-          if (results.length >= maxResults) return;
+          if (results.length >= maxResults) {
+            return;
+          }
 
           const entries = await fs.readdir(dirPath);
 
           for (const entry of entries) {
-            if (results.length >= maxResults) break;
+            if (results.length >= maxResults) {
+              break;
+            }
 
             const fullPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
 
@@ -254,9 +256,8 @@ export function createReadToolHandlers(fs: FileSystem) {
             } else {
               // Vérifier le pattern de fichier
               if (input.filePattern) {
-                const fileRegex = new RegExp(
-                  input.filePattern.replace(/\*/g, '.*').replace(/\?/g, '.')
-                );
+                const fileRegex = new RegExp(input.filePattern.replace(/\*/g, '.*').replace(/\?/g, '.'));
+
                 if (!fileRegex.test(entry.name)) {
                   continue;
                 }
@@ -274,6 +275,7 @@ export function createReadToolHandlers(fs: FileSystem) {
                     const context = lines.slice(contextStart, contextEnd).map((l, idx) => {
                       const lineNum = contextStart + idx + 1;
                       const marker = lineNum === i + 1 ? '>' : ' ';
+
                       return `${marker}${lineNum.toString().padStart(4)}\t${l}`;
                     });
 
@@ -329,7 +331,10 @@ export function createReadToolHandlers(fs: FileSystem) {
         const patternParts = input.pattern.split('/');
         const regexPattern = patternParts
           .map((part) => {
-            if (part === '**') return '.*';
+            if (part === '**') {
+              return '.*';
+            }
+
             return part.replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]');
           })
           .join('/');
@@ -339,9 +344,8 @@ export function createReadToolHandlers(fs: FileSystem) {
         // Fonction pour vérifier si un chemin doit être ignoré
         const shouldIgnore = (path: string): boolean => {
           for (const ignorePattern of ignorePatterns) {
-            const ignoreRegex = new RegExp(
-              ignorePattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*')
-            );
+            const ignoreRegex = new RegExp(ignorePattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
+
             if (ignoreRegex.test(path)) {
               return true;
             }
@@ -351,16 +355,22 @@ export function createReadToolHandlers(fs: FileSystem) {
 
         // Fonction récursive pour parcourir
         const searchDirectory = async (dirPath: string) => {
-          if (matches.length >= maxResults) return;
+          if (matches.length >= maxResults) {
+            return;
+          }
 
           const entries = await fs.readdir(dirPath);
 
           for (const entry of entries) {
-            if (matches.length >= maxResults) break;
+            if (matches.length >= maxResults) {
+              break;
+            }
 
             const fullPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
 
-            if (shouldIgnore(fullPath)) continue;
+            if (shouldIgnore(fullPath)) {
+              continue;
+            }
 
             if (entry.isDirectory) {
               await searchDirectory(fullPath);
@@ -444,7 +454,10 @@ export function createReadToolHandlers(fs: FileSystem) {
 
           // Trier: dossiers d'abord, puis fichiers
           return result.sort((a, b) => {
-            if (a.type === b.type) return a.name.localeCompare(b.name);
+            if (a.type === b.type) {
+              return a.name.localeCompare(b.name);
+            }
+
             return a.type === 'directory' ? -1 : 1;
           });
         };
@@ -470,16 +483,13 @@ export function createReadToolHandlers(fs: FileSystem) {
   };
 }
 
-// ============================================================================
-// EXPORT
-// ============================================================================
+/*
+ * ============================================================================
+ * EXPORT
+ * ============================================================================
+ */
 
 /**
  * Tous les outils de lecture
  */
-export const READ_TOOLS: ToolDefinition[] = [
-  ReadFileTool,
-  GrepTool,
-  GlobTool,
-  ListDirectoryTool,
-];
+export const READ_TOOLS: ToolDefinition[] = [ReadFileTool, GrepTool, GlobTool, ListDirectoryTool];

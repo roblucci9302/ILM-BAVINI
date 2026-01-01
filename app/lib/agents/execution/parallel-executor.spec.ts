@@ -38,9 +38,11 @@ describe('ParallelExecutor', () => {
     executor = new ParallelExecutor({ maxConcurrency: 3 });
   });
 
-  // ============================================================================
-  // TESTS DE BASE
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS DE BASE
+   * ============================================================================
+   */
 
   describe('execute', () => {
     it('should execute empty task list', async () => {
@@ -88,6 +90,7 @@ describe('ParallelExecutor', () => {
       const mockExecutor = vi.fn().mockImplementation(async (task) => {
         executionOrder.push(task.id);
         await new Promise((r) => setTimeout(r, 10));
+
         return { success: true, output: `Done ${task.id}` };
       });
 
@@ -120,9 +123,11 @@ describe('ParallelExecutor', () => {
     });
   });
 
-  // ============================================================================
-  // TESTS DE GESTION D'ERREUR
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS DE GESTION D'ERREUR
+   * ============================================================================
+   */
 
   describe('error handling', () => {
     it('should stop on error when continueOnError is false', async () => {
@@ -198,15 +203,21 @@ describe('ParallelExecutor', () => {
     });
 
     it('should detect cycles in dependencies', async () => {
-      const subtasks = [createMockSubtask('task-1', ['task-3']), createMockSubtask('task-2', ['task-1']), createMockSubtask('task-3', ['task-2'])];
+      const subtasks = [
+        createMockSubtask('task-1', ['task-3']),
+        createMockSubtask('task-2', ['task-1']),
+        createMockSubtask('task-3', ['task-2']),
+      ];
 
       await expect(executor.execute(subtasks, createMockExecutor())).rejects.toThrow('cycles');
     });
   });
 
-  // ============================================================================
-  // TESTS DE CALLBACKS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS DE CALLBACKS
+   * ============================================================================
+   */
 
   describe('callbacks', () => {
     it('should report progress', async () => {
@@ -263,9 +274,11 @@ describe('ParallelExecutor', () => {
     });
   });
 
-  // ============================================================================
-  // TESTS DE CONCURRENCE
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS DE CONCURRENCE
+   * ============================================================================
+   */
 
   describe('concurrency', () => {
     it('should respect maxConcurrency', async () => {
@@ -286,6 +299,7 @@ describe('ParallelExecutor', () => {
         maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
         await new Promise((r) => setTimeout(r, 50));
         currentConcurrent--;
+
         return { success: true, output: 'OK' };
       });
 
@@ -295,9 +309,11 @@ describe('ParallelExecutor', () => {
     });
   });
 
-  // ============================================================================
-  // TESTS DE STATISTIQUES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS DE STATISTIQUES
+   * ============================================================================
+   */
 
   describe('calculateStats', () => {
     it('should calculate correct stats', () => {
@@ -336,9 +352,11 @@ describe('ParallelExecutor', () => {
     });
   });
 
-  // ============================================================================
-  // TESTS DE GRAPHE COMPLEXE
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS DE GRAPHE COMPLEXE
+   * ============================================================================
+   */
 
   describe('complex dependency graph', () => {
     it('should handle diamond dependency', async () => {
@@ -354,6 +372,7 @@ describe('ParallelExecutor', () => {
       const mockExecutor = vi.fn().mockImplementation(async (task) => {
         executionOrder.push(task.id);
         await new Promise((r) => setTimeout(r, 10));
+
         return { success: true, output: `Done ${task.id}` };
       });
 
@@ -378,7 +397,10 @@ describe('ParallelExecutor', () => {
       const subtasks = [
         createMockSubtask('root'),
         ...Array.from({ length: 10 }, (_, i) => createMockSubtask(`branch-${i}`, ['root'])),
-        createMockSubtask('aggregator', Array.from({ length: 10 }, (_, i) => `branch-${i}`)),
+        createMockSubtask(
+          'aggregator',
+          Array.from({ length: 10 }, (_, i) => `branch-${i}`),
+        ),
       ];
 
       const results = await executor.execute(subtasks, createMockExecutor(10));
@@ -392,9 +414,11 @@ describe('ParallelExecutor', () => {
     });
   });
 
-  // ============================================================================
-  // TESTS FACTORY
-  // ============================================================================
+  /*
+   * ============================================================================
+   * TESTS FACTORY
+   * ============================================================================
+   */
 
   describe('createParallelExecutor', () => {
     it('should create executor with default options', () => {

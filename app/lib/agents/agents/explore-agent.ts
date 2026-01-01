@@ -7,12 +7,8 @@ import { BaseAgent } from '../core/base-agent';
 import type { ToolHandler } from '../core/tool-registry';
 import { EXPLORE_SYSTEM_PROMPT } from '../prompts/explore-prompt';
 import { READ_TOOLS, createReadToolHandlers, type FileSystem } from '../tools/read-tools';
-import type {
-  Task,
-  TaskResult,
-  Artifact,
-  DEFAULT_MODEL,
-} from '../types';
+import type { Task, TaskResult, Artifact } from '../types';
+import { getModelForAgent } from '../types';
 
 /**
  * Agent d'exploration du codebase
@@ -26,10 +22,10 @@ export class ExploreAgent extends BaseAgent {
     super({
       name: 'explore',
       description:
-        'Agent d\'exploration en LECTURE SEULE. Spécialisé dans la recherche de fichiers, ' +
-        'l\'analyse de code, la navigation dans le codebase. ' +
+        "Agent d'exploration en LECTURE SEULE. Spécialisé dans la recherche de fichiers, " +
+        "l'analyse de code, la navigation dans le codebase. " +
         'Utilise grep, glob, read_file, list_directory.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('explore'), // Sonnet 4.5 - rapide pour l'exploration
       tools: READ_TOOLS,
       systemPrompt: EXPLORE_SYSTEM_PROMPT,
       maxTokens: 8192,
@@ -48,11 +44,7 @@ export class ExploreAgent extends BaseAgent {
 
     // Créer les handlers et les enregistrer dans le registry
     const handlers = createReadToolHandlers(fs);
-    this.registerTools(
-      READ_TOOLS,
-      handlers as unknown as Record<string, ToolHandler>,
-      'filesystem'
-    );
+    this.registerTools(READ_TOOLS, handlers as unknown as Record<string, ToolHandler>, 'filesystem');
 
     this.log('info', 'FileSystem initialized for ExploreAgent with ToolRegistry');
   }
@@ -154,6 +146,7 @@ export class ExploreAgent extends BaseAgent {
     try {
       // Chercher du JSON dans la réponse
       const jsonMatch = result.output.match(/```json\n([\s\S]*?)\n```/);
+
       if (jsonMatch) {
         result.data = JSON.parse(jsonMatch[1]);
       }
@@ -170,8 +163,10 @@ export class ExploreAgent extends BaseAgent {
  */
 export function createExploreAgent(fs?: FileSystem): ExploreAgent {
   const agent = new ExploreAgent();
+
   if (fs) {
     agent.setFileSystem(fs);
   }
+
   return agent;
 }

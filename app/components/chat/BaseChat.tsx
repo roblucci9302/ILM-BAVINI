@@ -355,7 +355,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             </div>
             {!chatStarted && (
               <div id="categories" className="relative w-full max-w-2xl mx-auto mt-8 pb-12 flex justify-center">
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-nowrap gap-2 justify-center">
                   {CATEGORY_PROMPTS.map((category, index) => (
                     <button
                       key={index}

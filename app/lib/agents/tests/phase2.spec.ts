@@ -8,10 +8,7 @@ import { AgentRegistry } from '../core/agent-registry';
 import { TaskQueue, createTaskQueue } from '../core/task-queue';
 import { CoderAgent, createCoderAgent } from '../agents/coder-agent';
 import { BuilderAgent, createBuilderAgent } from '../agents/builder-agent';
-import {
-  createWriteToolHandlers,
-  createMockWritableFileSystem,
-} from '../tools/write-tools';
+import { createWriteToolHandlers, createMockWritableFileSystem } from '../tools/write-tools';
 import { createShellToolHandlers, createMockShell } from '../tools/shell-tools';
 import type { Task } from '../types';
 
@@ -42,9 +39,11 @@ vi.mock('@anthropic-ai/sdk', () => {
   };
 });
 
-// ============================================================================
-// TESTS WRITE TOOLS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS WRITE TOOLS
+ * ============================================================================
+ */
 
 describe('WriteTools', () => {
   let mockFs: ReturnType<typeof createMockWritableFileSystem>;
@@ -173,9 +172,11 @@ describe('WriteTools', () => {
   });
 });
 
-// ============================================================================
-// TESTS SHELL TOOLS
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS SHELL TOOLS
+ * ============================================================================
+ */
 
 describe('ShellTools', () => {
   let mockShell: ReturnType<typeof createMockShell>;
@@ -234,6 +235,7 @@ describe('ShellTools', () => {
       const result = await handlers.start_dev_server({});
 
       expect(result.success).toBe(true);
+
       const output = JSON.parse(result.output as string);
       expect(output.processId).toBeDefined();
       expect(output.port).toBeDefined();
@@ -278,9 +280,11 @@ describe('ShellTools', () => {
   });
 });
 
-// ============================================================================
-// TESTS CODER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS CODER AGENT
+ * ============================================================================
+ */
 
 describe('CoderAgent', () => {
   let agent: CoderAgent;
@@ -344,9 +348,11 @@ describe('CoderAgent', () => {
   });
 });
 
-// ============================================================================
-// TESTS BUILDER AGENT
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS BUILDER AGENT
+ * ============================================================================
+ */
 
 describe('BuilderAgent', () => {
   let agent: BuilderAgent;
@@ -402,9 +408,11 @@ describe('BuilderAgent', () => {
   });
 });
 
-// ============================================================================
-// TESTS TASK QUEUE
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS TASK QUEUE
+ * ============================================================================
+ */
 
 describe('TaskQueue', () => {
   let registry: AgentRegistry;
@@ -450,6 +458,7 @@ describe('TaskQueue', () => {
   it('should pause and resume', () => {
     queue.pause();
     queue.resume();
+
     // Should not throw
   });
 
@@ -459,9 +468,11 @@ describe('TaskQueue', () => {
   });
 });
 
-// ============================================================================
-// TESTS MOCK WRITABLE FILESYSTEM
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS MOCK WRITABLE FILESYSTEM
+ * ============================================================================
+ */
 
 describe('MockWritableFileSystem', () => {
   let mockFs: ReturnType<typeof createMockWritableFileSystem>;
@@ -514,9 +525,11 @@ describe('MockWritableFileSystem', () => {
   });
 });
 
-// ============================================================================
-// TESTS MOCK SHELL
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS MOCK SHELL
+ * ============================================================================
+ */
 
 describe('MockShell', () => {
   it('should execute commands', async () => {
@@ -563,13 +576,16 @@ describe('MockShell', () => {
   });
 });
 
-// ============================================================================
-// TESTS INTEGRATION
-// ============================================================================
+/*
+ * ============================================================================
+ * TESTS INTEGRATION
+ * ============================================================================
+ */
 
 describe('Integration Phase 2', () => {
   it('should register all Phase 2 agents', () => {
     AgentRegistry.resetInstance();
+
     const registry = AgentRegistry.getInstance();
 
     const mockFs = createMockWritableFileSystem({});
@@ -588,6 +604,7 @@ describe('Integration Phase 2', () => {
 
   it('should find agents by capability', () => {
     AgentRegistry.resetInstance();
+
     const registry = AgentRegistry.getInstance();
 
     const mockFs = createMockWritableFileSystem({});

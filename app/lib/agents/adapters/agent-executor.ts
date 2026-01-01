@@ -28,25 +28,26 @@ import {
   processedBatchesStore,
   type AgentControlMode,
 } from '~/lib/stores/chat';
-import {
-  addAgentLog,
-  updateAgentStatus,
-  setCurrentTask,
-} from '~/lib/stores/agents';
+import { addAgentLog, updateAgentStatus, setCurrentTask } from '~/lib/stores/agents';
 
 const logger = createScopedLogger('AgentExecutor');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 export interface ExecutorConfig {
   /** Control mode */
   controlMode: AgentControlMode;
+
   /** Global timeout in ms */
   globalTimeout?: number;
+
   /** Allow parallel execution? */
   allowParallel?: boolean;
+
   /** Callbacks */
   onBatchApproved?: (batch: PendingActionBatch) => void;
   onBatchRejected?: (batch: PendingActionBatch) => void;
@@ -57,8 +58,10 @@ export interface ExecutorConfig {
 export interface ToolCallRequest {
   /** Tool name */
   name: ToolType | string;
+
   /** Input parameters */
   input: Record<string, unknown>;
+
   /** Call ID (optional) */
   callId?: string;
 }
@@ -66,8 +69,10 @@ export interface ToolCallRequest {
 export interface ExecutionContext {
   /** Executing agent */
   agentName: AgentType;
+
   /** Current task */
   task?: Task;
+
   /** Session ID */
   sessionId?: string;
 }
@@ -77,17 +82,22 @@ interface ApprovalResolver {
   reject: (error: Error) => void;
 }
 
-// ============================================================================
-// AGENT EXECUTOR CLASS
-// ============================================================================
+/*
+ * ============================================================================
+ * AGENT EXECUTOR CLASS
+ * ============================================================================
+ */
 
 export class AgentExecutor {
   private config: ExecutorConfig;
-  private adapters: Map<AgentType, {
-    wc: WebContainerAdapter;
-    files: FileOperationsAdapter;
-    shell: ShellAdapter;
-  }> = new Map();
+  private adapters: Map<
+    AgentType,
+    {
+      wc: WebContainerAdapter;
+      files: FileOperationsAdapter;
+      shell: ShellAdapter;
+    }
+  > = new Map();
 
   // Queue of actions waiting for approval
   private pendingApprovals: Map<string, ApprovalResolver> = new Map();
@@ -117,9 +127,7 @@ export class AgentExecutor {
         const resolver = this.pendingApprovals.get(lastBatch.id);
 
         if (resolver) {
-          const hasApprovedActions = lastBatch.actions.some(
-            a => a.status === 'approved'
-          );
+          const hasApprovedActions = lastBatch.actions.some((a) => a.status === 'approved');
           resolver.resolve(hasApprovedActions);
           this.pendingApprovals.delete(lastBatch.id);
         }
@@ -127,17 +135,16 @@ export class AgentExecutor {
     });
   }
 
-  // --------------------------------------------------------------------------
-  // TOOL EXECUTION
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * TOOL EXECUTION
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Execute a tool call
    */
-  async executeTool(
-    request: ToolCallRequest,
-    context: ExecutionContext
-  ): Promise<ToolExecutionResult> {
+  async executeTool(request: ToolCallRequest, context: ExecutionContext): Promise<ToolExecutionResult> {
     const startTime = Date.now();
     const { name, input } = request;
     const { agentName, task } = context;
@@ -182,17 +189,11 @@ export class AgentExecutor {
         // Write operations - go through WebContainerAdapter with its own approval flow
         case 'write_file':
         case 'create_file':
-          result = await adapters.wc.writeFile(
-            input.path as string,
-            input.content as string
-          );
+          result = await adapters.wc.writeFile(input.path as string, input.content as string);
           break;
 
         case 'edit_file':
-          result = await adapters.wc.writeFile(
-            input.path as string,
-            input.newContent as string
-          );
+          result = await adapters.wc.writeFile(input.path as string, input.newContent as string);
           break;
 
         case 'delete_file':
@@ -224,6 +225,7 @@ export class AgentExecutor {
           } else {
             result = await adapters.shell.executeCommand(`npm ${npmCmd}`);
           }
+
           break;
         }
 
@@ -251,7 +253,7 @@ export class AgentExecutor {
       this.log(
         agentName,
         result.success ? 'debug' : 'warn',
-        `Tool ${name} ${result.success ? 'succeeded' : 'failed'}: ${result.error || 'OK'}`
+        `Tool ${name} ${result.success ? 'succeeded' : 'failed'}: ${result.error || 'OK'}`,
       );
 
       return result;
@@ -273,7 +275,7 @@ export class AgentExecutor {
    */
   async executeToolBatch(
     requests: ToolCallRequest[],
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<Map<string, ToolExecutionResult>> {
     const results = new Map<string, ToolExecutionResult>();
 
@@ -300,9 +302,11 @@ export class AgentExecutor {
     return results;
   }
 
-  // --------------------------------------------------------------------------
-  // BATCH APPROVAL
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * BATCH APPROVAL
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Request batch approval
@@ -316,11 +320,7 @@ export class AgentExecutor {
       pendingBatchStore.set(batch);
       approvalModalOpenStore.set(true);
 
-      this.log(
-        batch.agent,
-        'info',
-        `Waiting for approval of ${batch.actions.length} actions`
-      );
+      this.log(batch.agent, 'info', `Waiting for approval of ${batch.actions.length} actions`);
 
       // Timeout to avoid blocking indefinitely
       setTimeout(() => {
@@ -333,9 +333,11 @@ export class AgentExecutor {
     });
   }
 
-  // --------------------------------------------------------------------------
-  // TASK MANAGEMENT
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * TASK MANAGEMENT
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Start task execution
@@ -349,16 +351,8 @@ export class AgentExecutor {
   /**
    * Complete a task
    */
-  async completeTask(
-    task: Task,
-    agentName: AgentType,
-    result: TaskResult
-  ): Promise<void> {
-    this.log(
-      agentName,
-      result.success ? 'info' : 'warn',
-      `Task ${task.id} ${result.success ? 'completed' : 'failed'}`
-    );
+  async completeTask(task: Task, agentName: AgentType, result: TaskResult): Promise<void> {
+    this.log(agentName, result.success ? 'info' : 'warn', `Task ${task.id} ${result.success ? 'completed' : 'failed'}`);
 
     updateAgentStatus(agentName, result.success ? 'completed' : 'failed');
     setCurrentTask(agentName, null);
@@ -367,9 +361,11 @@ export class AgentExecutor {
     setTimeout(() => updateAgentStatus(agentName, 'idle'), 1000);
   }
 
-  // --------------------------------------------------------------------------
-  // HELPERS
-  // --------------------------------------------------------------------------
+  /*
+   * --------------------------------------------------------------------------
+   * HELPERS
+   * --------------------------------------------------------------------------
+   */
 
   /**
    * Get or create adapters for an agent
@@ -409,28 +405,19 @@ export class AgentExecutor {
    * Check if an error is blocking
    */
   private isBlockingError(error?: string): boolean {
-    if (!error) return false;
+    if (!error) {
+      return false;
+    }
 
-    const blockingPatterns = [
-      'rejected by user',
-      'permission denied',
-      'blocked for security',
-      'timeout',
-    ];
+    const blockingPatterns = ['rejected by user', 'permission denied', 'blocked for security', 'timeout'];
 
-    return blockingPatterns.some(p =>
-      error.toLowerCase().includes(p)
-    );
+    return blockingPatterns.some((p) => error.toLowerCase().includes(p));
   }
 
   /**
    * Log with agent context
    */
-  private log(
-    agentName: AgentType,
-    level: 'debug' | 'info' | 'warn' | 'error',
-    message: string
-  ): void {
+  private log(agentName: AgentType, level: 'debug' | 'info' | 'warn' | 'error', message: string): void {
     logger[level](`[${agentName}] ${message}`);
 
     addAgentLog(agentName, {
@@ -456,9 +443,11 @@ export class AgentExecutor {
   }
 }
 
-// ============================================================================
-// SINGLETON
-// ============================================================================
+/*
+ * ============================================================================
+ * SINGLETON
+ * ============================================================================
+ */
 
 let executorInstance: AgentExecutor | null = null;
 

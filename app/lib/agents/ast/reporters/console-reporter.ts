@@ -2,18 +2,13 @@
  * Console Reporter - Formatage des résultats pour la console
  */
 
-import type {
-  AnalysisResult,
-  AnalysisSummary,
-  ASTIssue,
-  Reporter,
-  ReporterOptions,
-  Severity,
-} from '../types';
+import type { AnalysisResult, AnalysisSummary, ASTIssue, Reporter, ReporterOptions, Severity } from '../types';
 
-// ============================================================================
-// COLORS
-// ============================================================================
+/*
+ * ============================================================================
+ * COLORS
+ * ============================================================================
+ */
 
 const colors = {
   reset: '\x1b[0m',
@@ -45,9 +40,11 @@ const severityIcons: Record<Severity, string> = {
   hint: '💡',
 };
 
-// ============================================================================
-// CONSOLE REPORTER
-// ============================================================================
+/*
+ * ============================================================================
+ * CONSOLE REPORTER
+ * ============================================================================
+ */
 
 /**
  * Reporter pour la console
@@ -80,6 +77,7 @@ export class ConsoleReporter implements Reporter {
 
     if (result.parseErrors.length > 0) {
       lines.push(this.color(colors.red, '  Parse errors:'));
+
       for (const error of result.parseErrors) {
         lines.push(this.color(colors.red, `    ${error.message}`));
       }
@@ -89,9 +87,7 @@ export class ConsoleReporter implements Reporter {
       lines.push(this.color(colors.green, '  ✓ No issues found'));
     } else {
       // Trier les issues
-      const sortedIssues = opts.sortBySeverity
-        ? this.sortBySeverity(result.issues)
-        : result.issues;
+      const sortedIssues = opts.sortBySeverity ? this.sortBySeverity(result.issues) : result.issues;
 
       for (const issue of sortedIssues) {
         lines.push(this.formatIssue(issue, opts.includeCode));
@@ -155,17 +151,21 @@ export class ConsoleReporter implements Reporter {
 
     // Issues par sévérité
     lines.push(this.color(colors.bold, 'Issues by severity:'));
+
     const { error, warning, info, hint } = summary.issuesBySeverity;
 
     if (error > 0) {
       lines.push(`  ${this.color(colors.red, `${severityIcons.error} Errors:`)} ${error}`);
     }
+
     if (warning > 0) {
       lines.push(`  ${this.color(colors.yellow, `${severityIcons.warning} Warnings:`)} ${warning}`);
     }
+
     if (info > 0) {
       lines.push(`  ${this.color(colors.blue, `${severityIcons.info} Info:`)} ${info}`);
     }
+
     if (hint > 0) {
       lines.push(`  ${this.color(colors.dim, `${severityIcons.hint} Hints:`)} ${hint}`);
     }
@@ -178,17 +178,21 @@ export class ConsoleReporter implements Reporter {
 
     // Issues par catégorie
     lines.push(this.color(colors.bold, 'Issues by category:'));
+
     const { security, performance, maintainability, style } = summary.issuesByCategory;
 
     if (security > 0) {
       lines.push(`  ${this.color(colors.red, '🔒 Security:')} ${security}`);
     }
+
     if (performance > 0) {
       lines.push(`  ${this.color(colors.yellow, '⚡ Performance:')} ${performance}`);
     }
+
     if (maintainability > 0) {
       lines.push(`  ${this.color(colors.blue, '🔧 Maintainability:')} ${maintainability}`);
     }
+
     if (style > 0) {
       lines.push(`  ${this.color(colors.cyan, '✨ Style:')} ${style}`);
     }
@@ -216,9 +220,11 @@ export class ConsoleReporter implements Reporter {
     return lines.join('\n');
   }
 
-  // ============================================================================
-  // PRIVATE HELPERS
-  // ============================================================================
+  /*
+   * ============================================================================
+   * PRIVATE HELPERS
+   * ============================================================================
+   */
 
   private formatFileHeader(result: AnalysisResult): string {
     const issueCount = result.issues.length;
@@ -226,6 +232,7 @@ export class ConsoleReporter implements Reporter {
     const warningCount = result.issues.filter((i) => i.severity === 'warning').length;
 
     let status: string;
+
     if (errorCount > 0) {
       status = this.color(colors.red, `${errorCount} error${errorCount > 1 ? 's' : ''}`);
     } else if (warningCount > 0) {
@@ -265,9 +272,11 @@ export class ConsoleReporter implements Reporter {
     const lines: string[] = [];
 
     lines.push(this.color(colors.dim, '  ─────────────────────────────────'));
-    lines.push(`  ${this.color(colors.dim, 'LOC:')} ${metrics.linesOfCode} | ` +
-               `${this.color(colors.dim, 'Complexity:')} ${metrics.cyclomaticComplexity} | ` +
-               `${this.color(colors.dim, 'Maintainability:')} ${metrics.maintainabilityIndex}/100`);
+    lines.push(
+      `  ${this.color(colors.dim, 'LOC:')} ${metrics.linesOfCode} | ` +
+        `${this.color(colors.dim, 'Complexity:')} ${metrics.cyclomaticComplexity} | ` +
+        `${this.color(colors.dim, 'Maintainability:')} ${metrics.maintainabilityIndex}/100`,
+    );
 
     if (metrics.anyCount > 0) {
       lines.push(`  ${this.color(colors.yellow, 'Any types:')} ${metrics.anyCount}`);
@@ -306,14 +315,19 @@ export class ConsoleReporter implements Reporter {
   }
 
   private color(color: string, text: string): string {
-    if (!this.useColors) return text;
+    if (!this.useColors) {
+      return text;
+    }
+
     return `${color}${text}${colors.reset}`;
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer un reporter console

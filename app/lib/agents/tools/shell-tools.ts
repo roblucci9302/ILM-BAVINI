@@ -5,18 +5,18 @@
 
 import type { ToolDefinition, ToolExecutionResult } from '../types';
 
-// ============================================================================
-// DÉFINITIONS DES OUTILS
-// ============================================================================
+/*
+ * ============================================================================
+ * DÉFINITIONS DES OUTILS
+ * ============================================================================
+ */
 
 /**
  * Outil pour exécuter une commande npm
  */
 export const NpmCommandTool: ToolDefinition = {
   name: 'npm_command',
-  description:
-    'Exécuter une commande npm/pnpm. ' +
-    'Exemples: install, run dev, run build, run test.',
+  description: 'Exécuter une commande npm/pnpm. ' + 'Exemples: install, run dev, run build, run test.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -47,9 +47,7 @@ export const NpmCommandTool: ToolDefinition = {
  */
 export const ShellCommandTool: ToolDefinition = {
   name: 'shell_command',
-  description:
-    'Exécuter une commande shell. ' +
-    'ATTENTION: Commandes dangereuses interdites (rm -rf, etc.).',
+  description: 'Exécuter une commande shell. ' + 'ATTENTION: Commandes dangereuses interdites (rm -rf, etc.).',
   inputSchema: {
     type: 'object',
     properties: {
@@ -75,9 +73,7 @@ export const ShellCommandTool: ToolDefinition = {
  */
 export const StartDevServerTool: ToolDefinition = {
   name: 'start_dev_server',
-  description:
-    'Démarrer le serveur de développement (npm run dev). ' +
-    'Le serveur reste actif en arrière-plan.',
+  description: 'Démarrer le serveur de développement (npm run dev). ' + 'Le serveur reste actif en arrière-plan.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -99,7 +95,7 @@ export const StartDevServerTool: ToolDefinition = {
  */
 export const StopServerTool: ToolDefinition = {
   name: 'stop_server',
-  description: 'Arrêter un serveur en cours d\'exécution.',
+  description: "Arrêter un serveur en cours d'exécution.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -117,9 +113,7 @@ export const StopServerTool: ToolDefinition = {
  */
 export const InstallDependenciesTool: ToolDefinition = {
   name: 'install_dependencies',
-  description:
-    'Installer une ou plusieurs dépendances npm. ' +
-    'Peut installer en dev avec --save-dev.',
+  description: 'Installer une ou plusieurs dépendances npm. ' + 'Peut installer en dev avec --save-dev.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -142,7 +136,7 @@ export const InstallDependenciesTool: ToolDefinition = {
  */
 export const GetProcessStatusTool: ToolDefinition = {
   name: 'get_process_status',
-  description: 'Obtenir le statut des processus en cours d\'exécution.',
+  description: "Obtenir le statut des processus en cours d'exécution.",
   inputSchema: {
     type: 'object',
     properties: {},
@@ -150,9 +144,11 @@ export const GetProcessStatusTool: ToolDefinition = {
   },
 };
 
-// ============================================================================
-// LISTE DES OUTILS SHELL
-// ============================================================================
+/*
+ * ============================================================================
+ * LISTE DES OUTILS SHELL
+ * ============================================================================
+ */
 
 export const SHELL_TOOLS: ToolDefinition[] = [
   NpmCommandTool,
@@ -163,9 +159,11 @@ export const SHELL_TOOLS: ToolDefinition[] = [
   GetProcessStatusTool,
 ];
 
-// ============================================================================
-// INTERFACE SHELL
-// ============================================================================
+/*
+ * ============================================================================
+ * INTERFACE SHELL
+ * ============================================================================
+ */
 
 /**
  * Résultat d'une commande shell
@@ -191,17 +189,25 @@ export interface RunningProcess {
  */
 export interface ShellInterface {
   /** Exécuter une commande et attendre le résultat */
-  exec(command: string, args?: string[], options?: {
-    cwd?: string;
-    timeout?: number;
-    env?: Record<string, string>;
-  }): Promise<ShellResult>;
+  exec(
+    command: string,
+    args?: string[],
+    options?: {
+      cwd?: string;
+      timeout?: number;
+      env?: Record<string, string>;
+    },
+  ): Promise<ShellResult>;
 
   /** Démarrer un processus en arrière-plan */
-  spawn(command: string, args?: string[], options?: {
-    cwd?: string;
-    env?: Record<string, string>;
-  }): Promise<{
+  spawn(
+    command: string,
+    args?: string[],
+    options?: {
+      cwd?: string;
+      env?: Record<string, string>;
+    },
+  ): Promise<{
     processId: string;
     port?: number;
   }>;
@@ -213,9 +219,11 @@ export interface ShellInterface {
   getRunningProcesses(): RunningProcess[];
 }
 
-// ============================================================================
-// COMMANDES INTERDITES
-// ============================================================================
+/*
+ * ============================================================================
+ * COMMANDES INTERDITES
+ * ============================================================================
+ */
 
 const FORBIDDEN_COMMANDS = [
   'rm -rf /',
@@ -224,7 +232,7 @@ const FORBIDDEN_COMMANDS = [
   'rm -rf $HOME',
   'chmod 777',
   'chmod -R 777',
-  ':(){ :|:& };:',  // Fork bomb
+  ':(){ :|:& };:', // Fork bomb
   'dd if=/dev/zero',
   'mkfs',
   '> /dev/sda',
@@ -256,15 +264,17 @@ function isCommandSafe(command: string): { safe: boolean; reason?: string } {
   return { safe: true };
 }
 
-// ============================================================================
-// HANDLERS D'EXÉCUTION
-// ============================================================================
+/*
+ * ============================================================================
+ * HANDLERS D'EXÉCUTION
+ * ============================================================================
+ */
 
 /**
  * Créer les handlers pour les outils shell
  */
 export function createShellToolHandlers(
-  shell: ShellInterface
+  shell: ShellInterface,
 ): Record<string, (input: Record<string, unknown>) => Promise<ToolExecutionResult>> {
   return {
     /**
@@ -512,9 +522,11 @@ export function createShellToolHandlers(
   };
 }
 
-// ============================================================================
-// MOCK SHELL (POUR LES TESTS)
-// ============================================================================
+/*
+ * ============================================================================
+ * MOCK SHELL (POUR LES TESTS)
+ * ============================================================================
+ */
 
 /**
  * Créer un mock Shell pour les tests
@@ -523,17 +535,13 @@ export function createMockShell(
   options: {
     execResults?: Record<string, ShellResult>;
     defaultExitCode?: number;
-  } = {}
+  } = {},
 ): ShellInterface {
   const processes = new Map<string, RunningProcess>();
   let processCounter = 0;
 
   return {
-    async exec(
-      command: string,
-      args?: string[],
-      _options?: { cwd?: string; timeout?: number }
-    ): Promise<ShellResult> {
+    async exec(command: string, args?: string[], _options?: { cwd?: string; timeout?: number }): Promise<ShellResult> {
       const fullCommand = [command, ...(args || [])].join(' ');
 
       // Vérifier si on a un résultat prédéfini
@@ -552,9 +560,10 @@ export function createMockShell(
     async spawn(
       command: string,
       args?: string[],
-      _options?: { cwd?: string; env?: Record<string, string> }
+      _options?: { cwd?: string; env?: Record<string, string> },
     ): Promise<{ processId: string; port?: number }> {
       processCounter++;
+
       const processId = `mock-process-${processCounter}`;
       const port = 5173;
 

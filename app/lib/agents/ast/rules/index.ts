@@ -11,9 +11,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('RuleRegistry');
 
-// ============================================================================
-// RULE REGISTRY
-// ============================================================================
+/*
+ * ============================================================================
+ * RULE REGISTRY
+ * ============================================================================
+ */
 
 /**
  * Registre central des règles d'analyse
@@ -34,6 +36,7 @@ export class RuleRegistry {
     if (!RuleRegistry.instance) {
       RuleRegistry.instance = new RuleRegistry();
     }
+
     return RuleRegistry.instance;
   }
 
@@ -73,6 +76,7 @@ export class RuleRegistry {
     if (this.rules.has(rule.id)) {
       logger.warn(`Rule '${rule.id}' already registered, overwriting`);
     }
+
     this.rules.set(rule.id, rule);
     logger.debug(`Registered rule: ${rule.id}`);
   }
@@ -131,11 +135,14 @@ export class RuleRegistry {
    */
   configure(id: string, config: Partial<RuleConfig>): boolean {
     const rule = this.rules.get(id);
+
     if (!rule) {
       logger.warn(`Cannot configure unknown rule: ${id}`);
       return false;
     }
+
     rule.configure(config);
+
     return true;
   }
 
@@ -204,6 +211,7 @@ export class RuleRegistry {
 
     for (const rule of rules) {
       byCategory[rule.category]++;
+
       if (rule.enabled) {
         enabled++;
       }
@@ -235,9 +243,11 @@ export interface RuleRegistryStats {
   byCategory: Record<RuleCategory, number>;
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY FUNCTIONS
+ * ============================================================================
+ */
 
 /**
  * Obtenir toutes les règles (raccourci)
@@ -267,9 +277,11 @@ export function configureRules(configs: Record<string, Partial<RuleConfig>>): vo
   RuleRegistry.getInstance().configureAll(configs);
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
+/*
+ * ============================================================================
+ * EXPORTS
+ * ============================================================================
+ */
 
 export { BaseRule, type RuleContext } from './base-rule';
 export { SECURITY_RULES } from './security';

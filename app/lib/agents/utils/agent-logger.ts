@@ -63,12 +63,7 @@ export class AgentLogger {
   /**
    * Logger un message
    */
-  private log(
-    level: LogLevel,
-    message: string,
-    data?: Record<string, unknown>,
-    taskId?: string
-  ): void {
+  private log(level: LogLevel, message: string, data?: Record<string, unknown>, taskId?: string): void {
     if (!this.shouldLog(level)) {
       return;
     }
@@ -149,7 +144,7 @@ export class AgentLogger {
     this.info(
       `Starting task: ${taskId}`,
       { prompt: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : '') },
-      taskId
+      taskId,
     );
   }
 
@@ -158,12 +153,7 @@ export class AgentLogger {
    */
   taskEnd(taskId: string, success: boolean, durationMs: number): void {
     const level = success ? 'info' : 'error';
-    this.log(
-      level,
-      `Task ${success ? 'completed' : 'failed'}: ${taskId}`,
-      { success, durationMs },
-      taskId
-    );
+    this.log(level, `Task ${success ? 'completed' : 'failed'}: ${taskId}`, { success, durationMs }, taskId);
   }
 
   /**
@@ -176,18 +166,13 @@ export class AgentLogger {
   /**
    * Logger le résultat d'un outil
    */
-  toolResult(
-    toolName: string,
-    success: boolean,
-    durationMs: number,
-    taskId?: string
-  ): void {
+  toolResult(toolName: string, success: boolean, durationMs: number, taskId?: string): void {
     const level = success ? 'debug' : 'warn';
     this.log(
       level,
       `Tool ${toolName} ${success ? 'succeeded' : 'failed'}`,
       { tool: toolName, success, durationMs },
-      taskId
+      taskId,
     );
   }
 
@@ -195,32 +180,21 @@ export class AgentLogger {
    * Logger un appel LLM
    */
   llmCall(inputTokens: number, outputTokens: number, taskId?: string): void {
-    this.debug(
-      'LLM call completed',
-      { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens },
-      taskId
-    );
+    this.debug('LLM call completed', { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens }, taskId);
   }
 
   /**
    * Logger une délégation
    */
   delegation(targetAgent: AgentType, task: string, taskId?: string): void {
-    this.info(
-      `Delegating to ${targetAgent}`,
-      { targetAgent, task: task.substring(0, 100) },
-      taskId
-    );
+    this.info(`Delegating to ${targetAgent}`, { targetAgent, task: task.substring(0, 100) }, taskId);
   }
 }
 
 /**
  * Créer un logger pour un agent
  */
-export function createAgentLogger(
-  agentName: AgentType,
-  options?: AgentLoggerOptions
-): AgentLogger {
+export function createAgentLogger(agentName: AgentType, options?: AgentLoggerOptions): AgentLogger {
   return new AgentLogger(agentName, options);
 }
 

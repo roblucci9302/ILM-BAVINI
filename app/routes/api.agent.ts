@@ -3,6 +3,9 @@
  *
  * This route handles requests for the multi-agent orchestration system.
  * It streams responses back to the client in a format compatible with the chat UI.
+ *
+ * IMPORTANT: This route now receives the full conversation history and file context
+ * to enable seamless switching between chat and agent modes.
  */
 
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
@@ -14,10 +17,29 @@ const logger = createScopedLogger('api.agent');
 // TYPES
 // ============================================================================
 
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+interface FileContext {
+  path: string;
+  content?: string;
+  type?: 'file' | 'folder';
+}
+
 interface AgentRequestBody {
-  message: string;
+  /** Current message (for backwards compatibility) */
+  message?: string;
+  /** Full conversation history */
+  messages?: ChatMessage[];
+  /** Existing files in the project */
+  files?: FileContext[];
+  /** Additional context */
   context?: Record<string, unknown>;
+  /** Control mode for approvals */
   controlMode?: 'strict' | 'moderate' | 'permissive';
+  /** Enable multi-agent mode */
   multiAgent?: boolean;
 }
 
@@ -49,10 +71,41 @@ function createStreamChunk(chunk: StreamChunk): string {
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const body = await request.json<AgentRequestBody>();
-  const { message, context: agentContext, controlMode = 'strict', multiAgent = false } = body;
+  const {
+    message,
+    messages: incomingMessages,
+    files,
+    context: agentContext,
+    controlMode = 'strict',
+    multiAgent = false
+  } = body;
 
-  logger.info(`Agent request received (multiAgent: ${multiAgent}, controlMode: ${controlMode})`);
-  logger.debug('Message:', message.substring(0, 100));
+  // Build messages array - prefer full history, fallback to single message
+  let messages: ChatMessage[] = [];
+
+  if (incomingMessages && incomingMessages.length > 0) {
+    messages = incomingMessages;
+    logger.info(`Agent request received with ${messages.length} messages (multiAgent: ${multiAgent})`);
+  } else if (message) {
+    // Backwards compatibility: single message
+    messages = [{ role: 'user', content: message }];
+    logger.info(`Agent request received with single message (multiAgent: ${multiAgent})`);
+  } else {
+    logger.error('No message or messages provided');
+    return new Response(JSON.stringify({ error: 'No message provided' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Log file context if present
+  if (files && files.length > 0) {
+    logger.info(`Project context: ${files.length} files available`);
+    logger.debug('Files:', files.map(f => f.path).join(', '));
+  }
+
+  const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+  logger.debug('Last user message:', lastUserMessage.substring(0, 100));
 
   // Create a streaming response
   const encoder = new TextEncoder();
@@ -85,22 +138,33 @@ export async function action({ request, context }: ActionFunctionArgs) {
           )
         );
 
-        // Call the underlying chat API for actual LLM response
-        // This is a bridge until the full client-side agent system is connected
+        // Build context with file information if available
+        const enrichedContext = {
+          ...agentContext,
+          ...(files && files.length > 0 ? {
+            existingProject: true,
+            projectFiles: files.map(f => f.path),
+            fileContents: files.reduce((acc, f) => {
+              if (f.content) {
+                acc[f.path] = f.content;
+              }
+              return acc;
+            }, {} as Record<string, string>),
+          } : {}),
+        };
+
+        // Call the underlying chat API with FULL conversation history
+        // This ensures the agent has context from previous messages
         const chatResponse = await fetch(new URL('/api/chat', request.url).toString(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            messages: [
-              {
-                role: 'user',
-                content: message,
-              },
-            ],
+            messages, // Pass the full conversation history
             mode: 'agent',
-            context: agentContext,
+            context: enrichedContext,
+            multiAgent: true,
           }),
         });
 

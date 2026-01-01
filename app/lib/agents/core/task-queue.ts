@@ -9,9 +9,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('TaskQueue');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Configuration de la queue
@@ -51,9 +53,11 @@ export interface QueueStats {
   totalProcessed: number;
 }
 
-// ============================================================================
-// TASK QUEUE
-// ============================================================================
+/*
+ * ============================================================================
+ * TASK QUEUE
+ * ============================================================================
+ */
 
 /**
  * File d'attente des tâches avec exécution parallèle
@@ -82,9 +86,11 @@ export class TaskQueue {
     };
   }
 
-  // ==========================================================================
-  // PUBLIC API
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * PUBLIC API
+   * ==========================================================================
+   */
 
   /**
    * Ajouter une tâche à la queue
@@ -134,6 +140,7 @@ export class TaskQueue {
 
         const result = await this.enqueue(task);
         results.set(task.id, result);
+
         return result;
       });
 
@@ -171,6 +178,7 @@ export class TaskQueue {
       item.task.status = 'cancelled';
       item.reject(new Error('Task cancelled'));
       this.log('info', `Task cancelled: ${taskId}`);
+
       return true;
     }
 
@@ -224,9 +232,11 @@ export class TaskQueue {
     return Array.from(this.running.values()).map((item) => item.task);
   }
 
-  // ==========================================================================
-  // PROCESSING
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * PROCESSING
+   * ==========================================================================
+   */
 
   /**
    * Traiter la queue
@@ -248,9 +258,7 @@ export class TaskQueue {
 
         // Vérifier les dépendances
         if (item.task.dependencies) {
-          const unmetDeps = item.task.dependencies.filter(
-            (depId) => !this.completed.has(depId)
-          );
+          const unmetDeps = item.task.dependencies.filter((depId) => !this.completed.has(depId));
 
           if (unmetDeps.length > 0) {
             // Remettre dans la queue
@@ -379,9 +387,11 @@ export class TaskQueue {
     return undefined;
   }
 
-  // ==========================================================================
-  // HELPERS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * HELPERS
+   * ==========================================================================
+   */
 
   /**
    * Attendre qu'une tâche soit terminée
@@ -500,17 +510,15 @@ export class TaskQueue {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance de TaskQueue
  */
-export function createTaskQueue(
-  registry: AgentRegistry,
-  apiKey: string,
-  config?: Partial<TaskQueueConfig>
-): TaskQueue {
+export function createTaskQueue(registry: AgentRegistry, apiKey: string, config?: Partial<TaskQueueConfig>): TaskQueue {
   return new TaskQueue(registry, apiKey, config);
 }

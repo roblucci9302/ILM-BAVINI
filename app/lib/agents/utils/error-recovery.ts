@@ -9,9 +9,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ErrorRecovery');
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Type d'erreur détecté
@@ -107,9 +109,11 @@ export interface RecoveryConfig {
   defaultFallbacks: Partial<Record<AgentType, AgentType>>;
 }
 
-// ============================================================================
-// ERROR RECOVERY
-// ============================================================================
+/*
+ * ============================================================================
+ * ERROR RECOVERY
+ * ============================================================================
+ */
 
 /**
  * Système de récupération d'erreurs
@@ -136,9 +140,11 @@ export class ErrorRecovery {
     };
   }
 
-  // ==========================================================================
-  // PUBLIC API
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * PUBLIC API
+   * ==========================================================================
+   */
 
   /**
    * Analyser une erreur et proposer des actions de récupération
@@ -178,11 +184,7 @@ export class ErrorRecovery {
   /**
    * Tenter de récupérer d'une erreur
    */
-  async handleError(
-    error: Error | AgentError | string,
-    task: Task,
-    apiKey: string
-  ): Promise<TaskResult> {
+  async handleError(error: Error | AgentError | string, task: Task, apiKey: string): Promise<TaskResult> {
     const analysis = this.analyzeError(error, task);
 
     if (!analysis.recoverable) {
@@ -213,11 +215,7 @@ export class ErrorRecovery {
   /**
    * Retry une tâche avec backoff exponentiel
    */
-  async retry(
-    task: Task,
-    apiKey: string,
-    maxRetries?: number
-  ): Promise<TaskResult> {
+  async retry(task: Task, apiKey: string, maxRetries?: number): Promise<TaskResult> {
     const max = maxRetries ?? this.config.maxRetries;
     const currentRetry = this.retryCount.get(task.id) ?? 0;
 
@@ -281,11 +279,7 @@ export class ErrorRecovery {
   /**
    * Exécuter un fallback vers un autre agent
    */
-  async fallback(
-    task: Task,
-    apiKey: string,
-    fallbackAgentName: AgentType
-  ): Promise<TaskResult> {
+  async fallback(task: Task, apiKey: string, fallbackAgentName: AgentType): Promise<TaskResult> {
     logger.info(`Falling back to ${fallbackAgentName} for task ${task.id}`);
 
     const fallbackAgent = this.registry.get(fallbackAgentName);
@@ -357,9 +351,11 @@ export class ErrorRecovery {
     return this.retryCount.get(taskId) ?? 0;
   }
 
-  // ==========================================================================
-  // CLASSIFICATION DES ERREURS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * CLASSIFICATION DES ERREURS
+   * ==========================================================================
+   */
 
   /**
    * Classifier le type d'erreur
@@ -378,11 +374,7 @@ export class ErrorRecovery {
     }
 
     // Timeouts
-    if (
-      lowerMessage.includes('timeout') ||
-      lowerMessage.includes('timed out') ||
-      lowerMessage.includes('etimedout')
-    ) {
+    if (lowerMessage.includes('timeout') || lowerMessage.includes('timed out') || lowerMessage.includes('etimedout')) {
       return 'timeout';
     }
 
@@ -396,11 +388,7 @@ export class ErrorRecovery {
     }
 
     // Validation
-    if (
-      lowerMessage.includes('validation') ||
-      lowerMessage.includes('invalid') ||
-      lowerMessage.includes('malformed')
-    ) {
+    if (lowerMessage.includes('validation') || lowerMessage.includes('invalid') || lowerMessage.includes('malformed')) {
       return 'validation';
     }
 
@@ -415,29 +403,17 @@ export class ErrorRecovery {
     }
 
     // Ressource non trouvée
-    if (
-      lowerMessage.includes('not found') ||
-      lowerMessage.includes('404') ||
-      lowerMessage.includes('does not exist')
-    ) {
+    if (lowerMessage.includes('not found') || lowerMessage.includes('404') || lowerMessage.includes('does not exist')) {
       return 'resource_not_found';
     }
 
     // Conflits
-    if (
-      lowerMessage.includes('conflict') ||
-      lowerMessage.includes('already exists') ||
-      lowerMessage.includes('409')
-    ) {
+    if (lowerMessage.includes('conflict') || lowerMessage.includes('already exists') || lowerMessage.includes('409')) {
       return 'conflict';
     }
 
     // Erreurs internes
-    if (
-      lowerMessage.includes('internal') ||
-      lowerMessage.includes('500') ||
-      lowerMessage.includes('server error')
-    ) {
+    if (lowerMessage.includes('internal') || lowerMessage.includes('500') || lowerMessage.includes('server error')) {
       return 'internal';
     }
 
@@ -466,8 +442,13 @@ export class ErrorRecovery {
     // Augmenter la sévérité selon le contexte
     if (task.type === 'deployer') {
       // Les erreurs de déploiement sont plus critiques
-      if (severity === 'medium') severity = 'high';
-      if (severity === 'high') severity = 'critical';
+      if (severity === 'medium') {
+        severity = 'high';
+      }
+
+      if (severity === 'high') {
+        severity = 'critical';
+      }
     }
 
     return severity;
@@ -483,28 +464,21 @@ export class ErrorRecovery {
     }
 
     // Erreurs généralement récupérables
-    const recoverableTypes: ErrorType[] = [
-      'network',
-      'timeout',
-      'rate_limit',
-      'internal',
-    ];
+    const recoverableTypes: ErrorType[] = ['network', 'timeout', 'rate_limit', 'internal'];
 
     return recoverableTypes.includes(errorType);
   }
 
-  // ==========================================================================
-  // GÉNÉRATION DES OPTIONS DE RÉCUPÉRATION
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * GÉNÉRATION DES OPTIONS DE RÉCUPÉRATION
+   * ==========================================================================
+   */
 
   /**
    * Générer les options de récupération possibles
    */
-  private generateRecoveryOptions(
-    errorType: ErrorType,
-    task: Task,
-    severity: ErrorSeverity
-  ): RecoveryAction[] {
+  private generateRecoveryOptions(errorType: ErrorType, task: Task, severity: ErrorSeverity): RecoveryAction[] {
     const options: RecoveryAction[] = [];
     const currentRetries = this.retryCount.get(task.id) ?? 0;
     const canRetry = currentRetries < this.config.maxRetries;
@@ -565,46 +539,41 @@ export class ErrorRecovery {
    */
   private selectBestAction(options: RecoveryAction[], task: Task): RecoveryAction {
     // Trier par probabilité de succès
-    const sorted = [...options].sort(
-      (a, b) => (b.successProbability ?? 0) - (a.successProbability ?? 0)
-    );
+    const sorted = [...options].sort((a, b) => (b.successProbability ?? 0) - (a.successProbability ?? 0));
 
     // Préférer retry si disponible et probabilité > 50%
     const retryOption = sorted.find((o) => o.type === 'retry');
+
     if (retryOption && (retryOption.successProbability ?? 0) > 0.5) {
       return retryOption;
     }
 
     // Sinon, prendre l'option avec la meilleure probabilité (excluant abort)
     const bestOption = sorted.find((o) => o.type !== 'abort');
+
     return bestOption ?? sorted[sorted.length - 1];
   }
 
-  // ==========================================================================
-  // EXÉCUTION DES ACTIONS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * EXÉCUTION DES ACTIONS
+   * ==========================================================================
+   */
 
   /**
    * Exécuter un retry
    */
-  private async executeRetry(
-    task: Task,
-    apiKey: string,
-    analysis: ErrorAnalysis
-  ): Promise<TaskResult> {
+  private async executeRetry(task: Task, apiKey: string, analysis: ErrorAnalysis): Promise<TaskResult> {
     const delay = analysis.recommendedAction.retryDelay ?? this.config.baseRetryDelay;
     await this.sleep(delay);
+
     return this.retry(task, apiKey);
   }
 
   /**
    * Exécuter un fallback
    */
-  private async executeFallback(
-    task: Task,
-    apiKey: string,
-    analysis: ErrorAnalysis
-  ): Promise<TaskResult> {
+  private async executeFallback(task: Task, apiKey: string, analysis: ErrorAnalysis): Promise<TaskResult> {
     const fallbackAgent = analysis.recommendedAction.fallbackAgent;
 
     if (!fallbackAgent) {
@@ -614,9 +583,11 @@ export class ErrorRecovery {
     return this.fallback(task, apiKey, fallbackAgent);
   }
 
-  // ==========================================================================
-  // CRÉATION DES RÉSULTATS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * CRÉATION DES RÉSULTATS
+   * ==========================================================================
+   */
 
   /**
    * Créer un résultat d'échec
@@ -670,9 +641,11 @@ export class ErrorRecovery {
     };
   }
 
-  // ==========================================================================
-  // HELPERS
-  // ==========================================================================
+  /*
+   * ==========================================================================
+   * HELPERS
+   * ==========================================================================
+   */
 
   /**
    * Extraire le message d'erreur
@@ -695,7 +668,7 @@ export class ErrorRecovery {
   private simplifyMessage(message: string, errorType: ErrorType): string {
     const simplifications: Record<ErrorType, string> = {
       network: 'Erreur de connexion réseau',
-      timeout: 'Délai d\'attente dépassé',
+      timeout: "Délai d'attente dépassé",
       rate_limit: 'Limite de requêtes atteinte',
       validation: 'Erreur de validation des données',
       permission: 'Permission refusée',
@@ -712,8 +685,7 @@ export class ErrorRecovery {
    * Calculer le délai de backoff
    */
   private calculateBackoff(retryCount: number): number {
-    const delay =
-      this.config.baseRetryDelay * Math.pow(this.config.backoffMultiplier, retryCount);
+    const delay = this.config.baseRetryDelay * Math.pow(this.config.backoffMultiplier, retryCount);
     return Math.min(delay, this.config.maxRetryDelay);
   }
 
@@ -737,6 +709,7 @@ export class ErrorRecovery {
     // Réduire la probabilité avec chaque retry
     const base = baseProbability[errorType] ?? 0.5;
     const reduction = retryCount * 0.15;
+
     return Math.max(0.1, base - reduction);
   }
 
@@ -748,16 +721,15 @@ export class ErrorRecovery {
   }
 }
 
-// ============================================================================
-// FACTORY
-// ============================================================================
+/*
+ * ============================================================================
+ * FACTORY
+ * ============================================================================
+ */
 
 /**
  * Créer une instance d'ErrorRecovery
  */
-export function createErrorRecovery(
-  registry: AgentRegistry,
-  config?: Partial<RecoveryConfig>
-): ErrorRecovery {
+export function createErrorRecovery(registry: AgentRegistry, config?: Partial<RecoveryConfig>): ErrorRecovery {
   return new ErrorRecovery(registry, config);
 }

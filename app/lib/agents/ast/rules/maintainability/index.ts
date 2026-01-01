@@ -5,9 +5,11 @@
 import ts from 'typescript';
 import { BaseRule, type RuleContext, type RuleExample, type OptionSchema } from '../base-rule';
 
-// ============================================================================
-// NO ANY RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * NO ANY RULE
+ * ============================================================================
+ */
 
 /**
  * Interdire l'utilisation du type 'any'
@@ -15,12 +17,14 @@ import { BaseRule, type RuleContext, type RuleExample, type OptionSchema } from 
 export class NoAnyRule extends BaseRule {
   readonly id = 'maintainability/no-any';
   readonly name = 'No any Type';
-  readonly description = 'Interdit l\'utilisation du type any qui désactive la vérification de types';
+  readonly description = "Interdit l'utilisation du type any qui désactive la vérification de types";
   readonly category = 'maintainability' as const;
   readonly defaultSeverity = 'warning' as const;
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     // Check for 'any' keyword
     if (node.kind === ts.SyntaxKind.AnyKeyword) {
@@ -39,14 +43,18 @@ export class NoAnyRule extends BaseRule {
         contextMsg = ' comme type de retour';
       }
 
-      context.report(this.createIssue(node, context.sourceFile,
-        `Évitez d'utiliser le type "any"${contextMsg}. Il désactive la vérification de types.`,
-        {
-          fixable: true,
-          fix: this.createReplaceFix(node, 'unknown'),
-          suggestion: 'Utilisez "unknown" pour un typage sûr, ou définissez un type spécifique.',
-        }
-      ));
+      context.report(
+        this.createIssue(
+          node,
+          context.sourceFile,
+          `Évitez d'utiliser le type "any"${contextMsg}. Il désactive la vérification de types.`,
+          {
+            fixable: true,
+            fix: this.createReplaceFix(node, 'unknown'),
+            suggestion: 'Utilisez "unknown" pour un typage sûr, ou définissez un type spécifique.',
+          },
+        ),
+      );
     }
 
     // Check for type assertions to any: as any
@@ -54,27 +62,28 @@ export class NoAnyRule extends BaseRule {
       const type = node.type;
 
       if (type.kind === ts.SyntaxKind.AnyKeyword) {
-        context.report(this.createIssue(node, context.sourceFile,
-          'Évitez les assertions de type "as any". Elles contournent la sécurité des types.',
-          {
-            severity: 'error',
-            suggestion: 'Utilisez "as unknown" puis un type guard, ou corrigez le type sous-jacent.',
-          }
-        ));
+        context.report(
+          this.createIssue(
+            node,
+            context.sourceFile,
+            'Évitez les assertions de type "as any". Elles contournent la sécurité des types.',
+            {
+              severity: 'error',
+              suggestion: 'Utilisez "as unknown" puis un type guard, ou corrigez le type sous-jacent.',
+            },
+          ),
+        );
       }
     }
 
     // Check for type references that might be 'any'
-    if (ts.isTypeReferenceNode(node) &&
-        ts.isIdentifier(node.typeName) &&
-        node.typeName.text === 'any') {
-      context.report(this.createIssue(node, context.sourceFile,
-        'Évitez d\'utiliser "any" comme type.',
-        {
+    if (ts.isTypeReferenceNode(node) && ts.isIdentifier(node.typeName) && node.typeName.text === 'any') {
+      context.report(
+        this.createIssue(node, context.sourceFile, 'Évitez d\'utiliser "any" comme type.', {
           fixable: true,
           fix: this.createReplaceFix(node, 'unknown'),
-        }
-      ));
+        }),
+      );
     }
   }
 
@@ -89,9 +98,11 @@ export class NoAnyRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// MAX COMPLEXITY RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * MAX COMPLEXITY RULE
+ * ============================================================================
+ */
 
 /**
  * Limiter la complexité cyclomatique des fonctions
@@ -108,17 +119,23 @@ export class MaxComplexityRule extends BaseRule {
   }
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     // Analyze function complexity
-    if (ts.isFunctionDeclaration(node) ||
-        ts.isFunctionExpression(node) ||
-        ts.isArrowFunction(node) ||
-        ts.isMethodDeclaration(node)) {
-
+    if (
+      ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isArrowFunction(node) ||
+      ts.isMethodDeclaration(node)
+    ) {
       // Skip if function body is empty or simple
       const body = (node as ts.FunctionLikeDeclaration).body;
-      if (!body) return;
+
+      if (!body) {
+        return;
+      }
 
       const complexity = this.calculateComplexity(node);
       const name = this.getFunctionName(node);
@@ -126,13 +143,17 @@ export class MaxComplexityRule extends BaseRule {
       if (complexity > this.maxComplexity) {
         const severityLevel = complexity > this.maxComplexity * 2 ? 'error' : this.severity;
 
-        context.report(this.createIssue(node, context.sourceFile,
-          `La fonction '${name}' a une complexité cyclomatique de ${complexity} (max: ${this.maxComplexity}).`,
-          {
-            severity: severityLevel,
-            suggestion: 'Décomposez cette fonction en sous-fonctions plus petites et ciblées.',
-          }
-        ));
+        context.report(
+          this.createIssue(
+            node,
+            context.sourceFile,
+            `La fonction '${name}' a une complexité cyclomatique de ${complexity} (max: ${this.maxComplexity}).`,
+            {
+              severity: severityLevel,
+              suggestion: 'Décomposez cette fonction en sous-fonctions plus petites et ciblées.',
+            },
+          ),
+        );
       }
     }
   }
@@ -144,11 +165,14 @@ export class MaxComplexityRule extends BaseRule {
       switch (n.kind) {
         case ts.SyntaxKind.IfStatement:
           complexity++;
+
           // Count else if as separate branch
           const ifStmt = n as ts.IfStatement;
+
           if (ifStmt.elseStatement && ts.isIfStatement(ifStmt.elseStatement)) {
             // Don't double-count, the nested if will be visited
           }
+
           break;
 
         case ts.SyntaxKind.ConditionalExpression: // ternary
@@ -164,11 +188,15 @@ export class MaxComplexityRule extends BaseRule {
 
         case ts.SyntaxKind.BinaryExpression:
           const binary = n as ts.BinaryExpression;
-          if (binary.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
-              binary.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
-              binary.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken) {
+
+          if (
+            binary.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+            binary.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+            binary.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+          ) {
             complexity++;
           }
+
           break;
       }
 
@@ -176,6 +204,7 @@ export class MaxComplexityRule extends BaseRule {
     };
 
     countBranches(node);
+
     return complexity;
   }
 
@@ -183,18 +212,23 @@ export class MaxComplexityRule extends BaseRule {
     if (ts.isFunctionDeclaration(node) && node.name) {
       return node.name.text;
     }
+
     if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
       return node.name.text;
     }
+
     if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
       const parent = node.parent;
+
       if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
         return parent.name.text;
       }
+
       if (ts.isPropertyAssignment(parent) && ts.isIdentifier(parent.name)) {
         return parent.name.text;
       }
     }
+
     return '<anonymous>';
   }
 
@@ -211,14 +245,20 @@ export class MaxComplexityRule extends BaseRule {
   protected getExamples(): RuleExample[] {
     return [
       { description: 'Fonction simple', code: 'function f() { return 1; }', isValid: true },
-      { description: 'Fonction avec if/else', code: 'function f(x) { if (x) { return 1; } else { return 2; } }', isValid: true },
+      {
+        description: 'Fonction avec if/else',
+        code: 'function f(x) { if (x) { return 1; } else { return 2; } }',
+        isValid: true,
+      },
     ];
   }
 }
 
-// ============================================================================
-// IMPORT ORDER RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * IMPORT ORDER RULE
+ * ============================================================================
+ */
 
 /**
  * Vérifier l'ordre des imports
@@ -232,22 +272,33 @@ export class ImportOrderRule extends BaseRule {
 
   // Import groups in order
   private readonly importGroups = [
-    { name: 'builtin', pattern: /^(node:|fs|path|util|crypto|http|https|stream|os|child_process|events|buffer|url|querystring|assert|tty|readline|net|dns|domain|cluster|dgram|vm|punycode|repl|zlib|v8|perf_hooks|async_hooks|trace_events|inspector|worker_threads|wasi)/ },
+    {
+      name: 'builtin',
+      pattern:
+        /^(node:|fs|path|util|crypto|http|https|stream|os|child_process|events|buffer|url|querystring|assert|tty|readline|net|dns|domain|cluster|dgram|vm|punycode|repl|zlib|v8|perf_hooks|async_hooks|trace_events|inspector|worker_threads|wasi)/,
+    },
     { name: 'external', pattern: /^[^./~@]|^@[^/]+\/[^/]+/ },
     { name: 'internal', pattern: /^~\// },
     { name: 'parent', pattern: /^\.\.\// },
     { name: 'sibling', pattern: /^\.\/(?!index)/ },
-    { name: 'index', pattern: /^\.\/index$|^\.$/  },
+    { name: 'index', pattern: /^\.\/index$|^\.$/ },
   ];
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     // Only analyze at source file level
-    if (!ts.isSourceFile(node)) return;
+    if (!ts.isSourceFile(node)) {
+      return;
+    }
 
     const imports = this.collectImports(node);
-    if (imports.length < 2) return;
+
+    if (imports.length < 2) {
+      return;
+    }
 
     let lastGroup = -1;
     let lastSpecifier = '';
@@ -257,22 +308,30 @@ export class ImportOrderRule extends BaseRule {
 
       // Check group order
       if (group < lastGroup) {
-        context.report(this.createIssue(imp.node, context.sourceFile,
-          `Import de '${imp.specifier}' devrait être avant les imports de groupe ${this.importGroups[lastGroup]?.name || 'unknown'}.`,
-          {
-            suggestion: 'Organisez les imports: builtin → external → internal → parent → sibling → index',
-          }
-        ));
+        context.report(
+          this.createIssue(
+            imp.node,
+            context.sourceFile,
+            `Import de '${imp.specifier}' devrait être avant les imports de groupe ${this.importGroups[lastGroup]?.name || 'unknown'}.`,
+            {
+              suggestion: 'Organisez les imports: builtin → external → internal → parent → sibling → index',
+            },
+          ),
+        );
       }
 
       // Check alphabetical order within group
       if (group === lastGroup && imp.specifier.toLowerCase() < lastSpecifier.toLowerCase()) {
-        context.report(this.createIssue(imp.node, context.sourceFile,
-          `Import de '${imp.specifier}' devrait être avant '${lastSpecifier}' (ordre alphabétique).`,
-          {
-            severity: 'hint',
-          }
-        ));
+        context.report(
+          this.createIssue(
+            imp.node,
+            context.sourceFile,
+            `Import de '${imp.specifier}' devrait être avant '${lastSpecifier}' (ordre alphabétique).`,
+            {
+              severity: 'hint',
+            },
+          ),
+        );
       }
 
       lastGroup = group;
@@ -286,6 +345,7 @@ export class ImportOrderRule extends BaseRule {
     for (const statement of sourceFile.statements) {
       if (ts.isImportDeclaration(statement)) {
         const moduleSpecifier = statement.moduleSpecifier;
+
         if (ts.isStringLiteral(moduleSpecifier)) {
           imports.push({
             node: statement,
@@ -309,15 +369,21 @@ export class ImportOrderRule extends BaseRule {
 
   protected getExamples(): RuleExample[] {
     return [
-      { description: 'Ordre correct', code: 'import fs from "fs";\nimport React from "react";\nimport { util } from "~/utils";', isValid: true },
+      {
+        description: 'Ordre correct',
+        code: 'import fs from "fs";\nimport React from "react";\nimport { util } from "~/utils";',
+        isValid: true,
+      },
       { description: 'Ordre incorrect', code: 'import { util } from "~/utils";\nimport fs from "fs";', isValid: false },
     ];
   }
 }
 
-// ============================================================================
-// NAMING CONVENTIONS RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * NAMING CONVENTIONS RULE
+ * ============================================================================
+ */
 
 /**
  * Vérifier les conventions de nommage
@@ -338,17 +404,23 @@ export class NamingConventionsRule extends BaseRule {
   };
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     // Classes should be PascalCase
     if (ts.isClassDeclaration(node) && node.name) {
       if (!this.patterns.PascalCase.test(node.name.text)) {
-        context.report(this.createIssue(node.name, context.sourceFile,
-          `Le nom de classe '${node.name.text}' devrait être en PascalCase.`,
-          {
-            suggestion: `Renommez en '${this.toPascalCase(node.name.text)}'`,
-          }
-        ));
+        context.report(
+          this.createIssue(
+            node.name,
+            context.sourceFile,
+            `Le nom de classe '${node.name.text}' devrait être en PascalCase.`,
+            {
+              suggestion: `Renommez en '${this.toPascalCase(node.name.text)}'`,
+            },
+          ),
+        );
       }
     }
 
@@ -357,40 +429,51 @@ export class NamingConventionsRule extends BaseRule {
       const name = node.name.text;
 
       if (!this.patterns.PascalCase.test(name)) {
-        context.report(this.createIssue(node.name, context.sourceFile,
-          `Le nom d'interface '${name}' devrait être en PascalCase.`,
-          {}
-        ));
+        context.report(
+          this.createIssue(
+            node.name,
+            context.sourceFile,
+            `Le nom d'interface '${name}' devrait être en PascalCase.`,
+            {},
+          ),
+        );
       }
 
       // Check for Hungarian notation (IFoo)
       if (name.startsWith('I') && name.length > 1 && name[1] === name[1].toUpperCase()) {
-        context.report(this.createIssue(node.name, context.sourceFile,
-          `Évitez le préfixe 'I' pour les interfaces. Utilisez '${name.slice(1)}' directement.`,
-          {
-            severity: 'hint',
-          }
-        ));
+        context.report(
+          this.createIssue(
+            node.name,
+            context.sourceFile,
+            `Évitez le préfixe 'I' pour les interfaces. Utilisez '${name.slice(1)}' directement.`,
+            {
+              severity: 'hint',
+            },
+          ),
+        );
       }
     }
 
     // Type aliases should be PascalCase
     if (ts.isTypeAliasDeclaration(node)) {
       if (!this.patterns.PascalCase.test(node.name.text)) {
-        context.report(this.createIssue(node.name, context.sourceFile,
-          `Le type '${node.name.text}' devrait être en PascalCase.`,
-          {}
-        ));
+        context.report(
+          this.createIssue(
+            node.name,
+            context.sourceFile,
+            `Le type '${node.name.text}' devrait être en PascalCase.`,
+            {},
+          ),
+        );
       }
     }
 
     // Enums should be PascalCase
     if (ts.isEnumDeclaration(node)) {
       if (!this.patterns.PascalCase.test(node.name.text)) {
-        context.report(this.createIssue(node.name, context.sourceFile,
-          `L'enum '${node.name.text}' devrait être en PascalCase.`,
-          {}
-        ));
+        context.report(
+          this.createIssue(node.name, context.sourceFile, `L'enum '${node.name.text}' devrait être en PascalCase.`, {}),
+        );
       }
 
       // Enum members should be PascalCase or UPPER_CASE
@@ -398,12 +481,15 @@ export class NamingConventionsRule extends BaseRule {
         if (ts.isIdentifier(member.name)) {
           const memberName = member.name.text;
 
-          if (!this.patterns.PascalCase.test(memberName) &&
-              !this.patterns.UPPER_CASE.test(memberName)) {
-            context.report(this.createIssue(member.name, context.sourceFile,
-              `Le membre d'enum '${memberName}' devrait être en PascalCase ou UPPER_CASE.`,
-              {}
-            ));
+          if (!this.patterns.PascalCase.test(memberName) && !this.patterns.UPPER_CASE.test(memberName)) {
+            context.report(
+              this.createIssue(
+                member.name,
+                context.sourceFile,
+                `Le membre d'enum '${memberName}' devrait être en PascalCase ou UPPER_CASE.`,
+                {},
+              ),
+            );
           }
         }
       }
@@ -412,10 +498,14 @@ export class NamingConventionsRule extends BaseRule {
     // Functions should be camelCase
     if (ts.isFunctionDeclaration(node) && node.name) {
       if (!this.patterns.camelCase.test(node.name.text)) {
-        context.report(this.createIssue(node.name, context.sourceFile,
-          `La fonction '${node.name.text}' devrait être en camelCase.`,
-          {}
-        ));
+        context.report(
+          this.createIssue(
+            node.name,
+            context.sourceFile,
+            `La fonction '${node.name.text}' devrait être en camelCase.`,
+            {},
+          ),
+        );
       }
     }
 
@@ -430,23 +520,33 @@ export class NamingConventionsRule extends BaseRule {
 
           // Check for single-letter names (except loop counters)
           if (name.length === 1 && !['i', 'j', 'k', 'n', 'x', 'y', 'z', '_'].includes(name)) {
-            context.report(this.createIssue(decl.name, context.sourceFile,
-              `Évitez les noms de variable à une lettre '${name}'. Utilisez un nom descriptif.`,
-              {
-                severity: 'hint',
-              }
-            ));
+            context.report(
+              this.createIssue(
+                decl.name,
+                context.sourceFile,
+                `Évitez les noms de variable à une lettre '${name}'. Utilisez un nom descriptif.`,
+                {
+                  severity: 'hint',
+                },
+              ),
+            );
           }
 
           // Module-level const can be UPPER_CASE or camelCase
           if (isConst && isModuleLevel) {
-            if (!this.patterns.camelCase.test(name) &&
-                !this.patterns.UPPER_CASE.test(name) &&
-                !this.patterns.PascalCase.test(name)) {
-              context.report(this.createIssue(decl.name, context.sourceFile,
-                `La constante '${name}' devrait être en camelCase ou UPPER_CASE.`,
-                {}
-              ));
+            if (
+              !this.patterns.camelCase.test(name) &&
+              !this.patterns.UPPER_CASE.test(name) &&
+              !this.patterns.PascalCase.test(name)
+            ) {
+              context.report(
+                this.createIssue(
+                  decl.name,
+                  context.sourceFile,
+                  `La constante '${name}' devrait être en camelCase ou UPPER_CASE.`,
+                  {},
+                ),
+              );
             }
           }
         }
@@ -464,12 +564,11 @@ export class NamingConventionsRule extends BaseRule {
       }
 
       if (name && !this.patterns.PascalCase.test(name)) {
-        context.report(this.createIssue(node, context.sourceFile,
-          `Le composant React '${name}' devrait être en PascalCase.`,
-          {
+        context.report(
+          this.createIssue(node, context.sourceFile, `Le composant React '${name}' devrait être en PascalCase.`, {
             severity: 'warning',
-          }
-        ));
+          }),
+        );
       }
     }
   }
@@ -481,9 +580,7 @@ export class NamingConventionsRule extends BaseRule {
   }
 
   private toPascalCase(str: string): string {
-    return str
-      .replace(/[-_](.)/g, (_, c) => c.toUpperCase())
-      .replace(/^(.)/, (_, c) => c.toUpperCase());
+    return str.replace(/[-_](.)/g, (_, c) => c.toUpperCase()).replace(/^(.)/, (_, c) => c.toUpperCase());
   }
 
   protected getExamples(): RuleExample[] {
@@ -498,9 +595,11 @@ export class NamingConventionsRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// MAX FILE LENGTH RULE
-// ============================================================================
+/*
+ * ============================================================================
+ * MAX FILE LENGTH RULE
+ * ============================================================================
+ */
 
 /**
  * Limiter la longueur des fichiers
@@ -517,10 +616,14 @@ export class MaxFileLengthRule extends BaseRule {
   }
 
   analyze(node: ts.Node, context: RuleContext): void {
-    if (!this.isEnabled()) return;
+    if (!this.isEnabled()) {
+      return;
+    }
 
     // Only analyze at source file level
-    if (!ts.isSourceFile(node)) return;
+    if (!ts.isSourceFile(node)) {
+      return;
+    }
 
     const lineCount = context.sourceFile.getLineStarts().length;
 
@@ -553,9 +656,11 @@ export class MaxFileLengthRule extends BaseRule {
   }
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
+/*
+ * ============================================================================
+ * EXPORTS
+ * ============================================================================
+ */
 
 export const MAINTAINABILITY_RULES = [
   NoAnyRule,

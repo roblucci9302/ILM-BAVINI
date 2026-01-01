@@ -1,13 +1,12 @@
 import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
-import { useChat } from 'ai/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useEffect, useRef, useState, useCallback } from 'react';
 import { cssTransition, toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from '~/components/ui/ErrorBoundary';
 import { AgentChatIntegration } from '~/components/agent';
-import { useMessageParser, usePromptEnhancer, useShortcuts, useSnapScroll, useAgentChat } from '~/lib/hooks';
+import { useMessageParser, usePromptEnhancer, useShortcuts, useSnapScroll } from '~/lib/hooks';
 import { useChatHistory } from '~/lib/persistence';
 import { chatStore } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -16,6 +15,8 @@ import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
 import { BaseChat } from './BaseChat';
 import { multiAgentEnabledStore } from './MultiAgentToggle';
+import { StreamingMessageParser } from '~/lib/runtime/message-parser';
+import { updateAgentStatus } from '~/lib/stores/agents';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -200,69 +201,81 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const [animationScope, animate] = useAnimate();
 
-  // State for managing messages when using agent mode
-  const [agentMessages, setAgentMessages] = useState<Message[]>(initialMessages);
-  const [agentStreaming, setAgentStreaming] = useState('');
+  // ============================================================================
+  // ÉTAT PARTAGÉ UNIQUE - Messages unifiés pour les deux modes
+  // ============================================================================
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [currentAgent, setCurrentAgent] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const messageIdRef = useRef<string>('');
 
-  const { messages: chatMessages, isLoading: chatLoading, input, handleInputChange, setInput, stop, append } = useChat({
-    api: '/api/chat',
-    body: {
-      mode,
-      continuationContext,
-      multiAgent: false, // Standard mode always uses /api/chat without multi-agent flag
+  // Message parser pour le streaming des artifacts
+  const messageParser = useRef(new StreamingMessageParser({
+    callbacks: {
+      onArtifactOpen: (data) => {
+        logger.info('Artifact opened:', data.id);
+        workbenchStore.showWorkbench.set(true);
+        workbenchStore.addArtifact(data);
+      },
+      onArtifactClose: (data) => {
+        logger.info('Artifact closed:', data.id);
+        workbenchStore.updateArtifact(data, { closed: true });
+      },
+      onActionOpen: (data) => {
+        if (data.action.type !== 'shell') {
+          workbenchStore.addAction(data);
+        }
+      },
+      onActionClose: (data) => {
+        if (data.action.type === 'shell') {
+          workbenchStore.addAction(data);
+        }
+        workbenchStore.runAction(data);
+      },
     },
-    onError: (error) => {
-      logger.error('Request failed\n\n', error);
-      toast.error('Une erreur est survenue lors du traitement de votre demande');
-    },
-    onFinish: () => {
-      logger.debug('Finished streaming');
-      setContinuationContext(null);
-    },
-    initialMessages,
-  });
+  })).current;
 
-  // Agent chat hook for multi-agent mode
-  const {
-    sendMessage: sendAgentMessage,
-    streamingContent,
-    isProcessing: agentProcessing,
-    currentAgent,
-    abort: abortAgent,
-  } = useAgentChat({
-    onStart: () => {
-      logger.info('Multi-agent processing started');
-    },
-    onFinish: (result) => {
-      logger.info('Multi-agent processing finished', { success: result.success });
-      if (result.success && result.content) {
-        // Add the agent response to messages
-        const assistantMessage: Message = {
-          id: `agent-${Date.now()}`,
-          role: 'assistant',
-          content: result.content,
-        };
-        setAgentMessages(prev => [...prev, assistantMessage]);
-        setAgentStreaming('');
+  // Handle input change
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  }, []);
 
-        // Store in history
-        storeMessageHistory([...agentMessages, assistantMessage]).catch((error) =>
-          toast.error(error.message)
-        );
+  // Stop/abort function
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setStreamingContent('');
+    if (multiAgentEnabled) {
+      updateAgentStatus('orchestrator', 'idle');
+    }
+  }, [multiAgentEnabled]);
+
+  // Get project files for context
+  const getProjectFiles = useCallback(() => {
+    const files: Array<{ path: string; content?: string }> = [];
+    try {
+      const workbenchFiles = workbenchStore.files.get();
+      if (workbenchFiles && typeof workbenchFiles === 'object') {
+        for (const [path, fileData] of Object.entries(workbenchFiles)) {
+          if (fileData && typeof fileData === 'object' && 'content' in fileData) {
+            files.push({
+              path,
+              content: (fileData as { content: string }).content,
+            });
+          }
+        }
       }
-    },
-    onError: (error) => {
-      logger.error('Multi-agent error:', error);
-      toast.error('Erreur du système multi-agent: ' + error.message);
-    },
-    onStream: (text) => {
-      setAgentStreaming(text);
-    },
-  });
-
-  // Use the appropriate messages and loading state based on mode
-  const messages = multiAgentEnabled ? agentMessages : chatMessages;
-  const isLoading = multiAgentEnabled ? agentProcessing : chatLoading;
+    } catch (error) {
+      logger.warn('Could not get files from workbench:', error);
+    }
+    return files;
+  }, []);
 
   const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
   const { parsedMessages, parseMessages } = useMessageParser();
@@ -291,15 +304,11 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     }
   };
 
-  const abort = () => {
-    if (multiAgentEnabled) {
-      abortAgent();
-    } else {
-      stop();
-    }
+  const abort = useCallback(() => {
+    stop();
     chatStore.setKey('aborted', true);
     workbenchStore.abortAllActions();
-  };
+  }, [stop]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -329,7 +338,10 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     setChatStarted(true);
   };
 
-  const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
+  // ============================================================================
+  // ENVOI UNIFIÉ - Une seule fonction pour les deux modes
+  // ============================================================================
+  const sendMessage = useCallback(async (_event: React.UIEvent, messageInput?: string) => {
     const _input = messageInput || input;
 
     // allow sending if there's text OR files
@@ -337,25 +349,16 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
       return;
     }
 
-    /**
-     * @note (delm) Usually saving files shouldn't take long but it may take longer if there
-     * many unsaved files. In that case we need to block user input and show an indicator
-     * of some kind so the user is aware that something is happening. But I consider the
-     * happy case to be no unsaved files and I would expect users to save their changes
-     * before they send another message.
-     */
     await workbenchStore.saveAllFiles();
-
     const fileModifications = workbenchStore.getFileModifications();
 
     chatStore.setKey('aborted', false);
-
     runAnimation();
 
     // build the message content
     let messageContent = _input;
 
-    // Détecter les demandes de continuation et définir le contexte (sans modifier le message affiché)
+    // Détecter les demandes de continuation
     if (isContinuationRequest(_input)) {
       const { incomplete, lastContent } = isLastResponseIncomplete(messages);
       if (incomplete || lastContent) {
@@ -372,35 +375,37 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
       workbenchStore.resetAllFileModifications();
     }
 
-    // if there are selected files, convert them and create multimodal message
+    // Add user message to the unified state
+    const userMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: messageContent,
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    // Handle file uploads (images)
     if (selectedFiles.length > 0) {
       try {
-        // convert all files to base64 data URLs
         const imageDataUrls = await Promise.all(selectedFiles.map((filePreview) => fileToDataURL(filePreview.file)));
-
-        // create multimodal content array
         const contentParts: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = [];
 
-        // add images first
         imageDataUrls.forEach((dataUrl) => {
           contentParts.push({ type: 'image', image: dataUrl });
         });
 
-        // add text if present
         if (messageContent.length > 0) {
           contentParts.push({ type: 'text', text: messageContent });
         } else {
-          // if no text, add a default message
           contentParts.push({ type: 'text', text: 'Voici une image de référence pour mon projet.' });
         }
 
-        // send multimodal message
-        append({
-          role: 'user',
-          content: contentParts as unknown as string, // type cast needed for AI SDK compatibility
-        });
+        // Update user message with multimodal content
+        setMessages(prev => prev.map(m =>
+          m.id === userMessage.id
+            ? { ...m, content: contentParts as unknown as string }
+            : m
+        ));
 
-        // clear selected files and revoke URLs
         selectedFiles.forEach((filePreview) => {
           URL.revokeObjectURL(filePreview.preview);
         });
@@ -408,38 +413,158 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
       } catch (error) {
         logger.error('Error converting files to base64:', error);
         toast.error('Erreur lors du traitement des images');
-
         return;
-      }
-    } else {
-      // no files, send text-only message
-      if (multiAgentEnabled) {
-        // Add user message to agent messages first
-        const userMessage: Message = {
-          id: `user-${Date.now()}`,
-          role: 'user',
-          content: messageContent,
-        };
-        setAgentMessages(prev => [...prev, userMessage]);
-
-        // Send via multi-agent system
-        logger.info('Sending message via multi-agent system');
-        sendAgentMessage(messageContent, {
-          mode,
-          continuationContext,
-        });
-      } else {
-        // Standard mode - use useChat's append
-        append({ role: 'user', content: messageContent });
       }
     }
 
+    // Clear input
     setInput('');
-
     resetEnhancer();
-
     textareaRef.current?.blur();
-  };
+
+    // ============================================================================
+    // STREAMING - API différente selon le mode, mais même état de messages
+    // ============================================================================
+    setIsLoading(true);
+    setStreamingContent('');
+    messageIdRef.current = `stream-${Date.now()}`;
+    abortControllerRef.current = new AbortController();
+
+    const apiUrl = multiAgentEnabled ? '/api/agent' : '/api/chat';
+    const messagesForApi = messages.map(msg => ({
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+    }));
+    // Add the new user message
+    messagesForApi.push({
+      role: 'user',
+      content: messageContent,
+    });
+
+    if (multiAgentEnabled) {
+      updateAgentStatus('orchestrator', 'thinking');
+      logger.info(`Sending to ${apiUrl} with ${messagesForApi.length} messages (multi-agent mode)`);
+    } else {
+      logger.info(`Sending to ${apiUrl} with ${messagesForApi.length} messages (normal mode)`);
+    }
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: messagesForApi,
+          files: getProjectFiles(),
+          mode,
+          context: { continuationContext },
+          controlMode: 'strict',
+          multiAgent: multiAgentEnabled,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let parsedContent = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+
+          if (multiAgentEnabled) {
+            // Parse agent response format (JSON lines)
+            const lines = chunk.split('\n').filter(Boolean);
+            for (const line of lines) {
+              try {
+                const parsed = JSON.parse(line);
+                if (parsed.type === 'text') {
+                  fullContent += parsed.content;
+                  const newParsed = messageParser.parse(messageIdRef.current, fullContent);
+                  parsedContent += newParsed;
+                  setStreamingContent(parsedContent);
+                } else if (parsed.type === 'agent_status') {
+                  setCurrentAgent(parsed.agent);
+                  updateAgentStatus(parsed.agent, parsed.status);
+                }
+              } catch {
+                fullContent += line;
+                const newParsed = messageParser.parse(messageIdRef.current, fullContent);
+                parsedContent += newParsed;
+                setStreamingContent(parsedContent);
+              }
+            }
+          } else {
+            // Parse AI SDK format (0:"text"\n)
+            const lines = chunk.split('\n').filter(Boolean);
+            for (const line of lines) {
+              const match = line.match(/^([0-9a-z]):(.+)$/i);
+              if (match) {
+                const [, type, data] = match;
+                if (type === '0') {
+                  try {
+                    const content = JSON.parse(data);
+                    fullContent += content;
+                    const newParsed = messageParser.parse(messageIdRef.current, fullContent);
+                    parsedContent += newParsed;
+                    setStreamingContent(parsedContent);
+                  } catch {
+                    fullContent += data;
+                    const newParsed = messageParser.parse(messageIdRef.current, fullContent);
+                    parsedContent += newParsed;
+                    setStreamingContent(parsedContent);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Add assistant message to unified state
+      const assistantMessage: Message = {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: fullContent,
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setStreamingContent('');
+
+      // Store in history
+      storeMessageHistory([...messages, userMessage, assistantMessage]).catch((error) =>
+        toast.error(error.message)
+      );
+
+      if (multiAgentEnabled) {
+        updateAgentStatus('orchestrator', 'idle');
+      }
+
+      setContinuationContext(null);
+      logger.debug('Finished streaming');
+
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.info('Request aborted');
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Request failed:', errorMessage);
+        toast.error('Une erreur est survenue lors du traitement de votre demande');
+      }
+      if (multiAgentEnabled) {
+        updateAgentStatus('orchestrator', 'idle');
+      }
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  }, [input, isLoading, selectedFiles, messages, multiAgentEnabled, mode, getProjectFiles, storeMessageHistory, resetEnhancer]);
 
   const [messageRef, scrollRef] = useSnapScroll();
 
@@ -549,12 +674,12 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
             };
           });
 
-          // If multi-agent is streaming, add streaming message
-          if (multiAgentEnabled && agentStreaming && agentProcessing) {
+          // If streaming, add streaming message
+          if (isLoading && streamingContent) {
             mappedMessages.push({
               id: 'streaming',
               role: 'assistant' as const,
-              content: agentStreaming + (currentAgent ? `\n\n_[${currentAgent}]_` : ''),
+              content: streamingContent + (multiAgentEnabled && currentAgent ? `\n\n_[${currentAgent}]_` : ''),
             });
           }
 

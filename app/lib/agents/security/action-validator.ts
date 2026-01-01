@@ -46,14 +46,22 @@
 import { checkCommand, type CommandCheckResult, type CommandAuthorizationLevel } from './command-whitelist';
 import type { AgentType } from '../types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+/*
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
 
 /**
  * Types d'actions possibles
  */
-export type ActionType = 'file_create' | 'file_modify' | 'file_delete' | 'shell_command' | 'directory_create' | 'file_move';
+export type ActionType =
+  | 'file_create'
+  | 'file_modify'
+  | 'file_delete'
+  | 'shell_command'
+  | 'directory_create'
+  | 'file_move';
 
 /**
  * Statut de validation d'une action
@@ -66,20 +74,28 @@ export type ValidationStatus = 'pending' | 'approved' | 'rejected' | 'auto_appro
 export interface ProposedAction {
   /** ID unique de l'action */
   id: string;
+
   /** Type d'action */
   type: ActionType;
+
   /** Agent qui propose l'action */
   agent: AgentType;
+
   /** Description courte */
   description: string;
+
   /** Détails de l'action */
   details: ActionDetails;
+
   /** Statut de validation */
   status: ValidationStatus;
+
   /** Timestamp de création */
   createdAt: Date;
+
   /** Timestamp de validation (si applicable) */
   validatedAt?: Date;
+
   /** Raison du rejet (si applicable) */
   rejectionReason?: string;
 }
@@ -144,12 +160,16 @@ export interface FileMoveDetails {
 export interface ValidationResult {
   /** L'action est-elle valide ? */
   valid: boolean;
+
   /** Nécessite-t-elle une approbation ? */
   requiresApproval: boolean;
+
   /** Niveau d'autorisation */
   authorizationLevel: CommandAuthorizationLevel | 'requires_approval';
+
   /** Messages d'erreur ou d'avertissement */
   messages: string[];
+
   /** Suggestions pour l'utilisateur */
   suggestions?: string[];
 }
@@ -160,21 +180,28 @@ export interface ValidationResult {
 export interface PendingActionBatch {
   /** ID unique du batch */
   id: string;
+
   /** Agent source */
   agent: AgentType;
+
   /** Actions dans ce batch */
   actions: ProposedAction[];
+
   /** Description globale */
   description: string;
+
   /** Timestamp de création */
   createdAt: Date;
+
   /** Statut global */
   status: 'pending' | 'approved' | 'partially_approved' | 'rejected';
 }
 
-// ============================================================================
-// VALIDATION
-// ============================================================================
+/*
+ * ============================================================================
+ * VALIDATION
+ * ============================================================================
+ */
 
 /**
  * Valide une action proposée par un agent
@@ -276,14 +303,7 @@ function validateFileCreate(details: FileCreateDetails, strictMode: boolean): Va
   }
 
   // Vérifier les fichiers sensibles
-  const sensitivePatterns = [
-    /\.env$/i,
-    /credentials/i,
-    /secrets?/i,
-    /\.pem$/i,
-    /\.key$/i,
-    /password/i,
-  ];
+  const sensitivePatterns = [/\.env$/i, /credentials/i, /secrets?/i, /\.pem$/i, /\.key$/i, /password/i];
 
   for (const pattern of sensitivePatterns) {
     if (pattern.test(details.path)) {
@@ -298,7 +318,7 @@ function validateFileCreate(details: FileCreateDetails, strictMode: boolean): Va
     requiresApproval: strictMode,
     authorizationLevel: 'requires_approval',
     messages,
-    suggestions: messages.length > 0 ? ['Vérifiez le contenu avant d\'approuver'] : undefined,
+    suggestions: messages.length > 0 ? ["Vérifiez le contenu avant d'approuver"] : undefined,
   };
 }
 
@@ -337,7 +357,7 @@ function validateFileModify(details: FileModifyDetails, strictMode: boolean): Va
     requiresApproval: strictMode,
     authorizationLevel: 'requires_approval',
     messages,
-    suggestions: messages.length > 0 ? ['Vérifiez le diff avant d\'approuver'] : undefined,
+    suggestions: messages.length > 0 ? ["Vérifiez le diff avant d'approuver"] : undefined,
   };
 }
 
@@ -360,7 +380,7 @@ function validateFileDelete(details: FileDeleteDetails, strictMode: boolean): Va
     requiresApproval: true, // Toujours, même en mode non-strict
     authorizationLevel: 'requires_approval',
     messages: ['Suppression de fichier - action irréversible'],
-    suggestions: ['Assurez-vous que ce fichier n\'est plus nécessaire'],
+    suggestions: ["Assurez-vous que ce fichier n'est plus nécessaire"],
   };
 }
 
@@ -396,9 +416,8 @@ function validateShellCommand(details: ShellCommandDetails, strictMode: boolean)
     requiresApproval: true,
     authorizationLevel: commandCheck.level === 'allowed' ? 'requires_approval' : commandCheck.level,
     messages: [commandCheck.message],
-    suggestions: commandCheck.level === 'approval_required'
-      ? ['Cette commande peut avoir des effets importants']
-      : undefined,
+    suggestions:
+      commandCheck.level === 'approval_required' ? ['Cette commande peut avoir des effets importants'] : undefined,
   };
 }
 
@@ -462,9 +481,11 @@ function validateFileMove(details: FileMoveDetails, strictMode: boolean): Valida
   };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+/*
+ * ============================================================================
+ * HELPERS
+ * ============================================================================
+ */
 
 /**
  * Génère un ID unique pour une action
@@ -508,7 +529,7 @@ export function createProposedAction(
   type: ActionType,
   agent: AgentType,
   description: string,
-  details: ActionDetails
+  details: ActionDetails,
 ): ProposedAction {
   return {
     id: generateActionId(),
@@ -527,7 +548,7 @@ export function createProposedAction(
 export function createActionBatch(
   agent: AgentType,
   actions: ProposedAction[],
-  description: string
+  description: string,
 ): PendingActionBatch {
   return {
     id: generateBatchId(),

@@ -5,9 +5,11 @@
 
 import type { ToolDefinition, ToolExecutionResult } from '../types';
 
-// ============================================================================
-// DÉFINITIONS DES OUTILS
-// ============================================================================
+/*
+ * ============================================================================
+ * DÉFINITIONS DES OUTILS
+ * ============================================================================
+ */
 
 /**
  * Outil pour lancer des tests
@@ -76,8 +78,7 @@ export const AnalyzeTestResultsTool: ToolDefinition = {
 export const CoverageReportTool: ToolDefinition = {
   name: 'coverage_report',
   description:
-    'Obtenir le rapport de couverture de code. ' +
-    'Affiche les fichiers non couverts et les zones à améliorer.',
+    'Obtenir le rapport de couverture de code. ' + 'Affiche les fichiers non couverts et les zones à améliorer.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -110,7 +111,7 @@ export const RunSingleTestTool: ToolDefinition = {
       },
       testName: {
         type: 'string',
-        description: "Nom du test spécifique (optionnel, sinon tous les tests du fichier)",
+        description: 'Nom du test spécifique (optionnel, sinon tous les tests du fichier)',
       },
       verbose: {
         type: 'boolean',
@@ -143,9 +144,11 @@ export const ListTestsTool: ToolDefinition = {
   },
 };
 
-// ============================================================================
-// LISTE DES OUTILS DE TEST
-// ============================================================================
+/*
+ * ============================================================================
+ * LISTE DES OUTILS DE TEST
+ * ============================================================================
+ */
 
 export const TEST_TOOLS: ToolDefinition[] = [
   RunTestsTool,
@@ -155,9 +158,11 @@ export const TEST_TOOLS: ToolDefinition[] = [
   ListTestsTool,
 ];
 
-// ============================================================================
-// INTERFACE TEST RUNNER
-// ============================================================================
+/*
+ * ============================================================================
+ * INTERFACE TEST RUNNER
+ * ============================================================================
+ */
 
 /**
  * Résultat d'un test individuel
@@ -211,12 +216,7 @@ export interface CoverageReport {
  */
 export interface TestRunner {
   /** Lancer des tests */
-  runTests(options?: {
-    pattern?: string;
-    testName?: string;
-    coverage?: boolean;
-    timeout?: number;
-  }): Promise<{
+  runTests(options?: { pattern?: string; testName?: string; coverage?: boolean; timeout?: number }): Promise<{
     success: boolean;
     output: string;
     suites: TestSuiteResult[];
@@ -229,7 +229,7 @@ export interface TestRunner {
   /** Lancer un seul fichier de test */
   runSingleTest(
     file: string,
-    testName?: string
+    testName?: string,
   ): Promise<{
     success: boolean;
     output: string;
@@ -251,15 +251,17 @@ export interface TestRunner {
   detectFramework(): Promise<'vitest' | 'jest' | 'mocha' | 'unknown'>;
 }
 
-// ============================================================================
-// HANDLERS D'EXÉCUTION
-// ============================================================================
+/*
+ * ============================================================================
+ * HANDLERS D'EXÉCUTION
+ * ============================================================================
+ */
 
 /**
  * Créer les handlers pour les outils de test
  */
 export function createTestToolHandlers(
-  runner: TestRunner
+  runner: TestRunner,
 ): Record<string, (input: Record<string, unknown>) => Promise<ToolExecutionResult>> {
   return {
     /**
@@ -429,16 +431,18 @@ export function createTestToolHandlers(
   };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+/*
+ * ============================================================================
+ * HELPERS
+ * ============================================================================
+ */
 
 /**
  * Parser la sortie de tests pour extraire les informations
  */
 function parseTestOutput(
   output: string,
-  _format: string
+  _format: string,
 ): {
   totalTests: number;
   passed: number;
@@ -461,6 +465,7 @@ function parseTestOutput(
 
   // Try vitest pattern
   const vitestMatch = output.match(vitestPattern);
+
   if (vitestMatch) {
     passed = parseInt(vitestMatch[1], 10);
     failed = parseInt(vitestMatch[2], 10);
@@ -469,6 +474,7 @@ function parseTestOutput(
 
   // Try jest pattern
   const jestMatch = output.match(jestPattern);
+
   if (jestMatch) {
     passed = parseInt(jestMatch[1], 10);
     failed = parseInt(jestMatch[2], 10);
@@ -480,6 +486,7 @@ function parseTestOutput(
   const errorPattern = /Error:\s*(.+?)(?:\n|$)/g;
 
   let match: RegExpExecArray | null;
+
   while ((match = failedTestPattern.exec(output)) !== null) {
     failedTests.push({
       name: match[1].trim(),
@@ -499,12 +506,15 @@ function parseTestOutput(
   if (output.includes('TypeError')) {
     patterns.push('Type errors detected - check type definitions');
   }
+
   if (output.includes('ReferenceError')) {
     patterns.push('Reference errors - check imports and variable declarations');
   }
+
   if (output.includes('timeout') || output.includes('Timeout')) {
     patterns.push('Timeout issues - consider increasing timeout or optimizing async code');
   }
+
   if (output.includes('mock') || output.includes('Mock')) {
     patterns.push('Mock-related issues - verify mock setup');
   }
@@ -556,9 +566,7 @@ function formatDetailedCoverage(report: CoverageReport, threshold: number): stri
   const fileDetails = lowCoverageFiles
     .map((f) => {
       const uncovered =
-        f.uncoveredLines.length > 5
-          ? f.uncoveredLines.slice(0, 5).join(', ') + '...'
-          : f.uncoveredLines.join(', ');
+        f.uncoveredLines.length > 5 ? f.uncoveredLines.slice(0, 5).join(', ') + '...' : f.uncoveredLines.join(', ');
       return `${f.path}: ${f.percentage.toFixed(1)}% (uncovered: ${uncovered})`;
     })
     .join('\n');
@@ -566,27 +574,29 @@ function formatDetailedCoverage(report: CoverageReport, threshold: number): stri
   return [summary, '', 'Files below threshold:', '─────────────────────', fileDetails].join('\n');
 }
 
-// ============================================================================
-// MOCK TEST RUNNER (POUR LES TESTS)
-// ============================================================================
+/*
+ * ============================================================================
+ * MOCK TEST RUNNER (POUR LES TESTS)
+ * ============================================================================
+ */
 
 /**
  * Créer un mock TestRunner pour les tests
  */
-export function createMockTestRunner(options: {
-  testFiles?: Array<{ file: string; tests: string[] }>;
-  testResults?: {
-    success: boolean;
-    output: string;
-    passed: number;
-    failed: number;
-  };
-  coverageReport?: CoverageReport | null;
-  framework?: 'vitest' | 'jest' | 'mocha';
-} = {}): TestRunner {
-  const defaultTestFiles = [
-    { file: 'tests/example.spec.ts', tests: ['should work', 'should handle errors'] },
-  ];
+export function createMockTestRunner(
+  options: {
+    testFiles?: Array<{ file: string; tests: string[] }>;
+    testResults?: {
+      success: boolean;
+      output: string;
+      passed: number;
+      failed: number;
+    };
+    coverageReport?: CoverageReport | null;
+    framework?: 'vitest' | 'jest' | 'mocha';
+  } = {},
+): TestRunner {
+  const defaultTestFiles = [{ file: 'tests/example.spec.ts', tests: ['should work', 'should handle errors'] }];
 
   const defaultResults = {
     success: true,
@@ -662,9 +672,11 @@ export function createMockTestRunner(options: {
 
     async listTests(pattern) {
       const files = options.testFiles || defaultTestFiles;
+
       if (pattern) {
         return files.filter((f) => f.file.includes(pattern));
       }
+
       return files;
     },
 

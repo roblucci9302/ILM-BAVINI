@@ -49,6 +49,7 @@ import type {
   Artifact,
   ToolExecutionResult,
 } from '../types';
+import { getModelForAgent } from '../types';
 import { createScopedLogger } from '~/utils/logger';
 import {
   ParallelExecutor,
@@ -59,9 +60,11 @@ import {
 
 const logger = createScopedLogger('Orchestrator');
 
-// ============================================================================
-// OUTILS DE L'ORCHESTRATEUR
-// ============================================================================
+/*
+ * ============================================================================
+ * OUTILS DE L'ORCHESTRATEUR
+ * ============================================================================
+ */
 
 /**
  * Outil pour déléguer une tâche à un agent
@@ -70,22 +73,22 @@ const DelegateToAgentTool: ToolDefinition = {
   name: 'delegate_to_agent',
   description:
     'Déléguer une tâche à un agent spécialisé. ' +
-    'Utilise cet outil quand une tâche correspond aux capacités d\'un agent.',
+    "Utilise cet outil quand une tâche correspond aux capacités d'un agent.",
   inputSchema: {
     type: 'object',
     properties: {
       agent: {
         type: 'string',
-        description: 'Nom de l\'agent cible (explore, coder, builder, tester, deployer)',
+        description: "Nom de l'agent cible (explore, coder, builder, tester, deployer)",
         enum: ['explore', 'coder', 'builder', 'tester', 'deployer'],
       },
       task: {
         type: 'string',
-        description: 'Description précise de la tâche pour l\'agent',
+        description: "Description précise de la tâche pour l'agent",
       },
       context: {
         type: 'object',
-        description: 'Contexte additionnel pour l\'agent (fichiers, infos, etc.)',
+        description: "Contexte additionnel pour l'agent (fichiers, infos, etc.)",
       },
     },
     required: ['agent', 'task'],
@@ -98,8 +101,7 @@ const DelegateToAgentTool: ToolDefinition = {
 const CreateSubtasksTool: ToolDefinition = {
   name: 'create_subtasks',
   description:
-    'Décomposer une tâche complexe en sous-tâches. ' +
-    'Utilise quand la tâche nécessite plusieurs agents ou étapes.',
+    'Décomposer une tâche complexe en sous-tâches. ' + 'Utilise quand la tâche nécessite plusieurs agents ou étapes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -139,16 +141,18 @@ const GetAgentStatusTool: ToolDefinition = {
     properties: {
       agent: {
         type: 'string',
-        description: 'Nom de l\'agent (optionnel, tous si omis)',
+        description: "Nom de l'agent (optionnel, tous si omis)",
       },
     },
     required: [],
   },
 };
 
-// ============================================================================
-// ORCHESTRATOR
-// ============================================================================
+/*
+ * ============================================================================
+ * ORCHESTRATOR
+ * ============================================================================
+ */
 
 /**
  * Agent orchestrateur principal du système multi-agent
@@ -194,7 +198,7 @@ export class Orchestrator extends BaseAgent {
       description:
         'Agent principal qui coordonne les autres agents. ' +
         'Analyse les demandes, décompose les tâches complexes, et délègue aux agents spécialisés.',
-      model: 'claude-sonnet-4-5-20250929',
+      model: getModelForAgent('orchestrator'), // Opus 4.5 pour le raisonnement stratégique
       tools: [DelegateToAgentTool, CreateSubtasksTool, GetAgentStatusTool],
       systemPrompt: ORCHESTRATOR_SYSTEM_PROMPT,
       maxTokens: 8192,
@@ -215,23 +219,27 @@ export class Orchestrator extends BaseAgent {
   private registerOrchestratorTools(): void {
     const orchestratorHandlers: Record<string, ToolHandler> = {
       delegate_to_agent: async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
-        const result = await this.handleDelegateToAgent(input as {
-          agent: AgentType;
-          task: string;
-          context?: Record<string, unknown>;
-        });
+        const result = await this.handleDelegateToAgent(
+          input as {
+            agent: AgentType;
+            task: string;
+            context?: Record<string, unknown>;
+          },
+        );
         return { success: true, output: result };
       },
 
       create_subtasks: async (input: Record<string, unknown>): Promise<ToolExecutionResult> => {
-        const result = await this.handleCreateSubtasks(input as {
-          tasks: Array<{
-            agent: AgentType;
-            description: string;
-            dependsOn?: number[];
-          }>;
-          reasoning: string;
-        });
+        const result = await this.handleCreateSubtasks(
+          input as {
+            tasks: Array<{
+              agent: AgentType;
+              description: string;
+              dependsOn?: number[];
+            }>;
+            reasoning: string;
+          },
+        );
         return { success: true, output: result };
       },
 
@@ -244,7 +252,7 @@ export class Orchestrator extends BaseAgent {
     this.registerTools(
       [DelegateToAgentTool, CreateSubtasksTool, GetAgentStatusTool],
       orchestratorHandlers,
-      'orchestration'
+      'orchestration',
     );
 
     this.log('info', 'Orchestrator tools registered in ToolRegistry');
@@ -331,9 +339,11 @@ export class Orchestrator extends BaseAgent {
 
   // executeToolHandler est hérité de BaseAgent et utilise le ToolRegistry
 
-  // ============================================================================
-  // MÉTHODES PRIVÉES
-  // ============================================================================
+  /*
+   * ============================================================================
+   * MÉTHODES PRIVÉES
+   * ============================================================================
+   */
 
   /**
    * Analyser la demande et décider de l'action
@@ -362,7 +372,7 @@ export class Orchestrator extends BaseAgent {
           `Description: ${a.description}\n` +
           `Capacités: ${a.capabilities.join(', ')}\n` +
           `Limites: ${a.limitations.join(', ')}\n` +
-          `Cas d'usage: ${a.useCases.join(', ')}`
+          `Cas d'usage: ${a.useCases.join(', ')}`,
       )
       .join('\n\n');
 
@@ -428,6 +438,7 @@ Choisis la meilleure approche.`;
 
     // Si pas d'outil appelé, c'est une réponse directe
     let textContent = '';
+
     for (const block of response.content) {
       if (block.type === 'text') {
         textContent += block.text;
@@ -444,10 +455,7 @@ Choisis la meilleure approche.`;
   /**
    * Exécuter une délégation à un agent
    */
-  private async executeDelegation(
-    decision: OrchestrationDecision,
-    originalTask: Task
-  ): Promise<TaskResult> {
+  private async executeDelegation(decision: OrchestrationDecision, originalTask: Task): Promise<TaskResult> {
     if (!decision.targetAgent) {
       throw new Error('No target agent specified for delegation');
     }
@@ -477,7 +485,7 @@ Choisis la meilleure approche.`;
             code: 'AGENT_BUSY',
             message: `Agent ${decision.targetAgent} is busy`,
             recoverable: true,
-            suggestion: 'Attendre que l\'agent soit disponible',
+            suggestion: "Attendre que l'agent soit disponible",
           },
         ],
       };
@@ -519,10 +527,7 @@ Choisis la meilleure approche.`;
   /**
    * Exécuter une décomposition en sous-tâches avec exécution parallèle
    */
-  private async executeDecomposition(
-    decision: OrchestrationDecision,
-    originalTask: Task
-  ): Promise<TaskResult> {
+  private async executeDecomposition(decision: OrchestrationDecision, originalTask: Task): Promise<TaskResult> {
     if (!decision.subTasks || decision.subTasks.length === 0) {
       return {
         success: false,
@@ -559,6 +564,7 @@ Choisis la meilleure approche.`;
         },
         createdAt: new Date(),
       },
+
       // Convertir les indices en IDs de dépendances
       dependencies: subTaskDef.dependencies?.map((idx) => `${originalTask.id}-step-${idx}`),
     }));
@@ -663,8 +669,10 @@ Choisis la meilleure approche.`;
     task: string;
     context?: Record<string, unknown>;
   }): Promise<{ delegated: boolean; agent: string; task: string }> {
-    // Ce handler est utilisé par le LLM pour signaler sa décision
-    // L'exécution réelle se fait dans executeDelegation
+    /*
+     * Ce handler est utilisé par le LLM pour signaler sa décision
+     * L'exécution réelle se fait dans executeDelegation
+     */
     return {
       delegated: true,
       agent: input.agent,
@@ -693,14 +701,14 @@ Choisis la meilleure approche.`;
   /**
    * Handler: Obtenir le statut des agents
    */
-  private async handleGetAgentStatus(input: {
-    agent?: AgentType;
-  }): Promise<unknown> {
+  private async handleGetAgentStatus(input: { agent?: AgentType }): Promise<unknown> {
     if (input.agent) {
       const agent = this.registry.get(input.agent);
+
       if (!agent) {
         return { error: `Agent ${input.agent} not found` };
       }
+
       return {
         name: input.agent,
         status: agent.getStatus(),
