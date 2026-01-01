@@ -83,6 +83,9 @@ interface BaseChatProps {
   enhancePrompt?: () => void;
   onFileSelect?: () => void;
   onFileRemove?: (index: number) => void;
+  onEditMessage?: (index: number) => void;
+  onDeleteMessage?: (index: number) => void;
+  onRegenerateMessage?: (index: number) => void;
 }
 
 const CATEGORY_PROMPTS = [
@@ -116,6 +119,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       handleStop,
       onFileSelect,
       onFileRemove,
+      onEditMessage,
+      onDeleteMessage,
+      onRegenerateMessage,
     },
     ref,
   ) => {
@@ -227,6 +233,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       className="flex flex-col w-full flex-1 max-w-chat px-4 pb-6 mx-auto z-1"
                       messages={messages}
                       isStreaming={isStreaming}
+                      onEditMessage={onEditMessage}
+                      onDeleteMessage={onDeleteMessage}
+                      onRegenerateMessage={onRegenerateMessage}
                     />
                   );
                 }}

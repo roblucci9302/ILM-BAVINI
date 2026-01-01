@@ -13,6 +13,28 @@ import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
 import { Slider, type SliderOptions } from '~/components/ui/Slider';
 import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
 import { chatId } from '~/lib/persistence/useChatHistory';
+
+// Combined computed store to reduce re-renders (single subscription instead of 7)
+const workbenchState = computed(
+  [
+    workbenchStore.previews,
+    workbenchStore.showWorkbench,
+    workbenchStore.selectedFile,
+    workbenchStore.currentDocument,
+    workbenchStore.unsavedFiles,
+    workbenchStore.files,
+    workbenchStore.currentView,
+  ],
+  (previews, showWorkbench, selectedFile, currentDocument, unsavedFiles, files, currentView) => ({
+    hasPreview: previews.length > 0,
+    showWorkbench,
+    selectedFile,
+    currentDocument,
+    unsavedFiles,
+    files,
+    selectedView: currentView,
+  }),
+);
 import { useCheckpoints } from '~/lib/hooks/useCheckpoints';
 import { useAutoCheckpoint } from '~/lib/hooks/useAutoCheckpoint';
 import type { FileMap } from '~/lib/stores/files';
@@ -70,18 +92,23 @@ const workbenchVariants = {
 export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => {
   renderLogger.trace('Workbench');
 
-  const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
-  const showWorkbench = useStore(workbenchStore.showWorkbench);
-  const selectedFile = useStore(workbenchStore.selectedFile);
-  
+  // Single subscription to combined workbench state (performance optimization)
+  const {
+    hasPreview,
+    showWorkbench,
+    selectedFile,
+    currentDocument,
+    unsavedFiles,
+    files,
+    selectedView,
+  } = useStore(workbenchState);
+
+  // Separate subscription for chatId (different store)
+  const currentChatId = useStore(chatId);
+
   useEffect(() => {
     logger.debug('Workbench state changed', { showWorkbench, chatStarted, hasPreview });
   }, [showWorkbench, chatStarted, hasPreview]);
-  const currentDocument = useStore(workbenchStore.currentDocument);
-  const unsavedFiles = useStore(workbenchStore.unsavedFiles);
-  const files = useStore(workbenchStore.files);
-  const selectedView = useStore(workbenchStore.currentView);
-  const currentChatId = useStore(chatId);
 
   // Checkpoint state
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);

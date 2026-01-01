@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useAnimate } from 'framer-motion';
-import { memo, useEffect, useRef, useState, useCallback } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { cssTransition, toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from '~/components/ui/ErrorBoundary';
@@ -14,6 +14,7 @@ import { fileModificationsToHTML } from '~/utils/diff';
 import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
 import { BaseChat } from './BaseChat';
+import { EditMessageModal } from './EditMessageModal';
 import { multiAgentEnabledStore } from './MultiAgentToggle';
 import { StreamingMessageParser } from '~/lib/runtime/message-parser';
 import { updateAgentStatus } from '~/lib/stores/agents';
@@ -175,6 +176,83 @@ interface FilePreview {
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// Image compression settings
+const MAX_IMAGE_DIMENSION = 1920; // Max width/height in pixels
+const COMPRESSION_QUALITY = 0.8; // 0-1, only for JPEG/WebP
+
+/**
+ * Compresses an image file using canvas.
+ * - Resizes if larger than MAX_IMAGE_DIMENSION
+ * - Compresses JPEG/WebP to COMPRESSION_QUALITY
+ * - Returns original file for GIFs (to preserve animation)
+ */
+const compressImage = async (file: File): Promise<File> => {
+  // Don't compress GIFs (would break animation)
+  if (file.type === 'image/gif') {
+    return file;
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+          width = MAX_IMAGE_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+          height = MAX_IMAGE_DIMENSION;
+        }
+      }
+
+      // Create canvas and draw resized image
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        resolve(file); // Fallback to original
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to blob with compression
+      const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+      const quality = outputType === 'image/png' ? undefined : COMPRESSION_QUALITY;
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+
+          // Only use compressed version if it's smaller
+          if (blob.size < file.size) {
+            const compressedFile = new File([blob], file.name, {
+              type: outputType,
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file);
+          }
+        },
+        outputType,
+        quality,
+      );
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 // converts file to base64 data URL
 const fileToDataURL = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -195,6 +273,10 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
   const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
   const [continuationContext, setContinuationContext] = useState<{ artifactId: string | null } | null>(null);
+
+  // Edit message state
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [editingMessageContent, setEditingMessageContent] = useState('');
 
   const { showChat, mode } = useStore(chatStore);
   const multiAgentEnabled = useStore(multiAgentEnabledStore);
@@ -279,6 +361,30 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
   const { parsedMessages, parseMessages } = useMessageParser();
+
+  // Memoize mapped messages to prevent re-renders
+  const displayMessages = useMemo(() => {
+    const mapped = messages.map((message, i) => {
+      if (message.role === 'user') {
+        return message;
+      }
+      return {
+        ...message,
+        content: parsedMessages[i] || '',
+      };
+    });
+
+    // Add streaming message if active
+    if (isLoading && streamingContent) {
+      mapped.push({
+        id: 'streaming',
+        role: 'assistant' as const,
+        content: streamingContent + (multiAgentEnabled && currentAgent ? `\n\n_[${currentAgent}]_` : ''),
+      });
+    }
+
+    return mapped;
+  }, [messages, parsedMessages, isLoading, streamingContent, multiAgentEnabled, currentAgent]);
 
   const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
@@ -573,34 +679,48 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
 
     if (!files) {
       return;
     }
 
-    const newFiles: FilePreview[] = [];
-
-    Array.from(files).forEach((file) => {
+    // Process files in parallel with validation and compression
+    const filePromises = Array.from(files).map(async (file): Promise<FilePreview | null> => {
       // validate file type
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         toast.error(`Type de fichier non supporté: ${file.name}. Utilisez JPEG, PNG, GIF ou WebP.`);
-        return;
+        return null;
       }
 
       // validate file size
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`Fichier trop volumineux: ${file.name}. Maximum 5MB.`);
-        return;
+        return null;
       }
 
-      // create preview URL
-      const preview = URL.createObjectURL(file);
-      newFiles.push({ file, preview });
+      try {
+        // Compress image for better performance
+        const compressedFile = await compressImage(file);
+
+        // Create preview URL from compressed file
+        const preview = URL.createObjectURL(compressedFile);
+
+        return { file: compressedFile, preview };
+      } catch {
+        // Fallback to original on compression error
+        const preview = URL.createObjectURL(file);
+        return { file, preview };
+      }
     });
 
-    setSelectedFiles((prev) => [...prev, ...newFiles]);
+    const results = await Promise.all(filePromises);
+    const newFiles = results.filter((f): f is FilePreview => f !== null);
+
+    if (newFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
 
     // reset input so same file can be selected again
     event.target.value = '';
@@ -632,6 +752,84 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     };
   }, []);
 
+  // ============================================================================
+  // MESSAGE EDITING - Edit and resend from a specific point
+  // ============================================================================
+  const handleEditMessage = useCallback((index: number) => {
+    const message = messages[index];
+    if (message && message.role === 'user') {
+      const content = typeof message.content === 'string'
+        ? message.content
+        : '';
+      setEditingMessageIndex(index);
+      setEditingMessageContent(content);
+    }
+  }, [messages]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageIndex(null);
+    setEditingMessageContent('');
+  }, []);
+
+  const handleSaveEdit = useCallback(async (index: number, newContent: string) => {
+    // Close modal
+    setEditingMessageIndex(null);
+    setEditingMessageContent('');
+
+    // Truncate messages up to and including the edited message
+    // Then replace the user message with the new content and resend
+    const truncatedMessages = messages.slice(0, index);
+    setMessages(truncatedMessages);
+
+    // Wait a tick for state to update
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Send the new message (this will add it to the messages array)
+    const fakeEvent = {} as React.UIEvent;
+    await sendMessage(fakeEvent, newContent);
+  }, [messages, sendMessage]);
+
+  const handleDeleteMessage = useCallback((index: number) => {
+    // Delete message and all following messages
+    const truncatedMessages = messages.slice(0, index);
+    setMessages(truncatedMessages);
+    storeMessageHistory(truncatedMessages).catch((error) => toast.error(error.message));
+    toast.success('Message supprimé');
+  }, [messages, storeMessageHistory]);
+
+  const handleRegenerateMessage = useCallback(async (index: number) => {
+    // Find the last user message before this assistant message
+    let lastUserMessageIndex = -1;
+    for (let i = index - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserMessageIndex = i;
+        break;
+      }
+    }
+
+    if (lastUserMessageIndex === -1) {
+      toast.error('Impossible de régénérer: aucun message utilisateur trouvé');
+      return;
+    }
+
+    // Get the user message content
+    const userMessage = messages[lastUserMessageIndex];
+    const content = typeof userMessage.content === 'string'
+      ? userMessage.content
+      : '';
+
+    // Truncate to just before the assistant message
+    const truncatedMessages = messages.slice(0, lastUserMessageIndex);
+    setMessages(truncatedMessages);
+
+    // Wait a tick for state to update
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Resend the user message
+    const fakeEvent = {} as React.UIEvent;
+    await sendMessage(fakeEvent, content);
+  }, [messages, sendMessage]);
+
   return (
     <>
       {/* Hidden file input */}
@@ -662,36 +860,25 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
         handleStop={abort}
         onFileSelect={handleFileSelect}
         onFileRemove={handleFileRemove}
-        messages={(() => {
-          // Map existing messages
-          const mappedMessages = messages.map((message, i) => {
-            if (message.role === 'user') {
-              return message;
-            }
-
-            return {
-              ...message,
-              content: parsedMessages[i] || '',
-            };
-          });
-
-          // If streaming, add streaming message
-          if (isLoading && streamingContent) {
-            mappedMessages.push({
-              id: 'streaming',
-              role: 'assistant' as const,
-              content: streamingContent + (multiAgentEnabled && currentAgent ? `\n\n_[${currentAgent}]_` : ''),
-            });
-          }
-
-          return mappedMessages;
-        })()}
+        onEditMessage={handleEditMessage}
+        onDeleteMessage={handleDeleteMessage}
+        onRegenerateMessage={handleRegenerateMessage}
+        messages={displayMessages}
         enhancePrompt={() => {
           enhancePrompt(input, (input) => {
             setInput(input);
             scrollTextArea();
           });
         }}
+      />
+
+      {/* Edit Message Modal */}
+      <EditMessageModal
+        isOpen={editingMessageIndex !== null}
+        initialContent={editingMessageContent}
+        messageIndex={editingMessageIndex ?? 0}
+        onSave={handleSaveEdit}
+        onCancel={handleCancelEdit}
       />
     </>
   );

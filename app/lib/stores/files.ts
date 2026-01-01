@@ -76,6 +76,21 @@ export class FilesStore {
     return computeFileModifications(this.files.get(), this.#modifiedFiles);
   }
 
+  /**
+   * Get the original content of a file before modifications.
+   * Returns undefined if the file hasn't been modified.
+   */
+  getOriginalContent(filePath: string): string | undefined {
+    return this.#modifiedFiles.get(filePath);
+  }
+
+  /**
+   * Check if a file has been modified since the last user message.
+   */
+  isFileModified(filePath: string): boolean {
+    return this.#modifiedFiles.has(filePath);
+  }
+
   resetFileModifications() {
     this.#modifiedFiles.clear();
   }

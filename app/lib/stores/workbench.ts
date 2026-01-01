@@ -211,6 +211,20 @@ export class WorkbenchStore {
   }
 
   /**
+   * Get the original content of a file before modifications.
+   */
+  getOriginalContent(filePath: string): string | undefined {
+    return this.#filesStore.getOriginalContent(filePath);
+  }
+
+  /**
+   * Check if a file has been modified since the last user message.
+   */
+  isFileModified(filePath: string): boolean {
+    return this.#filesStore.isFileModified(filePath);
+  }
+
+  /**
    * Restore files from a checkpoint snapshot.
    * This syncs the WebContainer filesystem with the snapshot.
    */

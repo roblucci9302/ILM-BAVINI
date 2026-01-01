@@ -1,5 +1,5 @@
 import type { Message } from 'ai';
-import React, { useCallback } from 'react';
+import React from 'react';
 import { classNames } from '~/utils/classNames';
 import { AssistantMessage } from './AssistantMessage';
 import { UserMessage } from './UserMessage';
@@ -9,31 +9,13 @@ interface MessagesProps {
   className?: string;
   isStreaming?: boolean;
   messages?: Message[];
-  onEditMessage?: (index: number, newContent: string) => void;
+  onEditMessage?: (index: number) => void;
   onDeleteMessage?: (index: number) => void;
   onRegenerateMessage?: (index: number) => void;
 }
 
 export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: MessagesProps, ref) => {
   const { id, isStreaming = false, messages = [], onEditMessage, onDeleteMessage, onRegenerateMessage } = props;
-
-  // Handlers for message actions
-  const handleEditMessage = useCallback((index: number) => {
-    // For now, we'll just trigger the callback - the actual edit UI can be added later
-    const message = messages[index];
-    if (message && onEditMessage) {
-      // In a full implementation, this would open an edit modal/input
-      onEditMessage(index, typeof message.content === 'string' ? message.content : '');
-    }
-  }, [messages, onEditMessage]);
-
-  const handleDeleteMessage = useCallback((index: number) => {
-    onDeleteMessage?.(index);
-  }, [onDeleteMessage]);
-
-  const handleRegenerateMessage = useCallback((index: number) => {
-    onRegenerateMessage?.(index);
-  }, [onRegenerateMessage]);
 
   return (
     <div id={id} ref={ref} className={props.className} role="log" aria-label="Historique de la conversation" aria-live="polite">
@@ -46,7 +28,7 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
 
             return (
               <div
-                key={index}
+                key={message.id || `msg-${index}`}
                 className={classNames('flex gap-4 p-6 w-full rounded-[calc(0.75rem-1px)]', {
                   'bg-bolt-elements-messages-background': isUserMessage || !isStreaming || (isStreaming && !isLast),
                   'bg-gradient-to-b from-bolt-elements-messages-background from-30% to-transparent':
@@ -64,8 +46,8 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
                     <UserMessage
                       content={content}
                       messageIndex={index}
-                      onEdit={onEditMessage ? handleEditMessage : undefined}
-                      onDelete={onDeleteMessage ? handleDeleteMessage : undefined}
+                      onEdit={onEditMessage}
+                      onDelete={onDeleteMessage}
                     />
                   ) : (
                     <AssistantMessage
@@ -73,7 +55,7 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
                       messageIndex={index}
                       isLast={isLast}
                       isStreaming={isStreaming}
-                      onRegenerate={onRegenerateMessage ? handleRegenerateMessage : undefined}
+                      onRegenerate={onRegenerateMessage}
                     />
                   )}
                 </div>

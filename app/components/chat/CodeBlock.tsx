@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { bundledLanguages, codeToHtml, isSpecialLang, type BundledLanguage, type SpecialLanguage } from 'shiki';
 import { classNames } from '~/utils/classNames';
 import { createScopedLogger } from '~/utils/logger';
@@ -6,6 +6,9 @@ import { createScopedLogger } from '~/utils/logger';
 import styles from './CodeBlock.module.scss';
 
 const logger = createScopedLogger('CodeBlock');
+
+// Debounce delay for syntax highlighting during streaming (ms)
+const HIGHLIGHT_DEBOUNCE_MS = 150;
 
 interface CodeBlockProps {
   className?: string;
@@ -19,6 +22,8 @@ export const CodeBlock = memo(
   ({ className, code, language = 'plaintext', theme = 'dark-plus', disableCopy = false }: CodeBlockProps) => {
     const [html, setHTML] = useState<string | undefined>(undefined);
     const [copied, setCopied] = useState(false);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastCodeRef = useRef<string>('');
 
     const copyToClipboard = () => {
       if (copied) {
@@ -39,14 +44,31 @@ export const CodeBlock = memo(
         logger.warn(`Unsupported language '${language}'`);
       }
 
-      logger.trace(`Language = ${language}`);
+      // Clear any pending debounce
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      // Skip if code hasn't changed (prevents duplicate processing)
+      if (code === lastCodeRef.current) {
+        return;
+      }
 
       const processCode = async () => {
+        logger.trace(`Highlighting ${code.length} chars, lang=${language}`);
+        lastCodeRef.current = code;
         setHTML(await codeToHtml(code, { lang: language, theme }));
       };
 
-      processCode();
-    }, [code]);
+      // Debounce syntax highlighting to reduce CPU during streaming
+      debounceRef.current = setTimeout(processCode, HIGHLIGHT_DEBOUNCE_MS);
+
+      return () => {
+        if (debounceRef.current) {
+          clearTimeout(debounceRef.current);
+        }
+      };
+    }, [code, language, theme]);
 
     return (
       <div className={classNames('relative group text-left', className)}>

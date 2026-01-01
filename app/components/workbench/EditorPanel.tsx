@@ -9,6 +9,7 @@ import {
   type OnSaveCallback as OnEditorSave,
   type OnScrollCallback as OnEditorScroll,
 } from '~/components/editor/codemirror';
+import { DiffViewer } from '~/components/editor/DiffViewer';
 import { IconButton } from '~/components/ui/IconButton';
 import { PanelHeader } from '~/components/ui/PanelHeader';
 import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
@@ -80,6 +81,22 @@ export const EditorPanel = memo(
     const activeFileUnsaved = useMemo(() => {
       return editorDocument !== undefined && unsavedFiles?.has(editorDocument.filePath);
     }, [editorDocument, unsavedFiles]);
+
+    // Diff view state
+    const [showDiff, setShowDiff] = useState(false);
+
+    // Get original content for diff view
+    const originalContent = useMemo(() => {
+      if (!editorDocument?.filePath) return undefined;
+      return workbenchStore.getOriginalContent(editorDocument.filePath);
+    }, [editorDocument?.filePath]);
+
+    const canShowDiff = originalContent !== undefined && editorDocument !== undefined;
+
+    // Reset diff view when file changes
+    useEffect(() => {
+      setShowDiff(false);
+    }, [editorDocument?.filePath]);
 
     useEffect(() => {
       const unsubscribeFromEventEmitter = shortcutEventEmitter.on('toggleTerminal', () => {
@@ -180,32 +197,52 @@ export const EditorPanel = memo(
                 {activeFileSegments?.length && (
                   <div className="flex items-center flex-1 text-sm">
                     <FileBreadcrumb pathSegments={activeFileSegments} files={files} onFileSelect={onFileSelect} />
-                    {activeFileUnsaved && (
-                      <div className="flex gap-1 ml-auto -mr-1.5">
-                        <PanelHeaderButton onClick={onFileSave}>
-                          <div className="i-ph:floppy-disk-duotone" />
-                          Enregistrer
+                    <div className="flex gap-1 ml-auto -mr-1.5">
+                      {/* Diff toggle button - only show when file has modifications */}
+                      {canShowDiff && (
+                        <PanelHeaderButton
+                          onClick={() => setShowDiff(!showDiff)}
+                          className={classNames({ 'bg-bolt-elements-background-depth-3': showDiff })}
+                        >
+                          <div className="i-ph:git-diff" />
+                          {showDiff ? 'Éditeur' : 'Diff'}
                         </PanelHeaderButton>
-                        <PanelHeaderButton onClick={onFileReset}>
-                          <div className="i-ph:clock-counter-clockwise-duotone" />
-                          Réinitialiser
-                        </PanelHeaderButton>
-                      </div>
-                    )}
+                      )}
+                      {activeFileUnsaved && (
+                        <>
+                          <PanelHeaderButton onClick={onFileSave}>
+                            <div className="i-ph:floppy-disk-duotone" />
+                            Enregistrer
+                          </PanelHeaderButton>
+                          <PanelHeaderButton onClick={onFileReset}>
+                            <div className="i-ph:clock-counter-clockwise-duotone" />
+                            Réinitialiser
+                          </PanelHeaderButton>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </PanelHeader>
               <div className="h-full flex-1 overflow-hidden relative">
-                <CodeMirrorEditor
-                  theme={theme}
-                  editable={!isStreaming && editorDocument !== undefined}
-                  settings={editorSettings}
-                  doc={editorDocument}
-                  autoFocusOnDocumentChange={!isMobile()}
-                  onScroll={onEditorScroll}
-                  onChange={onEditorChange}
-                  onSave={onFileSave}
-                />
+                {showDiff && canShowDiff && editorDocument ? (
+                  <DiffViewer
+                    originalContent={originalContent}
+                    modifiedContent={editorDocument.value}
+                    fileName={editorDocument.filePath.split('/').pop()}
+                  />
+                ) : (
+                  <CodeMirrorEditor
+                    theme={theme}
+                    editable={!isStreaming && editorDocument !== undefined}
+                    settings={editorSettings}
+                    doc={editorDocument}
+                    autoFocusOnDocumentChange={!isMobile()}
+                    onScroll={onEditorScroll}
+                    onChange={onEditorChange}
+                    onSave={onFileSave}
+                  />
+                )}
                 <EditorAgentOverlay filePath={editorDocument?.filePath} />
               </div>
             </Panel>
