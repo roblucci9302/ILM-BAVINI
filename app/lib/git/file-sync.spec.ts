@@ -281,7 +281,7 @@ describe('GitFileSync', () => {
 
       expect(stats.files).toBe(2);
       expect(stats.errors.length).toBe(1);
-      expect(stats.errors[0]).toContain('file2.ts');
+      expect(stats.errors[0]).toContain('Read error');
     });
   });
 

@@ -50,13 +50,16 @@ describe('ConnectorsPanel', () => {
       }
     });
 
-    it('should render exactly 3 connectors', () => {
+    it('should render exactly 6 connectors', () => {
       render(<ConnectorsPanel />);
 
-      expect(CONNECTORS.length).toBe(3);
+      expect(CONNECTORS.length).toBe(6);
       expect(screen.getByTestId('connector-card-github')).toBeInTheDocument();
       expect(screen.getByTestId('connector-card-supabase')).toBeInTheDocument();
       expect(screen.getByTestId('connector-card-netlify')).toBeInTheDocument();
+      expect(screen.getByTestId('connector-card-figma')).toBeInTheDocument();
+      expect(screen.getByTestId('connector-card-notion')).toBeInTheDocument();
+      expect(screen.getByTestId('connector-card-stripe')).toBeInTheDocument();
     });
   });
 

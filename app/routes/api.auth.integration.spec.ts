@@ -137,8 +137,8 @@ describe('OAuth Integration Tests', () => {
       expect(supportsOAuth('invalid')).toBe(false);
     });
 
-    it('should have exactly 3 OAuth providers', () => {
-      expect(OAUTH_PROVIDER_IDS.length).toBe(3);
+    it('should have exactly 6 OAuth providers', () => {
+      expect(OAUTH_PROVIDER_IDS.length).toBe(6);
     });
   });
 

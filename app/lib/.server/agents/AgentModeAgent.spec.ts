@@ -50,63 +50,61 @@ describe('AgentModeAgent', () => {
   // ===========================================================================
 
   describe('Message Processing', () => {
-    it('should process action messages', async () => {
+    it('should process action messages and return ready status', async () => {
       const response = await agent.process('Ajoute un composant Button.tsx');
 
       expect(response).toBeDefined();
-      expect(response.type).toBe('plan');
-      expect(response.status).toBe('awaiting_approval');
+      expect(response.type).toBe('response');
+      expect(response.status).toBe('ready');
     });
 
-    it('should reject non-action messages', async () => {
+    it('should always return ready status in agent mode', async () => {
       const response = await agent.process('Explique-moi ce code');
 
       expect(response.type).toBe('response');
-      expect(response.status).toBe('no_action');
+      expect(response.status).toBe('ready');
     });
 
-    it('should generate plan for create intent', async () => {
+    it('should return message indicating agent mode is active', async () => {
       const response = await agent.process('Crée un fichier utils.ts');
 
-      expect(response.plan).toBeDefined();
-      expect(response.plan!.actions.length).toBeGreaterThan(0);
+      expect(response.message).toBeDefined();
+      expect(response.message).toContain('Mode Agent');
     });
 
-    it('should generate plan for modify intent', async () => {
+    it('should include suggestions array', async () => {
       const response = await agent.process('Modifie App.tsx');
 
-      expect(response.plan).toBeDefined();
-      expect(response.canExecute).toBe(true);
+      expect(Array.isArray(response.suggestions)).toBe(true);
     });
   });
 
   // ===========================================================================
-  // Plan Generation
+  // Response Structure (process doesn't generate plans, just returns ready state)
   // ===========================================================================
 
-  describe('Plan Generation', () => {
-    it('should generate actions from files', async () => {
+  describe('Response Structure', () => {
+    it('should return consistent response for file creation requests', async () => {
       const response = await agent.process('Crée Header.tsx et Footer.tsx');
 
-      expect(response.plan).toBeDefined();
-      const plan = response.plan!;
-      expect(plan.actions.length).toBeGreaterThanOrEqual(1);
+      expect(response.type).toBe('response');
+      expect(response.status).toBe('ready');
+      expect(response.message).toBeDefined();
     });
 
-    it('should estimate plan correctly', async () => {
+    it('should return ready status for any message', async () => {
       const response = await agent.process('Crée Button.tsx');
 
-      const plan = response.plan!;
-      expect(plan.estimates).toBeDefined();
-      expect(plan.estimates.risk).toBeDefined();
-      expect(plan.estimates.filesAffected).toBeGreaterThanOrEqual(0);
+      expect(response.type).toBe('response');
+      expect(response.status).toBe('ready');
+      expect(response.suggestions).toBeDefined();
     });
 
-    it('should format plan message', async () => {
+    it('should return agent mode active message', async () => {
       const response = await agent.process('Ajoute un composant');
 
       expect(response.message).toBeDefined();
-      expect(response.message).toContain('Plan');
+      expect(response.message).toContain('Mode Agent');
     });
   });
 

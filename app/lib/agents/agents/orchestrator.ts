@@ -1,6 +1,36 @@
 /**
- * Orchestrator - Agent principal qui coordonne les sous-agents
- * Analyse les demandes, décompose les tâches, délègue et agrège les résultats
+ * @fileoverview Orchestrator - Agent principal du système multi-agent BAVINI
+ *
+ * L'Orchestrator est l'agent de coordination qui:
+ * - Analyse les demandes utilisateur pour déterminer la stratégie d'exécution
+ * - Décompose les tâches complexes en sous-tâches
+ * - Délègue aux agents spécialisés (Explorer, Coder, Builder, Tester, Deployer)
+ * - Agrège les résultats des sous-agents
+ * - Gère l'exécution parallèle avec le ParallelExecutor
+ *
+ * @module agents/agents/orchestrator
+ * @see {@link BaseAgent} pour la classe de base
+ * @see {@link AgentRegistry} pour l'accès aux agents
+ * @see {@link ParallelExecutor} pour l'exécution parallèle
+ *
+ * @example
+ * ```typescript
+ * // Créer et utiliser l'orchestrateur
+ * const orchestrator = createOrchestrator();
+ * orchestrator.setApiKey(process.env.ANTHROPIC_API_KEY);
+ *
+ * const result = await orchestrator.run({
+ *   id: 'task-1',
+ *   type: 'orchestrator',
+ *   prompt: 'Crée une API REST avec Express et des tests',
+ * }, apiKey);
+ *
+ * // L'orchestrateur va:
+ * // 1. Analyser la demande
+ * // 2. Créer des sous-tâches (coder -> API, tester -> tests)
+ * // 3. Les exécuter en parallèle si possible
+ * // 4. Agréger et retourner les résultats
+ * ```
  */
 
 import { BaseAgent } from '../core/base-agent';
@@ -121,7 +151,37 @@ const GetAgentStatusTool: ToolDefinition = {
 // ============================================================================
 
 /**
- * Agent orchestrateur principal
+ * Agent orchestrateur principal du système multi-agent
+ *
+ * L'Orchestrator analyse les demandes, détermine la meilleure stratégie
+ * d'exécution, et coordonne les agents spécialisés pour accomplir
+ * les tâches complexes.
+ *
+ * @class Orchestrator
+ * @extends BaseAgent
+ *
+ * @property {AgentRegistry} registry - Accès aux agents enregistrés
+ * @property {ExecutionPlan | null} currentPlan - Plan d'exécution en cours
+ * @property {string} apiKey - Clé API pour les sous-agents
+ *
+ * @example
+ * ```typescript
+ * const orchestrator = new Orchestrator();
+ * orchestrator.setApiKey(apiKey);
+ *
+ * // Exécuter une demande utilisateur
+ * const result = await orchestrator.run({
+ *   id: 'task-123',
+ *   type: 'orchestrator',
+ *   prompt: 'Ajoute une fonctionnalité de dark mode',
+ *   context: { projectPath: '/app' }
+ * }, apiKey);
+ *
+ * // Vérifier le type de décision prise
+ * if (result.data?.delegatedTo) {
+ *   console.log(`Délégué à: ${result.data.delegatedTo}`);
+ * }
+ * ```
  */
 export class Orchestrator extends BaseAgent {
   private registry: AgentRegistry;

@@ -74,28 +74,62 @@ export const activityPanelOpenStore = atom<boolean>(false);
 // ============================================================================
 
 /**
- * Change le mode du chat
+ * Change le mode du chat entre 'chat' (analyse seule) et 'agent' (avec actions).
+ *
+ * @param mode - Le nouveau mode à appliquer
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * setChatMode('agent'); // Active le mode agent
+ * setChatMode('chat');  // Passe en mode lecture seule
+ * ```
  */
 export function setChatMode(mode: ChatMode): void {
   chatStore.setKey('mode', mode);
 }
 
 /**
- * Retourne le mode actuel
+ * Retourne le mode actuel du chat.
+ *
+ * @returns Le mode actuel ('chat' ou 'agent')
+ *
+ * @example
+ * ```ts
+ * const mode = getChatMode();
+ * if (mode === 'agent') {
+ *   // Actions autorisées
+ * }
+ * ```
  */
 export function getChatMode(): ChatMode {
   return chatStore.get().mode;
 }
 
 /**
- * Change le mode de contrôle des agents
+ * Change le mode de contrôle des agents.
+ *
+ * - 'strict': Chaque action nécessite approbation
+ * - 'moderate': Seules les actions dangereuses nécessitent approbation
+ * - 'permissive': Seules les suppressions/shell nécessitent approbation
+ *
+ * @param mode - Le niveau de contrôle à appliquer
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * setAgentControlMode('strict');     // Approbation pour tout
+ * setAgentControlMode('permissive'); // Approbation minimale
+ * ```
  */
 export function setAgentControlMode(mode: AgentControlMode): void {
   chatStore.setKey('controlMode', mode);
 }
 
 /**
- * Retourne le mode de contrôle actuel
+ * Retourne le mode de contrôle actuel des agents.
+ *
+ * @returns Le mode de contrôle ('strict', 'moderate', ou 'permissive')
  */
 export function getAgentControlMode(): AgentControlMode {
   return chatStore.get().controlMode;
@@ -106,7 +140,23 @@ export function getAgentControlMode(): AgentControlMode {
 // ============================================================================
 
 /**
- * Soumet un batch d'actions pour approbation
+ * Soumet un batch d'actions pour approbation utilisateur.
+ * Ouvre automatiquement le modal d'approbation.
+ *
+ * @param batch - Le batch d'actions à soumettre (contient id, agent, actions, description)
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * submitBatchForApproval({
+ *   id: 'batch-123',
+ *   agent: 'coder',
+ *   actions: [{ id: 'action-1', type: 'file:create', ... }],
+ *   description: 'Créer le composant Button',
+ *   createdAt: new Date(),
+ *   status: 'pending',
+ * });
+ * ```
  */
 export function submitBatchForApproval(batch: PendingActionBatch): void {
   pendingBatchStore.set(batch);
@@ -115,7 +165,16 @@ export function submitBatchForApproval(batch: PendingActionBatch): void {
 }
 
 /**
- * Approuve toutes les actions du batch en cours
+ * Approuve toutes les actions du batch en cours.
+ * Ferme le modal d'approbation et ajoute le batch à l'historique.
+ *
+ * @returns Liste des actions approuvées avec leur nouveau statut
+ *
+ * @example
+ * ```ts
+ * const approved = approveAllActions();
+ * console.log(`${approved.length} actions approuvées`);
+ * ```
  */
 export function approveAllActions(): ProposedAction[] {
   const batch = pendingBatchStore.get();
@@ -153,7 +212,17 @@ export function approveAllActions(): ProposedAction[] {
 }
 
 /**
- * Approuve seulement certaines actions du batch
+ * Approuve seulement certaines actions du batch en cours.
+ * Les actions non sélectionnées sont marquées comme rejetées.
+ *
+ * @param actionIds - Liste des IDs des actions à approuver
+ * @returns Liste des actions approuvées (exclut les rejetées)
+ *
+ * @example
+ * ```ts
+ * // Approuver seulement les 2 premières actions
+ * const approved = approveSelectedActions(['action-1', 'action-2']);
+ * ```
  */
 export function approveSelectedActions(actionIds: string[]): ProposedAction[] {
   const batch = pendingBatchStore.get();
@@ -196,7 +265,10 @@ export function approveSelectedActions(actionIds: string[]): ProposedAction[] {
 }
 
 /**
- * Rejette toutes les actions du batch en cours
+ * Rejette toutes les actions du batch en cours.
+ * Ferme le modal et ajoute le batch rejeté à l'historique.
+ *
+ * @returns void
  */
 export function rejectAllActions(): void {
   const batch = pendingBatchStore.get();
@@ -254,7 +326,17 @@ export function reopenApprovalModal(): void {
 // ============================================================================
 
 /**
- * Ouvre/ferme le panneau d'activité des agents
+ * Ouvre, ferme ou bascule le panneau d'activité des agents.
+ *
+ * @param open - Si défini, force l'état. Sinon, bascule l'état actuel.
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * toggleActivityPanel();      // Bascule l'état
+ * toggleActivityPanel(true);  // Force l'ouverture
+ * toggleActivityPanel(false); // Force la fermeture
+ * ```
  */
 export function toggleActivityPanel(open?: boolean): void {
   const current = activityPanelOpenStore.get();
@@ -266,14 +348,18 @@ export function toggleActivityPanel(open?: boolean): void {
 // ============================================================================
 
 /**
- * Vérifie si une approbation est en attente
+ * Vérifie si une approbation est en attente.
+ *
+ * @returns true si un batch attend l'approbation utilisateur
  */
 export function hasApprovalPending(): boolean {
   return pendingBatchStore.get() !== null;
 }
 
 /**
- * Obtient le nombre d'actions en attente
+ * Obtient le nombre d'actions en attente d'approbation.
+ *
+ * @returns Nombre d'actions dans le batch en attente, ou 0 si aucun batch
  */
 export function getPendingActionsCount(): number {
   const batch = pendingBatchStore.get();
@@ -281,7 +367,10 @@ export function getPendingActionsCount(): number {
 }
 
 /**
- * Vérifie si le mode strict est actif
+ * Vérifie si le mode strict est actif.
+ * En mode strict, toutes les actions nécessitent approbation.
+ *
+ * @returns true si controlMode === 'strict'
  */
 export function isStrictMode(): boolean {
   return chatStore.get().controlMode === 'strict';

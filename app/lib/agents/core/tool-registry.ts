@@ -1,6 +1,29 @@
 /**
- * Tool Registry - Registre centralisé des handlers d'outils
- * Permet aux agents d'enregistrer et d'exécuter des outils de manière unifiée
+ * @fileoverview Registre centralisé des handlers d'outils pour les agents BAVINI
+ *
+ * Ce module fournit le ToolRegistry, une classe qui permet aux agents
+ * d'enregistrer et d'exécuter des outils de manière unifiée. Il gère:
+ * - Enregistrement d'outils avec leurs handlers
+ * - Exécution synchrone, parallèle et séquentielle
+ * - Catégorisation et statistiques
+ * - Factory functions pour créer des registres pré-configurés
+ *
+ * @module agents/core/tool-registry
+ * @see {@link BaseAgent} pour l'utilisation des outils dans les agents
+ *
+ * @example
+ * ```typescript
+ * // Créer un registre et enregistrer des outils
+ * const registry = new ToolRegistry();
+ *
+ * registry.register(
+ *   { name: 'read_file', description: '...', inputSchema: {...} },
+ *   async (input) => ({ success: true, output: fileContent })
+ * );
+ *
+ * // Exécuter un outil
+ * const result = await registry.execute('read_file', { path: '/src/app.ts' });
+ * ```
  */
 
 import type { ToolDefinition, ToolExecutionResult } from '../types';
@@ -61,7 +84,40 @@ export interface RegistryStats {
 // ============================================================================
 
 /**
- * Registre centralisé des outils pour les agents
+ * Registre centralisé des outils pour les agents BAVINI
+ *
+ * Cette classe gère l'enregistrement et l'exécution des outils utilisés
+ * par les agents. Chaque outil est composé d'une définition (pour le LLM)
+ * et d'un handler (fonction d'exécution).
+ *
+ * @class ToolRegistry
+ *
+ * @example
+ * ```typescript
+ * const registry = new ToolRegistry();
+ *
+ * // Enregistrer un outil de lecture de fichier
+ * registry.register(
+ *   {
+ *     name: 'read_file',
+ *     description: 'Lit le contenu d\'un fichier',
+ *     inputSchema: {
+ *       type: 'object',
+ *       properties: { path: { type: 'string' } },
+ *       required: ['path']
+ *     }
+ *   },
+ *   async (input) => {
+ *     const content = await fs.readFile(input.path as string, 'utf-8');
+ *     return { success: true, output: content };
+ *   },
+ *   { category: 'filesystem' }
+ * );
+ *
+ * // Exécuter l'outil
+ * const result = await registry.execute('read_file', { path: '/app.ts' });
+ * console.log(result.output);
+ * ```
  */
 export class ToolRegistry {
   private tools: Map<string, RegisteredTool> = new Map();
@@ -241,7 +297,27 @@ export class ToolRegistry {
   // ============================================================================
 
   /**
-   * Exécuter un outil
+   * Exécuter un outil enregistré
+   *
+   * Cette méthode trouve l'outil dans le registre, exécute son handler
+   * avec les paramètres fournis, et retourne le résultat.
+   *
+   * @param {string} name - Nom de l'outil à exécuter
+   * @param {Record<string, unknown>} input - Paramètres d'entrée de l'outil
+   * @returns {Promise<ToolExecutionResult>} Le résultat de l'exécution
+   *
+   * @example
+   * ```typescript
+   * const result = await registry.execute('read_file', {
+   *   path: '/src/index.ts'
+   * });
+   *
+   * if (result.success) {
+   *   console.log('Contenu:', result.output);
+   * } else {
+   *   console.error('Erreur:', result.error);
+   * }
+   * ```
    */
   async execute(
     name: string,
@@ -468,6 +544,27 @@ export async function createGitToolsRegistry(
 
 /**
  * Créer un registre complet avec tous les outils standards
+ *
+ * Factory function qui crée un ToolRegistry pré-configuré avec
+ * les outils de filesystem, shell et git selon les adapters fournis.
+ *
+ * @param {Object} adapters - Adapters pour les différentes catégories d'outils
+ * @param {WritableFileSystem} [adapters.fileSystem] - Adapter pour les opérations filesystem
+ * @param {ShellInterface} [adapters.shell] - Adapter pour les commandes shell
+ * @param {GitInterface} [adapters.git] - Adapter pour les opérations Git
+ * @returns {Promise<ToolRegistry>} Un registre configuré avec les outils appropriés
+ *
+ * @example
+ * ```typescript
+ * const registry = await createStandardToolRegistry({
+ *   fileSystem: webcontainerAdapter,
+ *   shell: shellAdapter,
+ *   git: gitAdapter
+ * });
+ *
+ * console.log(`${registry.size} outils disponibles`);
+ * console.log('Catégories:', registry.getCategories());
+ * ```
  */
 export async function createStandardToolRegistry(adapters: {
   fileSystem?: import('../tools/write-tools').WritableFileSystem;

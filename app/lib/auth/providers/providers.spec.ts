@@ -20,9 +20,15 @@ describe('OAuth Providers Registry', () => {
       expect(OAUTH_PROVIDER_IDS).toContain('supabase');
     });
 
-    it('should be a constant tuple with 3 providers', () => {
+    it('should be a constant tuple with 6 providers', () => {
       expect(Array.isArray(OAUTH_PROVIDER_IDS)).toBe(true);
-      expect(OAUTH_PROVIDER_IDS.length).toBe(3);
+      expect(OAUTH_PROVIDER_IDS.length).toBe(6);
+    });
+
+    it('should include new connectors', () => {
+      expect(OAUTH_PROVIDER_IDS).toContain('figma');
+      expect(OAUTH_PROVIDER_IDS).toContain('notion');
+      expect(OAUTH_PROVIDER_IDS).toContain('stripe');
     });
   });
 

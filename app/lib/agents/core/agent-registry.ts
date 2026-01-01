@@ -1,6 +1,30 @@
 /**
- * Registre des agents BAVINI
- * Singleton qui gère l'enregistrement et la récupération des agents
+ * @fileoverview Registre centralisé des agents BAVINI
+ *
+ * Ce module fournit un singleton pour gérer l'enregistrement, la récupération
+ * et le suivi des agents du système multi-agent. Il permet:
+ * - Enregistrement/désenregistrement dynamique d'agents
+ * - Récupération d'agents par nom ou capacité
+ * - Suivi des statistiques d'utilisation
+ * - Propagation des événements des agents
+ *
+ * @module agents/core/agent-registry
+ * @see {@link BaseAgent} pour la classe de base des agents
+ *
+ * @example
+ * ```typescript
+ * // Obtenir l'instance du registre
+ * const registry = AgentRegistry.getInstance();
+ *
+ * // Enregistrer un agent
+ * registry.register(new CoderAgent());
+ *
+ * // Récupérer et utiliser un agent
+ * const coder = registry.get('coder');
+ * if (coder?.isAvailable()) {
+ *   await coder.run(task, apiKey);
+ * }
+ * ```
  */
 
 import type { BaseAgent } from './base-agent';
@@ -30,7 +54,34 @@ export interface RegistryStats {
 }
 
 /**
- * Registre singleton des agents
+ * Registre singleton des agents BAVINI
+ *
+ * Cette classe implémente le pattern Singleton pour centraliser la gestion
+ * de tous les agents du système. Elle offre:
+ * - Enregistrement et désenregistrement d'agents
+ * - Recherche par nom, statut ou capacité
+ * - Statistiques d'utilisation
+ * - Système d'événements pour le monitoring
+ *
+ * @class AgentRegistry
+ * @example
+ * ```typescript
+ * // Pattern Singleton - obtenir l'instance
+ * const registry = AgentRegistry.getInstance();
+ *
+ * // Enregistrer tous les agents
+ * registry.register(new ExplorerAgent());
+ * registry.register(new CoderAgent());
+ *
+ * // Trouver les agents disponibles
+ * const available = registry.getAvailable();
+ * console.log(`${available.length} agents prêts`);
+ *
+ * // Écouter les événements
+ * registry.subscribe((event) => {
+ *   console.log(`Agent ${event.agentName}: ${event.type}`);
+ * });
+ * ```
  */
 export class AgentRegistry {
   private static instance: AgentRegistry;
@@ -42,7 +93,15 @@ export class AgentRegistry {
   }
 
   /**
-   * Obtenir l'instance singleton
+   * Obtenir l'instance singleton du registre
+   *
+   * @static
+   * @returns {AgentRegistry} L'instance unique du registre
+   *
+   * @example
+   * ```typescript
+   * const registry = AgentRegistry.getInstance();
+   * ```
    */
   static getInstance(): AgentRegistry {
     if (!AgentRegistry.instance) {
@@ -66,7 +125,21 @@ export class AgentRegistry {
   // ============================================================================
 
   /**
-   * Enregistrer un agent
+   * Enregistrer un agent dans le registre
+   *
+   * L'agent sera disponible pour la récupération et le registre
+   * s'abonnera automatiquement à ses événements.
+   *
+   * @param {BaseAgent} agent - L'agent à enregistrer
+   * @returns {void}
+   * @emits agent:started - Avec action='registered' lors de l'enregistrement
+   *
+   * @example
+   * ```typescript
+   * const coder = new CoderAgent();
+   * registry.register(coder);
+   * // L'agent est maintenant disponible via registry.get('coder')
+   * ```
    */
   register(agent: BaseAgent): void {
     const name = agent.getName() as AgentType;
@@ -138,6 +211,20 @@ export class AgentRegistry {
 
   /**
    * Obtenir un agent par son nom
+   *
+   * Incrémente automatiquement le compteur d'utilisation
+   * et met à jour lastUsedAt.
+   *
+   * @param {AgentType} name - Le nom de l'agent (ex: 'coder', 'explorer')
+   * @returns {BaseAgent | undefined} L'agent ou undefined si non trouvé
+   *
+   * @example
+   * ```typescript
+   * const explorer = registry.get('explorer');
+   * if (explorer && explorer.isAvailable()) {
+   *   const result = await explorer.run(task, apiKey);
+   * }
+   * ```
    */
   get(name: AgentType): BaseAgent | undefined {
     const registered = this.agents.get(name);
@@ -218,8 +305,22 @@ export class AgentRegistry {
   }
 
   /**
-   * Trouver le meilleur agent pour une tâche
-   * Basé sur la description et la disponibilité
+   * Trouver le meilleur agent pour une tâche donnée
+   *
+   * Sélectionne un agent disponible basé sur la description de la tâche
+   * et ses capacités. Par défaut, exclut l'orchestrateur.
+   *
+   * @param {string} taskDescription - Description de la tâche à accomplir
+   * @param {boolean} [excludeOrchestrator=true] - Exclure l'orchestrateur de la recherche
+   * @returns {BaseAgent | null} L'agent le plus adapté ou null si aucun disponible
+   *
+   * @example
+   * ```typescript
+   * const agent = registry.findBestAgent('Génère du code TypeScript');
+   * if (agent) {
+   *   console.log(`Agent sélectionné: ${agent.getName()}`);
+   * }
+   * ```
    */
   findBestAgent(taskDescription: string, excludeOrchestrator = true): BaseAgent | null {
     const available = this.getAvailable();

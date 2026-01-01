@@ -126,11 +126,11 @@ describe('Templates Service', () => {
       }
     });
 
-    it('devrait retourner false pour les templates sans templateDir', () => {
+    it('devrait retourner true pour react-vite-ts avec templateDir', () => {
       const react = getTemplateById('react-vite-ts');
       expect(react).toBeDefined();
       if (react) {
-        expect(hasTemplateFiles(react)).toBe(false);
+        expect(hasTemplateFiles(react)).toBe(true);
       }
     });
   });

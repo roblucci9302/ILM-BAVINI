@@ -1,6 +1,38 @@
 /**
- * Parallel Executor - Exécution parallèle de tâches avec gestion des dépendances
- * Utilise le DependencyGraph pour déterminer l'ordre d'exécution optimal
+ * @fileoverview Exécuteur parallèle de tâches avec gestion des dépendances
+ *
+ * Ce module fournit le ParallelExecutor qui permet d'exécuter des sous-tâches
+ * en parallèle tout en respectant leurs dépendances. Il utilise un graphe
+ * de dépendances pour déterminer l'ordre d'exécution optimal.
+ *
+ * Fonctionnalités:
+ * - Exécution par niveaux (toutes les tâches d'un niveau en parallèle)
+ * - Gestion de la concurrence maximum
+ * - Timeout global et par tâche
+ * - Callbacks de progression
+ * - Statistiques d'exécution (temps, efficacité parallèle)
+ *
+ * @module agents/execution/parallel-executor
+ * @see {@link DependencyGraph} pour la gestion des dépendances
+ * @see {@link Orchestrator} pour l'utilisation dans l'orchestration
+ *
+ * @example
+ * ```typescript
+ * const executor = createParallelExecutor({
+ *   maxConcurrency: 3,
+ *   continueOnError: true,
+ *   onProgress: (completed, total) => {
+ *     console.log(`Progress: ${completed}/${total}`);
+ *   }
+ * });
+ *
+ * const results = await executor.execute(subtasks, async (task, agent) => {
+ *   return await registry.get(agent).run(task, apiKey);
+ * });
+ *
+ * const stats = ParallelExecutor.calculateStats(results);
+ * console.log(`Efficacité: ${stats.parallelEfficiency}x`);
+ * ```
  */
 
 import { DependencyGraph, type ExecutionLevel } from './dependency-graph';
@@ -80,6 +112,32 @@ export type TaskExecutor = (task: Task, agent: AgentType) => Promise<TaskResult>
 
 /**
  * Exécuteur parallèle de tâches avec gestion des dépendances
+ *
+ * Cette classe coordonne l'exécution de sous-tâches en respectant:
+ * - Les dépendances entre tâches (via DependencyGraph)
+ * - La limite de concurrence maximale
+ * - Les timeouts (global et par tâche)
+ *
+ * @class ParallelExecutor
+ *
+ * @example
+ * ```typescript
+ * const executor = new ParallelExecutor({
+ *   maxConcurrency: 3,
+ *   globalTimeout: 300000,
+ *   continueOnError: false
+ * });
+ *
+ * const subtasks = [
+ *   { id: 'explore', agent: 'explorer', task: {...}, dependencies: [] },
+ *   { id: 'code', agent: 'coder', task: {...}, dependencies: ['explore'] },
+ *   { id: 'test', agent: 'tester', task: {...}, dependencies: ['code'] }
+ * ];
+ *
+ * const results = await executor.execute(subtasks, async (task, agent) => {
+ *   return await agentRegistry.get(agent).run(task, apiKey);
+ * });
+ * ```
  */
 export class ParallelExecutor {
   private options: Required<Omit<ParallelExecutorOptions, 'onProgress' | 'onTaskStart' | 'onLevelStart' | 'onLevelComplete'>> &
@@ -100,6 +158,29 @@ export class ParallelExecutor {
 
   /**
    * Exécuter les sous-tâches avec gestion des dépendances
+   *
+   * Cette méthode:
+   * 1. Construit un graphe de dépendances
+   * 2. Valide qu'il n'y a pas de cycles
+   * 3. Trie les tâches par niveau topologique
+   * 4. Exécute chaque niveau en parallèle (avec limite de concurrence)
+   *
+   * @param {SubtaskDefinition[]} subtasks - Liste des sous-tâches à exécuter
+   * @param {TaskExecutor} executor - Fonction qui exécute une tâche
+   * @returns {Promise<SubtaskResult[]>} Résultats de toutes les exécutions
+   * @throws {Error} Si le graphe contient des cycles
+   *
+   * @example
+   * ```typescript
+   * const results = await executor.execute(subtasks, async (task, agent) => {
+   *   const a = agentRegistry.get(agent);
+   *   if (!a) throw new Error(`Agent ${agent} not found`);
+   *   return a.run(task, apiKey);
+   * });
+   *
+   * const successful = results.filter(r => r.success);
+   * console.log(`${successful.length}/${results.length} tâches réussies`);
+   * ```
    */
   async execute(subtasks: SubtaskDefinition[], executor: TaskExecutor): Promise<SubtaskResult[]> {
     if (subtasks.length === 0) {
@@ -322,6 +403,26 @@ export class ParallelExecutor {
 
   /**
    * Calculer les statistiques d'exécution
+   *
+   * Analyse les résultats pour fournir des métriques sur l'exécution:
+   * - Nombre de tâches réussies/échouées
+   * - Temps total d'exécution
+   * - Efficacité parallèle (ratio temps séquentiel / temps réel)
+   *
+   * @static
+   * @param {SubtaskResult[]} results - Résultats de l'exécution
+   * @returns {ExecutionStats} Statistiques calculées
+   *
+   * @example
+   * ```typescript
+   * const stats = ParallelExecutor.calculateStats(results);
+   *
+   * console.log(`Tâches: ${stats.successful}/${stats.total} réussies`);
+   * console.log(`Niveaux: ${stats.levels}`);
+   * console.log(`Temps: ${stats.totalTime}ms`);
+   * console.log(`Efficacité: ${stats.parallelEfficiency}x`);
+   * // Ex: efficacité de 2.5x = 2.5 fois plus rapide qu'en séquentiel
+   * ```
    */
   static calculateStats(results: SubtaskResult[]): ExecutionStats {
     if (results.length === 0) {

@@ -253,7 +253,8 @@ describe('ChatModeAgent', () => {
     });
 
     it('should mention Agent mode transition', () => {
-      expect(CHAT_MODE_SYSTEM_PROMPT).toContain('mode Agent');
+      // Le prompt mentionne la désactivation du mode Chat pour coder
+      expect(CHAT_MODE_SYSTEM_PROMPT).toContain('désactiver le mode Chat');
     });
   });
 });

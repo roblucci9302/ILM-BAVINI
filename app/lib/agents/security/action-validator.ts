@@ -1,9 +1,46 @@
 /**
- * Validateur d'actions pour les agents BAVINI
+ * @fileoverview Validateur d'actions pour les agents BAVINI
  *
  * Ce module centralise la validation de toutes les actions des agents
  * avant leur exécution. Il implémente le mode "strict" où chaque action
  * nécessite une approbation explicite de l'utilisateur.
+ *
+ * Types d'actions validées:
+ * - Création/modification/suppression de fichiers
+ * - Commandes shell
+ * - Création de répertoires
+ * - Déplacement de fichiers
+ *
+ * Niveaux d'autorisation:
+ * - `allowed` - Action sûre, exécution automatique (en mode non-strict)
+ * - `approval_required` - Nécessite approbation utilisateur
+ * - `blocked` - Action interdite, refusée automatiquement
+ *
+ * @module agents/security/action-validator
+ * @see {@link checkCommand} pour la validation des commandes shell
+ *
+ * @example
+ * ```typescript
+ * // Créer et valider une action
+ * const action = createProposedAction(
+ *   'file_modify',
+ *   'coder',
+ *   'Modifier src/app.ts',
+ *   {
+ *     type: 'file_modify',
+ *     path: 'src/app.ts',
+ *     oldContent: '...',
+ *     newContent: '...',
+ *     linesAdded: 10,
+ *     linesRemoved: 5
+ *   }
+ * );
+ *
+ * const result = validateAction(action, true); // mode strict
+ * if (result.valid && result.requiresApproval) {
+ *   // Demander approbation à l'utilisateur
+ * }
+ * ```
  */
 
 import { checkCommand, type CommandCheckResult, type CommandAuthorizationLevel } from './command-whitelist';
@@ -141,7 +178,31 @@ export interface PendingActionBatch {
 
 /**
  * Valide une action proposée par un agent
- * En mode strict, toutes les actions nécessitent une approbation
+ *
+ * Cette fonction détermine si une action est valide et si elle nécessite
+ * une approbation utilisateur. En mode strict, toutes les actions valides
+ * requièrent une approbation.
+ *
+ * @param {ProposedAction} action - L'action à valider
+ * @param {boolean} [strictMode=true] - Si true, toutes les actions nécessitent approbation
+ * @returns {ValidationResult} Résultat de la validation
+ *
+ * @example
+ * ```typescript
+ * const action = createProposedAction('shell_command', 'builder', 'npm install', {
+ *   type: 'shell_command',
+ *   command: 'npm install',
+ *   commandCheck: checkCommand('npm install')
+ * });
+ *
+ * const result = validateAction(action, true);
+ *
+ * if (!result.valid) {
+ *   console.error('Action bloquée:', result.messages);
+ * } else if (result.requiresApproval) {
+ *   console.log('Approbation requise');
+ * }
+ * ```
  */
 export function validateAction(action: ProposedAction, strictMode: boolean = true): ValidationResult {
   const messages: string[] = [];
@@ -420,7 +481,28 @@ export function generateBatchId(): string {
 }
 
 /**
- * Crée une action proposée
+ * Crée une action proposée avec un ID unique
+ *
+ * @param {ActionType} type - Type d'action (file_create, shell_command, etc.)
+ * @param {AgentType} agent - Agent qui propose l'action
+ * @param {string} description - Description courte de l'action
+ * @param {ActionDetails} details - Détails spécifiques au type d'action
+ * @returns {ProposedAction} L'action créée avec statut 'pending'
+ *
+ * @example
+ * ```typescript
+ * const action = createProposedAction(
+ *   'file_create',
+ *   'coder',
+ *   'Créer un nouveau composant',
+ *   {
+ *     type: 'file_create',
+ *     path: 'src/components/Button.tsx',
+ *     content: 'export const Button = ...',
+ *     lineCount: 25
+ *   }
+ * );
+ * ```
  */
 export function createProposedAction(
   type: ActionType,

@@ -101,6 +101,34 @@ export interface UseAgentChatReturn {
 // HOOK
 // ============================================================================
 
+/**
+ * Hook React pour intégrer le système multi-agents dans l'interface chat.
+ *
+ * Fournit une interface complète pour:
+ * - Envoyer des messages au système d'agents
+ * - Suivre le streaming des réponses en temps réel
+ * - Gérer l'état de traitement et les erreurs
+ * - Contrôler le mode multi-agents
+ *
+ * @param options - Options de configuration du hook
+ * @param options.onStart - Callback appelé au début du traitement
+ * @param options.onFinish - Callback appelé à la fin avec le résultat
+ * @param options.onError - Callback appelé en cas d'erreur
+ * @param options.onStream - Callback pour chaque mise à jour du streaming
+ *
+ * @returns Interface UseAgentChatReturn avec sendMessage, abort, etc.
+ *
+ * @example
+ * ```tsx
+ * const { sendMessage, streamingContent, isProcessing } = useAgentChat({
+ *   onFinish: (result) => console.log('Terminé:', result),
+ * });
+ *
+ * const handleSend = async () => {
+ *   const result = await sendMessage('Crée un composant Button');
+ * };
+ * ```
+ */
 export function useAgentChat(options: AgentChatOptions = {}): UseAgentChatReturn {
   const { onStart, onFinish, onError, onStream } = options;
 
@@ -374,7 +402,17 @@ export function useAgentChat(options: AgentChatOptions = {}): UseAgentChatReturn
 }
 
 /**
- * Simple hook to check if we're in agent mode
+ * Hook simple pour vérifier si le mode agent est actif.
+ *
+ * @returns true si chatStore.mode === 'agent'
+ *
+ * @example
+ * ```tsx
+ * const isAgentMode = useIsAgentMode();
+ * if (isAgentMode) {
+ *   // Afficher les contrôles d'approbation
+ * }
+ * ```
  */
 export function useIsAgentMode(): boolean {
   const chatState = useStore(chatStore);
@@ -382,7 +420,25 @@ export function useIsAgentMode(): boolean {
 }
 
 /**
- * Hook to get current control mode
+ * Hook pour gérer le mode de contrôle des agents.
+ *
+ * @returns Objet avec:
+ *   - controlMode: Mode actuel ('strict', 'moderate', 'permissive')
+ *   - setControlMode: Fonction pour changer le mode
+ *   - isStrict: Raccourci pour controlMode === 'strict'
+ *
+ * @example
+ * ```tsx
+ * const { controlMode, setControlMode, isStrict } = useControlMode();
+ *
+ * return (
+ *   <select value={controlMode} onChange={(e) => setControlMode(e.target.value)}>
+ *     <option value="strict">Strict</option>
+ *     <option value="moderate">Modéré</option>
+ *     <option value="permissive">Permissif</option>
+ *   </select>
+ * );
+ * ```
  */
 export function useControlMode() {
   const chatState = useStore(chatStore);

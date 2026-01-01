@@ -109,7 +109,11 @@ export interface CurrentAction {
 export const currentActionStore = atom<CurrentAction | null>(null);
 
 /**
- * Définir l'action en cours
+ * Définit l'action actuellement en cours d'exécution.
+ * Utilisé pour afficher des indicateurs visuels dans l'UI.
+ *
+ * @param action - L'action en cours (type, description, filePath, agentName) ou null
+ * @returns void
  */
 export function setCurrentAction(action: CurrentAction | null): void {
   currentActionStore.set(action);
@@ -158,7 +162,17 @@ export const agentStatsStore = computed(
 // ============================================================================
 
 /**
- * Mettre à jour le statut d'un agent
+ * Met à jour le statut d'un agent et maintient la liste des agents actifs.
+ *
+ * @param agent - Le type d'agent à mettre à jour
+ * @param status - Le nouveau statut ('idle', 'thinking', 'executing', etc.)
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * updateAgentStatus('coder', 'executing');
+ * updateAgentStatus('builder', 'idle');
+ * ```
  */
 export function updateAgentStatus(agent: AgentType, status: AgentStatus): void {
   agentStatusStore.setKey(agent, status);
@@ -174,14 +188,32 @@ export function updateAgentStatus(agent: AgentType, status: AgentStatus): void {
 }
 
 /**
- * Définir la tâche en cours d'un agent
+ * Définit la tâche actuellement en cours d'exécution pour un agent.
+ *
+ * @param agent - Le type d'agent
+ * @param task - La tâche en cours, ou null pour effacer
+ * @returns void
  */
 export function setCurrentTask(agent: AgentType, task: Task | null): void {
   currentTasksStore.setKey(agent, task);
 }
 
 /**
- * Ajouter un log pour un agent
+ * Ajoute une entrée de log pour un agent spécifique.
+ * Le log est ajouté à la fois au store de l'agent et au store système.
+ *
+ * @param agent - Le type d'agent qui génère le log
+ * @param log - L'entrée de log (sans timestamp, ajouté automatiquement)
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * addAgentLog('coder', {
+ *   level: 'info',
+ *   message: 'Fichier créé: Button.tsx',
+ *   data: { path: '/src/Button.tsx' },
+ * });
+ * ```
  */
 export function addAgentLog(agent: AgentType, log: Omit<LogEntry, 'timestamp'>): void {
   const entry: LogEntry = {
@@ -201,7 +233,10 @@ export function addAgentLog(agent: AgentType, log: Omit<LogEntry, 'timestamp'>):
 }
 
 /**
- * Ajouter une tâche à la queue
+ * Ajoute une tâche à la queue d'exécution.
+ *
+ * @param task - La tâche à ajouter
+ * @returns void
  */
 export function enqueueTask(task: Task): void {
   const queue = taskQueueStore.get();
@@ -209,7 +244,9 @@ export function enqueueTask(task: Task): void {
 }
 
 /**
- * Retirer une tâche de la queue
+ * Retire et retourne la première tâche de la queue (FIFO).
+ *
+ * @returns La tâche retirée, ou undefined si la queue est vide
  */
 export function dequeueTask(): Task | undefined {
   const queue = taskQueueStore.get();
@@ -221,7 +258,11 @@ export function dequeueTask(): Task | undefined {
 }
 
 /**
- * Marquer une tâche comme complétée
+ * Marque une tâche comme complétée et l'ajoute à l'historique.
+ *
+ * @param task - La tâche complétée
+ * @param result - Le résultat de l'exécution (success, output, error)
+ * @returns void
  */
 export function completeTask(task: Task, result: TaskResult): void {
   const completed = completedTasksStore.get();
@@ -232,7 +273,20 @@ export function completeTask(task: Task, result: TaskResult): void {
 }
 
 /**
- * Traiter un événement d'agent
+ * Traite un événement émis par un agent et met à jour les stores appropriés.
+ * Gère les événements de cycle de vie: started, completed, failed, tool_call, etc.
+ *
+ * @param event - L'événement à traiter (type, agentName, data)
+ * @returns void
+ *
+ * @example
+ * ```ts
+ * handleAgentEvent({
+ *   type: 'agent:started',
+ *   agentName: 'coder',
+ *   data: { taskId: 'task-123' },
+ * });
+ * ```
  */
 export function handleAgentEvent(event: AgentEvent): void {
   const agent = event.agentName;
@@ -323,7 +377,10 @@ export function handleAgentEvent(event: AgentEvent): void {
 }
 
 /**
- * Réinitialiser tous les stores
+ * Réinitialise tous les stores d'agents à leur état initial.
+ * Utilisé lors du démarrage d'une nouvelle session ou pour nettoyer l'état.
+ *
+ * @returns void
  */
 export function resetAgentStores(): void {
   agentStatusStore.set({
@@ -369,7 +426,18 @@ export function resetAgentStores(): void {
 }
 
 /**
- * Obtenir un résumé de l'état du système
+ * Obtient un résumé complet de l'état du système multi-agents.
+ *
+ * @returns Objet contenant:
+ *   - agents: État de chaque agent (statut et tâche en cours)
+ *   - stats: Statistiques globales (agents actifs, tâches complétées, etc.)
+ *   - recentLogs: Les 10 derniers logs système
+ *
+ * @example
+ * ```ts
+ * const summary = getSystemSummary();
+ * console.log(`${summary.stats.busyAgents} agents actifs`);
+ * ```
  */
 export function getSystemSummary(): {
   agents: Record<AgentType, { status: AgentStatus; currentTask: string | null }>;

@@ -99,7 +99,44 @@ export interface UseCheckpointsReturn {
 }
 
 /**
- * Hook for managing checkpoints in React components.
+ * Hook React pour la gestion des checkpoints (Time Travel).
+ *
+ * Ce hook fournit une interface complète pour:
+ * - Créer des points de sauvegarde manuels ou automatiques
+ * - Restaurer l'état du projet à un point précédent
+ * - Gérer et supprimer les checkpoints existants
+ * - Suivre les statistiques et l'état de chargement
+ *
+ * @param options - Configuration du hook
+ * @param options.chatId - ID du chat pour lequel gérer les checkpoints
+ * @param options.getFilesSnapshot - Callback pour obtenir l'état actuel des fichiers
+ * @param options.getMessages - Callback pour obtenir les messages actuels
+ * @param options.getActionsSnapshot - Callback pour obtenir l'état des actions
+ * @param options.onRestoreFiles - Callback pour restaurer les fichiers
+ * @param options.onRestoreMessages - Callback pour restaurer les messages
+ * @param options.autoLoad - Charger automatiquement les checkpoints au montage (défaut: true)
+ *
+ * @returns Interface UseCheckpointsReturn avec état et actions
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   checkpoints,
+ *   createCheckpoint,
+ *   restoreCheckpoint,
+ *   isRestoring,
+ * } = useCheckpoints({
+ *   chatId: 'chat-123',
+ *   getFilesSnapshot: () => filesStore.get(),
+ *   onRestoreFiles: async (files) => filesStore.set(files),
+ * });
+ *
+ * // Créer un checkpoint manuel
+ * await createCheckpoint('Avant refactoring', 'manual');
+ *
+ * // Restaurer un checkpoint
+ * await restoreCheckpoint(checkpoints[0].id);
+ * ```
  */
 export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsReturn {
   const {
@@ -141,7 +178,10 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, [chatId, autoLoad, initialized]);
 
   /**
-   * Load checkpoints from the database.
+   * Charge les checkpoints depuis la base de données PGlite.
+   * Appelé automatiquement si autoLoad est true.
+   *
+   * @returns Promise résolue quand le chargement est terminé
    */
   const loadCheckpoints = useCallback(async (): Promise<void> => {
     if (!chatId) return;
@@ -171,7 +211,11 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, [chatId]);
 
   /**
-   * Create a new checkpoint.
+   * Crée un nouveau checkpoint avec l'état actuel du projet.
+   *
+   * @param description - Description optionnelle du checkpoint
+   * @param triggerType - Type de déclencheur ('manual', 'auto', 'before_action')
+   * @returns Le checkpoint créé, ou null en cas d'erreur ou throttling
    */
   const createCheckpoint = useCallback(async (
     description?: string,
@@ -245,7 +289,14 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, [chatId, getFilesSnapshot, getMessages, getActionsSnapshot, config, loadCheckpoints]);
 
   /**
-   * Restore a checkpoint.
+   * Restaure l'état du projet à un checkpoint précédent.
+   *
+   * @param checkpointId - ID du checkpoint à restaurer
+   * @param options - Options de restauration
+   * @param options.restoreFiles - Restaurer les fichiers (défaut: true)
+   * @param options.restoreConversation - Restaurer la conversation (défaut: false)
+   * @param options.createRestorePoint - Créer un point de restauration avant (défaut: true)
+   * @returns Résultat avec success, filesRestored, messagesRestored, etc.
    */
   const restoreCheckpoint = useCallback(async (
     checkpointId: string,
@@ -320,7 +371,10 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, [createCheckpoint, onRestoreFiles, onRestoreMessages]);
 
   /**
-   * Delete a checkpoint.
+   * Supprime un checkpoint de la base de données.
+   *
+   * @param checkpointId - ID du checkpoint à supprimer
+   * @returns true si supprimé avec succès, false sinon
    */
   const deleteCheckpointHandler = useCallback(async (checkpointId: string): Promise<boolean> => {
     setError(null);
@@ -345,7 +399,11 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, []);
 
   /**
-   * Update a checkpoint's description.
+   * Met à jour la description d'un checkpoint existant.
+   *
+   * @param checkpointId - ID du checkpoint à modifier
+   * @param description - Nouvelle description
+   * @returns true si mis à jour avec succès, false sinon
    */
   const updateDescriptionHandler = useCallback(async (
     checkpointId: string,
@@ -373,7 +431,10 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, []);
 
   /**
-   * Clear all checkpoints for the current chat.
+   * Supprime tous les checkpoints du chat actuel.
+   * ⚠️ Action irréversible.
+   *
+   * @returns Promise résolue quand la suppression est terminée
    */
   const clearCheckpointsHandler = useCallback(async (): Promise<void> => {
     if (!chatId) return;
@@ -394,7 +455,10 @@ export function useCheckpoints(options: UseCheckpointsOptions): UseCheckpointsRe
   }, [chatId]);
 
   /**
-   * Format a checkpoint for timeline display.
+   * Formate un checkpoint pour l'affichage dans la timeline.
+   *
+   * @param checkpoint - Le checkpoint à formater
+   * @returns Objet formaté avec time, date, filesCount, etc.
    */
   const formatForTimeline = useCallback((checkpoint: Checkpoint) => {
     return formatCheckpointForTimeline(checkpoint);

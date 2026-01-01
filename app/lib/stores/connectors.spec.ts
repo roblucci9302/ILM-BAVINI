@@ -44,8 +44,8 @@ describe('connectors store', () => {
       expect(connectorIds).toContain('netlify');
     });
 
-    it('should have exactly 3 core connectors', () => {
-      expect(CONNECTORS.length).toBe(3);
+    it('should have exactly 6 connectors', () => {
+      expect(CONNECTORS.length).toBe(6);
     });
 
     it('should have valid fields for each connector', () => {
@@ -187,7 +187,7 @@ describe('connectors store', () => {
       it('should return only OAuth connectors', () => {
         const oauthConnectors = getOAuthConnectors();
 
-        expect(oauthConnectors.length).toBe(3);
+        expect(oauthConnectors.length).toBe(6);
         expect(oauthConnectors.every((c) => c.authMethod === 'oauth')).toBe(true);
       });
 
