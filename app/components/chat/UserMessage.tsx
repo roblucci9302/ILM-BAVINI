@@ -1,5 +1,7 @@
+import { memo } from 'react';
 import { modificationsRegex } from '~/utils/diff';
 import { Markdown } from './Markdown';
+import { FloatingMessageActions } from './MessageActions';
 
 // content part types for multimodal messages
 interface TextPart {
@@ -16,9 +18,20 @@ type ContentPart = TextPart | ImagePart;
 
 interface UserMessageProps {
   content: string | ContentPart[];
+  messageIndex: number;
+  onEdit?: (index: number) => void;
+  onDelete?: (index: number) => void;
 }
 
-export function UserMessage({ content }: UserMessageProps) {
+export const UserMessage = memo(({ content, messageIndex, onEdit, onDelete }: UserMessageProps) => {
+  // Get text content for copy action
+  const getTextContent = (): string => {
+    if (Array.isArray(content)) {
+      const textParts = content.filter((part): part is TextPart => part.type === 'text');
+      return textParts.map((part) => part.text).join('\n');
+    }
+    return content;
+  };
   // handle multimodal content (array of parts)
   if (Array.isArray(content)) {
     const imageParts = content.filter((part): part is ImagePart => part.type === 'image');
@@ -26,7 +39,15 @@ export function UserMessage({ content }: UserMessageProps) {
     const textContent = textParts.map((part) => part.text).join('\n');
 
     return (
-      <div className="min-w-0 pt-[4px]">
+      <div className="relative min-w-0 pt-[4px] group/message">
+        <FloatingMessageActions
+          role="user"
+          messageIndex={messageIndex}
+          content={getTextContent()}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          position="top-right"
+        />
         {/* Display images */}
         {imageParts.length > 0 && (
           <div className="flex gap-2 mb-3 flex-wrap">
@@ -48,11 +69,21 @@ export function UserMessage({ content }: UserMessageProps) {
 
   // handle string content (text-only message)
   return (
-    <div className="min-w-0 pt-[4px]">
+    <div className="relative min-w-0 pt-[4px] group/message">
+      <FloatingMessageActions
+        role="user"
+        messageIndex={messageIndex}
+        content={getTextContent()}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        position="top-right"
+      />
       <Markdown limitedMarkdown>{sanitizeUserMessage(content)}</Markdown>
     </div>
   );
-}
+});
+
+UserMessage.displayName = 'UserMessage';
 
 function sanitizeUserMessage(content: string) {
   return content.replace(modificationsRegex, '').trim();

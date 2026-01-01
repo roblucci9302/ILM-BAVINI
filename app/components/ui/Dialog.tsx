@@ -104,7 +104,7 @@ export const Dialog = memo(({ className, children, onBackdrop, onClose }: Dialog
     <RadixDialog.Portal>
       <RadixDialog.Overlay onClick={onBackdrop} asChild>
         <motion.div
-          className="bg-black/50 fixed inset-0 z-max"
+          className="bg-black/40 backdrop-blur-sm fixed inset-0 z-max"
           initial="closed"
           animate="open"
           exit="closed"
@@ -114,7 +114,13 @@ export const Dialog = memo(({ className, children, onBackdrop, onClose }: Dialog
       <RadixDialog.Content asChild>
         <motion.div
           className={classNames(
-            'fixed top-[50%] left-[50%] z-max max-h-[85vh] w-[90vw] max-w-[450px] translate-x-[-50%] translate-y-[-50%] border border-bolt-elements-borderColor rounded-lg bg-bolt-elements-background-depth-2 shadow-lg focus:outline-none overflow-hidden',
+            'fixed top-[50%] left-[50%] z-max max-h-[85vh] w-[90vw] max-w-[450px] translate-x-[-50%] translate-y-[-50%]',
+            'rounded-xl overflow-hidden focus:outline-none',
+            // Glassmorphism effect
+            'bg-[var(--bolt-glass-background-elevated)]',
+            'backdrop-blur-[var(--bolt-glass-blur-strong)]',
+            'border border-[var(--bolt-glass-border)]',
+            'shadow-[var(--bolt-glass-shadow)]',
             className,
           )}
           initial="closed"

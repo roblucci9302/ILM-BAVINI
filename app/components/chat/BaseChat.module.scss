@@ -39,7 +39,8 @@
     #E9D5FF 100%
   );
   background-size: 100% 155%;
-  animation: subtleShift 18s ease-in-out infinite;
+  animation: subtleShift 8s ease-in-out infinite; /* Optimized: 18s → 8s */
+  will-change: background-position; /* GPU acceleration hint */
 }
 
 @keyframes subtleShift {

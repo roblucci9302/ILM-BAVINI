@@ -214,12 +214,12 @@ describe('AgentStopButton', () => {
       expect(screen.getByRole('button')).toHaveClass('custom-stop-class');
     });
 
-    it('should have red background', () => {
+    it('should have red gradient background', () => {
       mockActiveAgentCountStore.set(1);
 
       render(<AgentStopButton onStop={mockOnStop} />);
 
-      expect(screen.getByRole('button')).toHaveClass('bg-red-500');
+      expect(screen.getByRole('button')).toHaveClass('from-red-500');
     });
   });
 });

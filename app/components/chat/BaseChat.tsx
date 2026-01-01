@@ -362,7 +362,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       onClick={(event) => {
                         handleSendMessage(event, category.prompt);
                       }}
-                      className="group flex items-center gap-2 px-4 py-2 rounded-full border border-bolt-elements-borderColor bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3 hover:border-accent-500 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-all duration-200"
+                      className="group flex items-center justify-center gap-2 px-4 py-2 min-w-[120px] shrink-0 rounded-full border border-bolt-elements-borderColor bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3 hover:border-accent-500 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-all duration-200"
                     >
                       <div
                         className={classNames(category.icon, 'text-base group-hover:text-accent-500 transition-colors')}

@@ -131,7 +131,9 @@ describe('Preview', () => {
 
       render(<Preview />);
 
-      expect(screen.getByText('Démarrage du serveur...')).toBeInTheDocument();
+      // Updated loading state with improved styling
+      expect(screen.getByText('Démarrage du serveur')).toBeInTheDocument();
+      expect(screen.getByText("Préparation de l'aperçu...")).toBeInTheDocument();
     });
   });
 

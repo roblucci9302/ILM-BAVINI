@@ -270,8 +270,8 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
         }}
       >
           <div className="h-full w-full py-4 pr-4">
-            <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
-              <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor">
+            <div className="h-full flex flex-col bg-[var(--bolt-glass-background-elevated)] backdrop-blur-[var(--bolt-glass-blur)] border border-[var(--bolt-glass-border)] shadow-[var(--bolt-glass-shadow)] rounded-xl overflow-hidden">
+              <div className="flex items-center px-3.5 py-2.5 border-b border-[var(--bolt-glass-border)]">
                 <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
                 <AgentProgressBanner compact className="ml-2" />
                 <ConnectorQuickLinks />
@@ -289,8 +289,8 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                           className="mr-1 text-sm"
                         />
                         {showCheckpointTimeline && checkpointCount > 0 && (
-                          <div className="absolute top-full right-0 mt-1 w-72 bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor rounded-lg shadow-lg z-50 overflow-hidden">
-                            <div className="max-h-80 overflow-y-auto p-2">
+                          <div className="absolute top-full right-0 mt-2 w-80 bg-[var(--bolt-glass-background-elevated)] backdrop-blur-[var(--bolt-glass-blur-strong)] border border-[var(--bolt-glass-border)] rounded-xl shadow-[var(--bolt-glass-shadow)] z-50 overflow-hidden">
+                            <div className="max-h-80 overflow-y-auto p-2.5">
                               <CheckpointTimeline
                                 checkpoints={timelineCheckpoints}
                                 currentCheckpointId={currentCheckpointId}

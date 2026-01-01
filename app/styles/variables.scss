@@ -4,6 +4,14 @@
   --bolt-elements-borderColor: theme('colors.alpha.gray.10');
   --bolt-elements-borderColorActive: theme('colors.accent.600');
 
+  /* Glassmorphism Tokens */
+  --bolt-glass-background: rgba(255, 255, 255, 0.8);
+  --bolt-glass-background-elevated: rgba(255, 255, 255, 0.9);
+  --bolt-glass-border: rgba(0, 0, 0, 0.08);
+  --bolt-glass-blur: 12px;
+  --bolt-glass-blur-strong: 20px;
+  --bolt-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+
   --bolt-elements-bg-depth-1: theme('colors.white');
   --bolt-elements-bg-depth-2: theme('colors.gray.50');
   --bolt-elements-bg-depth-3: theme('colors.gray.200');
@@ -109,6 +117,14 @@
 :root[data-theme='dark'] {
   --bolt-elements-borderColor: theme('colors.alpha.white.10');
   --bolt-elements-borderColorActive: theme('colors.accent.500');
+
+  /* Glassmorphism Tokens */
+  --bolt-glass-background: rgba(10, 10, 10, 0.75);
+  --bolt-glass-background-elevated: rgba(23, 23, 23, 0.85);
+  --bolt-glass-border: rgba(255, 255, 255, 0.08);
+  --bolt-glass-blur: 12px;
+  --bolt-glass-blur-strong: 20px;
+  --bolt-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
   --bolt-elements-bg-depth-1: theme('colors.gray.950');
   --bolt-elements-bg-depth-2: theme('colors.gray.900');

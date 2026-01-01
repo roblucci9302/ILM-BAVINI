@@ -244,10 +244,10 @@ function NodeButton({
   return (
     <button
       className={classNames(
-        'flex items-center gap-1.5 w-full pr-2 border-2 border-transparent text-faded py-0.5',
+        'flex items-center gap-1.5 w-full pr-2 border-2 border-transparent text-faded py-1', /* Improved spacing: py-0.5 → py-1 */
         className,
       )}
-      style={{ paddingLeft: `${6 + depth * NODE_PADDING_LEFT}px` }}
+      style={{ paddingLeft: `${8 + depth * NODE_PADDING_LEFT}px` }} /* Improved left padding: 6px → 8px */
       onClick={() => onClick?.()}
       role={role}
       aria-expanded={ariaExpanded}

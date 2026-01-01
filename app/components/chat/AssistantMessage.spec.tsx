@@ -9,28 +9,38 @@ vi.mock('./Markdown', () => ({
   ),
 }));
 
+// Mock the MessageActions component
+vi.mock('./MessageActions', () => ({
+  FloatingMessageActions: () => <div data-testid="message-actions" />,
+}));
+
 describe('AssistantMessage', () => {
+  const defaultProps = {
+    content: 'Hello, world!',
+    messageIndex: 0,
+  };
+
   it('should render with content', () => {
-    render(<AssistantMessage content="Hello, world!" />);
+    render(<AssistantMessage {...defaultProps} />);
 
     expect(screen.getByTestId('markdown-content')).toHaveTextContent('Hello, world!');
   });
 
   it('should pass content to Markdown component', () => {
     const content = 'This is a **test** message';
-    render(<AssistantMessage content={content} />);
+    render(<AssistantMessage {...defaultProps} content={content} />);
 
     expect(screen.getByTestId('markdown-content')).toHaveTextContent(content);
   });
 
   it('should render empty content', () => {
-    render(<AssistantMessage content="" />);
+    render(<AssistantMessage {...defaultProps} content="" />);
 
     expect(screen.getByTestId('markdown-content')).toBeInTheDocument();
   });
 
   it('should have correct container class', () => {
-    const { container } = render(<AssistantMessage content="Test" />);
+    const { container } = render(<AssistantMessage {...defaultProps} content="Test" />);
 
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass('w-full', 'min-w-0');
@@ -40,14 +50,14 @@ describe('AssistantMessage', () => {
     const multilineContent = `Line 1
 Line 2
 Line 3`;
-    render(<AssistantMessage content={multilineContent} />);
+    render(<AssistantMessage {...defaultProps} content={multilineContent} />);
 
     expect(screen.getByTestId('markdown-content')).toHaveTextContent('Line 1');
   });
 
   it('should handle HTML-like content safely', () => {
     const htmlContent = '<script>alert("xss")</script>';
-    render(<AssistantMessage content={htmlContent} />);
+    render(<AssistantMessage {...defaultProps} content={htmlContent} />);
 
     // The content should be passed to Markdown which handles sanitization
     expect(screen.getByTestId('markdown-content')).toBeInTheDocument();
@@ -55,7 +65,7 @@ Line 3`;
 
   it('should handle code blocks in content', () => {
     const codeContent = '```typescript\nconst x = 1;\n```';
-    render(<AssistantMessage content={codeContent} />);
+    render(<AssistantMessage {...defaultProps} content={codeContent} />);
 
     // Text content gets normalized (whitespace collapsed)
     expect(screen.getByTestId('markdown-content')).toHaveTextContent('```typescript');
@@ -66,5 +76,11 @@ Line 3`;
     // AssistantMessage is wrapped in memo, verify it's a valid component
     expect(AssistantMessage).toBeDefined();
     expect(typeof AssistantMessage).toBe('object'); // memo components are objects
+  });
+
+  it('should render message actions', () => {
+    render(<AssistantMessage {...defaultProps} />);
+
+    expect(screen.getByTestId('message-actions')).toBeInTheDocument();
   });
 });

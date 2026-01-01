@@ -48,3 +48,37 @@ body {
     top: 1rem;
   }
 }
+
+/* ============================================
+   GLASSMORPHISM: Reusable glass effect utilities
+   ============================================ */
+
+.glass {
+  background: var(--bolt-glass-background);
+  backdrop-filter: blur(var(--bolt-glass-blur));
+  -webkit-backdrop-filter: blur(var(--bolt-glass-blur));
+  border: 1px solid var(--bolt-glass-border);
+}
+
+.glass-elevated {
+  background: var(--bolt-glass-background-elevated);
+  backdrop-filter: blur(var(--bolt-glass-blur-strong));
+  -webkit-backdrop-filter: blur(var(--bolt-glass-blur-strong));
+  border: 1px solid var(--bolt-glass-border);
+  box-shadow: var(--bolt-glass-shadow);
+}
+
+.glass-card {
+  background: var(--bolt-glass-background);
+  backdrop-filter: blur(var(--bolt-glass-blur));
+  -webkit-backdrop-filter: blur(var(--bolt-glass-blur));
+  border: 1px solid var(--bolt-glass-border);
+  box-shadow: var(--bolt-glass-shadow);
+  border-radius: 12px;
+}
+
+.glass-subtle {
+  background: var(--bolt-glass-background);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}

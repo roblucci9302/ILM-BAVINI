@@ -175,7 +175,8 @@ describe('Messages', () => {
       const { container } = render(<Messages messages={messages} />);
 
       const messageWrappers = container.querySelectorAll('.flex.gap-4');
-      expect(messageWrappers[1]).toHaveClass('mt-4');
+      // Phase 2: Improved spacing from mt-4 to mt-5
+      expect(messageWrappers[1]).toHaveClass('mt-5');
     });
 
     it('should not add margin-top to first message', () => {
@@ -184,7 +185,7 @@ describe('Messages', () => {
       const { container } = render(<Messages messages={messages} />);
 
       const messageWrapper = container.querySelector('.flex.gap-4');
-      expect(messageWrapper).not.toHaveClass('mt-4');
+      expect(messageWrapper).not.toHaveClass('mt-5');
     });
   });
 

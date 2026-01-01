@@ -133,18 +133,21 @@
   --blur: 12px;
 }
 
+/* Performance optimization: Only animate first 4 circles */
 .circle1 { --x: 0; --y: -40px; --animation: circle-1; }
 .circle2 { --x: 92px; --y: 8px; --animation: circle-2; }
 .circle3 { --x: -12px; --y: -12px; --animation: circle-3; }
 .circle4 { --x: 80px; --y: -12px; --animation: circle-4; }
-.circle5 { --x: 12px; --y: -4px; --animation: circle-5; }
-.circle6 { --x: 56px; --y: 16px; --animation: circle-6; }
-.circle7 { --x: 8px; --y: 28px; --animation: circle-7; }
-.circle8 { --x: 28px; --y: -4px; --animation: circle-8; }
-.circle9 { --x: 20px; --y: -12px; --animation: circle-9; }
-.circle10 { --x: 64px; --y: 16px; --animation: circle-10; }
-.circle11 { --x: 4px; --y: 4px; --animation: circle-11; }
-.circle12 { --blur: 14px; --x: 52px; --y: 4px; --animation: circle-12; }
+
+/* Static circles (no animation) for better performance */
+.circle5 { --x: 12px; --y: -4px; opacity: 0.5; }
+.circle6 { --x: 56px; --y: 16px; opacity: 0.5; }
+.circle7 { --x: 8px; --y: 28px; opacity: 0.4; }
+.circle8 { --x: 28px; --y: -4px; opacity: 0.4; }
+.circle9 { --x: 20px; --y: -12px; opacity: 0.3; }
+.circle10 { --x: 64px; --y: 16px; opacity: 0.3; }
+.circle11 { --x: 4px; --y: 4px; opacity: 0.25; }
+.circle12 { --blur: 14px; --x: 52px; --y: 4px; opacity: 0.25; }
 
 /* Color variants */
 .react {

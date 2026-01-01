@@ -214,16 +214,15 @@ export const AgentStatusBadge = memo(({
     <motion.button
       onClick={handleClick}
       className={classNames(
-        'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors',
-        'hover:bg-bolt-elements-background-depth-3',
-        'border border-bolt-elements-borderColor',
+        'flex items-center gap-2.5 px-3.5 py-2 rounded-xl transition-all duration-200',
+        'hover:shadow-md',
         activeCount > 0
-          ? 'bg-accent-500/10 border-accent-500/30'
-          : 'bg-bolt-elements-background-depth-2',
+          ? 'bg-accent-500/10 border border-accent-500/30 hover:bg-accent-500/15'
+          : 'bg-[var(--bolt-glass-background)] backdrop-blur-[var(--bolt-glass-blur)] border border-[var(--bolt-glass-border)] hover:bg-bolt-elements-background-depth-3',
         className
       )}
       whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileTap={{ scale: 0.97 }}
     >
       {/* Robot icon */}
       <div className={classNames(
@@ -299,22 +298,24 @@ export const AgentStopButton = memo(({
       onClick={onStop}
       disabled={disabled}
       className={classNames(
-        'flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all',
-        'bg-red-500 hover:bg-red-600 active:bg-red-700',
+        'flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all duration-200',
+        'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
         'text-white font-semibold',
-        'border-2 border-red-400',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'border border-red-400/50',
+        'shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
         className
       )}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
     >
       <div className="i-ph:stop-circle-fill text-xl" />
-      <span className="text-sm uppercase tracking-wide">Arrêter</span>
-      <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-md">{activeCount}</span>
+      <span className="text-sm uppercase tracking-wider">Arrêter</span>
+      <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-bold">{activeCount}</span>
     </motion.button>
   );
 });
@@ -332,15 +333,19 @@ export const AgentLoadingIndicator = memo(({
   message?: string;
 }) => {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor">
-      <div className="i-svg-spinners:90-ring-with-bg text-accent-400" />
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[var(--bolt-glass-background)] backdrop-blur-[var(--bolt-glass-blur)] border border-[var(--bolt-glass-border)] shadow-sm"
+    >
+      <div className="i-svg-spinners:90-ring-with-bg text-accent-400 text-lg" />
       {agent && (
-        <div className={classNames(getAgentIcon(agent), 'text-bolt-elements-textSecondary')} />
+        <div className={classNames(getAgentIcon(agent), 'text-accent-400 text-lg')} />
       )}
       <span className="text-sm text-bolt-elements-textSecondary">
         {message || (agent ? `${getAgentDisplayName(agent)} en cours...` : 'Traitement...')}
       </span>
-    </div>
+    </motion.div>
   );
 });
 

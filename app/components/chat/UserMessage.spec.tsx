@@ -7,17 +7,27 @@ vi.mock('./Markdown', () => ({
   Markdown: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
 }));
 
+// Mock the MessageActions component
+vi.mock('./MessageActions', () => ({
+  FloatingMessageActions: () => <div data-testid="message-actions" />,
+}));
+
 describe('UserMessage', () => {
+  const defaultProps = {
+    content: 'Hello world',
+    messageIndex: 0,
+  };
+
   describe('string content', () => {
     it('should render simple text content', () => {
-      render(<UserMessage content="Hello world" />);
+      render(<UserMessage {...defaultProps} />);
 
       expect(screen.getByTestId('markdown')).toHaveTextContent('Hello world');
     });
 
     it('should sanitize content with modifications regex', () => {
       // the modificationsRegex removes certain patterns
-      render(<UserMessage content="   Hello world   " />);
+      render(<UserMessage {...defaultProps} content="   Hello world   " />);
 
       expect(screen.getByTestId('markdown')).toHaveTextContent('Hello world');
     });
@@ -27,7 +37,7 @@ describe('UserMessage', () => {
     it('should render text from multimodal content', () => {
       const content = [{ type: 'text' as const, text: 'Hello from multimodal' }];
 
-      render(<UserMessage content={content} />);
+      render(<UserMessage {...defaultProps} content={content} />);
 
       expect(screen.getByTestId('markdown')).toHaveTextContent('Hello from multimodal');
     });
@@ -38,7 +48,7 @@ describe('UserMessage', () => {
         { type: 'text' as const, text: 'Description' },
       ];
 
-      render(<UserMessage content={content} />);
+      render(<UserMessage {...defaultProps} content={content} />);
 
       const img = screen.getByRole('img');
 
@@ -53,7 +63,7 @@ describe('UserMessage', () => {
         { type: 'text' as const, text: 'Two images' },
       ];
 
-      render(<UserMessage content={content} />);
+      render(<UserMessage {...defaultProps} content={content} />);
 
       const images = screen.getAllByRole('img');
 
@@ -68,7 +78,7 @@ describe('UserMessage', () => {
         { type: 'text' as const, text: 'Second part' },
       ];
 
-      render(<UserMessage content={content} />);
+      render(<UserMessage {...defaultProps} content={content} />);
 
       // HTML collapses newlines to spaces
       expect(screen.getByTestId('markdown')).toHaveTextContent('First part Second part');
@@ -77,7 +87,7 @@ describe('UserMessage', () => {
     it('should handle images-only content (no text)', () => {
       const content = [{ type: 'image' as const, image: 'data:image/png;base64,abc123' }];
 
-      render(<UserMessage content={content} />);
+      render(<UserMessage {...defaultProps} content={content} />);
 
       expect(screen.getByRole('img')).toBeInTheDocument();
       expect(screen.queryByTestId('markdown')).not.toBeInTheDocument();
@@ -89,13 +99,21 @@ describe('UserMessage', () => {
         { type: 'text' as const, text: 'Test' },
       ];
 
-      render(<UserMessage content={content} />);
+      render(<UserMessage {...defaultProps} content={content} />);
 
       const img = screen.getByRole('img');
 
       expect(img).toHaveClass('max-w-[200px]');
       expect(img).toHaveClass('max-h-[200px]');
       expect(img).toHaveClass('rounded-lg');
+    });
+  });
+
+  describe('message actions', () => {
+    it('should render message actions', () => {
+      render(<UserMessage {...defaultProps} />);
+
+      expect(screen.getByTestId('message-actions')).toBeInTheDocument();
     });
   });
 });

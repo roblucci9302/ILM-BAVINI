@@ -117,7 +117,7 @@ export const Preview = memo(() => {
       {isPortDropdownOpen && (
         <div className="z-iframe-overlay w-full h-full absolute" onClick={() => setIsPortDropdownOpen(false)} />
       )}
-      <div className="bg-bolt-elements-background-depth-2 p-2 flex items-center gap-1.5">
+      <div className="p-2.5 flex items-center gap-2">
         <IconButton icon="i-ph:arrow-clockwise" title="Recharger l'aperçu" onClick={reloadPreview} />
         <IconButton
           icon="i-ph:arrows-out"
@@ -126,8 +126,7 @@ export const Preview = memo(() => {
           disabled={!iframeUrl || !activePreview?.ready}
         />
         <div
-          className="flex items-center gap-1 flex-grow bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-3 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive
-        focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive"
+          className="flex items-center gap-1.5 flex-grow bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-xl px-3.5 py-1.5 text-sm transition-all duration-200 hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:border-accent-500/50 focus-within:text-bolt-elements-preview-addressBar-textActive focus-within:ring-2 focus-within:ring-accent-500/20"
         >
           <input
             ref={inputRef}
@@ -160,13 +159,13 @@ export const Preview = memo(() => {
           />
         )}
         {/* Separator */}
-        <div className="w-px h-5 bg-bolt-elements-borderColor" />
+        <div className="w-px h-5 bg-bolt-elements-borderColor/50" />
         {/* Device selector */}
         <DeviceSelector />
       </div>
       <div
         ref={fullscreenContainerRef}
-        className="flex-1 border-t border-bolt-elements-borderColor overflow-hidden relative"
+        className="flex-1 border-t border-[var(--bolt-glass-border)] overflow-hidden relative"
       >
         {activePreview ? (
           activePreview.ready ? (
@@ -189,14 +188,31 @@ export const Preview = memo(() => {
             )
           ) : (
             <div className="flex w-full h-full justify-center items-center bg-bolt-elements-background-depth-1">
-              <div className="flex flex-col items-center gap-3">
-                <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-3xl" />
-                <span className="text-bolt-elements-textSecondary text-sm">Démarrage du serveur...</span>
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-accent-500/10 flex items-center justify-center">
+                    <div className="i-svg-spinners:90-ring-with-bg text-accent-500 text-2xl" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className="text-bolt-elements-textPrimary font-medium">Démarrage du serveur</span>
+                  <p className="text-bolt-elements-textTertiary text-sm mt-1">Préparation de l'aperçu...</p>
+                </div>
               </div>
             </div>
           )
         ) : (
-          <div className="flex w-full h-full justify-center items-center bg-white">Aucun aperçu disponible</div>
+          <div className="flex w-full h-full justify-center items-center bg-bolt-elements-background-depth-1">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-bolt-elements-background-depth-3 flex items-center justify-center">
+                <div className="i-ph:eye-slash text-3xl text-bolt-elements-textTertiary" />
+              </div>
+              <div>
+                <span className="text-bolt-elements-textSecondary font-medium">Aucun aperçu disponible</span>
+                <p className="text-bolt-elements-textTertiary text-sm mt-1">Lancez le serveur pour voir l'aperçu</p>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Floating exit button - macOS style - only visible in fullscreen */}

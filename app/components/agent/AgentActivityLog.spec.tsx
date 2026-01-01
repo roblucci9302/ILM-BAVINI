@@ -81,7 +81,9 @@ describe('AgentActivityLog', () => {
     it('should show total agents', () => {
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('8 agents')).toBeInTheDocument();
+      // New card-based layout shows number and label separately
+      expect(screen.getByText('8')).toBeInTheDocument();
+      expect(screen.getByText('Agents')).toBeInTheDocument();
     });
 
     it('should show active agents count', () => {
@@ -95,7 +97,9 @@ describe('AgentActivityLog', () => {
 
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('2 actifs')).toBeInTheDocument();
+      // New card-based layout shows number and label separately
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText('Actifs')).toBeInTheDocument();
     });
 
     it('should show completed tasks count', () => {
@@ -109,7 +113,9 @@ describe('AgentActivityLog', () => {
 
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('10 tâches')).toBeInTheDocument();
+      // New card-based layout shows number and label separately
+      expect(screen.getByText('10')).toBeInTheDocument();
+      expect(screen.getByText('Tâches')).toBeInTheDocument();
     });
 
     it('should show failed tasks when present', () => {
@@ -123,10 +129,12 @@ describe('AgentActivityLog', () => {
 
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('2 échecs')).toBeInTheDocument();
+      // New card-based layout shows number and label separately
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText('Échecs')).toBeInTheDocument();
     });
 
-    it('should show pending tasks count', () => {
+    it('should show pending tasks count when no failures', () => {
       mockAgentStatsStore.set({
         totalAgents: 8,
         busyAgents: 1,
@@ -137,7 +145,9 @@ describe('AgentActivityLog', () => {
 
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('5 en attente')).toBeInTheDocument();
+      // New card-based layout shows number and label separately
+      expect(screen.getByText('5')).toBeInTheDocument();
+      expect(screen.getByText('Attente')).toBeInTheDocument();
     });
   });
 
@@ -145,7 +155,7 @@ describe('AgentActivityLog', () => {
     it('should render filter dropdowns', () => {
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.getByText('Filtrer:')).toBeInTheDocument();
+      expect(screen.getByText('Filtrer')).toBeInTheDocument();
     });
 
     it('should have level filter dropdown', () => {
@@ -229,7 +239,7 @@ describe('AgentActivityLog', () => {
     it('should call onClose when close button clicked', () => {
       render(<AgentActivityLog isOpen={true} onClose={mockOnClose} />);
 
-      const closeButton = screen.getByRole('button', { name: '' });
+      const closeButton = screen.getByRole('button', { name: 'Fermer' });
       fireEvent.click(closeButton);
 
       expect(mockOnClose).toHaveBeenCalled();
@@ -270,20 +280,20 @@ describe('AgentActivityLog helper functions', () => {
   describe('log level colors', () => {
     it('should return correct colors for each level', () => {
       const logs: LogEntry[] = [
-        { timestamp: new Date(), level: 'debug', message: 'Debug' },
-        { timestamp: new Date(), level: 'info', message: 'Info' },
-        { timestamp: new Date(), level: 'warn', message: 'Warn' },
-        { timestamp: new Date(), level: 'error', message: 'Error' },
+        { timestamp: new Date(), level: 'debug', message: 'Debug message' },
+        { timestamp: new Date(), level: 'info', message: 'Info message' },
+        { timestamp: new Date(), level: 'warn', message: 'Warn message' },
+        { timestamp: new Date(), level: 'error', message: 'Error message' },
       ];
       mockSystemLogsStore.set(logs);
 
       render(<AgentActivityLog isOpen={true} onClose={vi.fn()} />);
 
-      // All messages should be visible
-      expect(screen.getByText('Debug')).toBeInTheDocument();
-      expect(screen.getByText('Info')).toBeInTheDocument();
-      expect(screen.getByText('Warn')).toBeInTheDocument();
-      expect(screen.getByText('Error')).toBeInTheDocument();
+      // All messages should be visible (using unique message text)
+      expect(screen.getByText('Debug message')).toBeInTheDocument();
+      expect(screen.getByText('Info message')).toBeInTheDocument();
+      expect(screen.getByText('Warn message')).toBeInTheDocument();
+      expect(screen.getByText('Error message')).toBeInTheDocument();
     });
   });
 

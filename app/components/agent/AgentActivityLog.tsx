@@ -186,43 +186,67 @@ const AgentStats = memo(() => {
   const stats = useStore(agentStatsStore);
 
   return (
-    <div className="flex items-center gap-4 px-4 py-2 bg-bolt-elements-background-depth-3 border-b border-bolt-elements-borderColor text-xs">
-      <div className="flex items-center gap-1">
-        <div className="i-ph:robot text-bolt-elements-textSecondary" />
-        <span className="text-bolt-elements-textSecondary">
-          {stats.totalAgents} agents
+    <div className="grid grid-cols-4 gap-2 px-4 py-3 border-b border-[var(--bolt-glass-border)]">
+      {/* Total Agents */}
+      <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-bolt-elements-background-depth-3/50">
+        <div className="i-ph:robot text-lg text-bolt-elements-textSecondary" />
+        <span className="text-lg font-semibold text-bolt-elements-textPrimary">
+          {stats.totalAgents}
+        </span>
+        <span className="text-[10px] text-bolt-elements-textTertiary uppercase tracking-wide">
+          Agents
         </span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        <span className="text-green-400">
-          {stats.busyAgents} actif{stats.busyAgents > 1 ? 's' : ''}
+      {/* Active */}
+      <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-green-500/10">
+        <div className="relative">
+          <div className="w-3 h-3 rounded-full bg-green-500" />
+          {stats.busyAgents > 0 && (
+            <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-500 animate-ping opacity-75" />
+          )}
+        </div>
+        <span className="text-lg font-semibold text-green-400">
+          {stats.busyAgents}
+        </span>
+        <span className="text-[10px] text-green-400/70 uppercase tracking-wide">
+          Actifs
         </span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <div className="i-ph:check-circle text-bolt-elements-textSecondary" />
-        <span className="text-bolt-elements-textSecondary">
-          {stats.completedTasks} tâches
+      {/* Completed */}
+      <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-bolt-elements-background-depth-3/50">
+        <div className="i-ph:check-circle text-lg text-bolt-elements-icon-success" />
+        <span className="text-lg font-semibold text-bolt-elements-textPrimary">
+          {stats.completedTasks}
+        </span>
+        <span className="text-[10px] text-bolt-elements-textTertiary uppercase tracking-wide">
+          Tâches
         </span>
       </div>
 
-      {stats.failedTasks > 0 && (
-        <div className="flex items-center gap-1">
-          <div className="i-ph:x-circle text-red-400" />
-          <span className="text-red-400">
-            {stats.failedTasks} échec{stats.failedTasks > 1 ? 's' : ''}
+      {/* Pending or Failed */}
+      {stats.failedTasks > 0 ? (
+        <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-red-500/10">
+          <div className="i-ph:x-circle text-lg text-red-400" />
+          <span className="text-lg font-semibold text-red-400">
+            {stats.failedTasks}
+          </span>
+          <span className="text-[10px] text-red-400/70 uppercase tracking-wide">
+            Échecs
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-bolt-elements-background-depth-3/50">
+          <div className="i-ph:clock text-lg text-bolt-elements-textSecondary" />
+          <span className="text-lg font-semibold text-bolt-elements-textPrimary">
+            {stats.pendingTasks}
+          </span>
+          <span className="text-[10px] text-bolt-elements-textTertiary uppercase tracking-wide">
+            Attente
           </span>
         </div>
       )}
-
-      <div className="flex items-center gap-1">
-        <div className="i-ph:clock text-bolt-elements-textSecondary" />
-        <span className="text-bolt-elements-textSecondary">
-          {stats.pendingTasks} en attente
-        </span>
-      </div>
     </div>
   );
 });
@@ -256,33 +280,61 @@ const LogFilters = memo(({
     'fixer',
   ];
 
+  const selectClassName = classNames(
+    'text-xs px-2.5 py-1.5 rounded-lg',
+    'bg-bolt-elements-background-depth-3/80 backdrop-blur-sm',
+    'border border-bolt-elements-borderColor',
+    'text-bolt-elements-textPrimary',
+    'hover:border-accent-500/50 focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30',
+    'transition-all duration-200',
+    'cursor-pointer appearance-none',
+    'pr-7 bg-no-repeat bg-right'
+  );
+
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b border-bolt-elements-borderColor">
-      <span className="text-xs text-bolt-elements-textSecondary">Filtrer:</span>
+    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--bolt-glass-border)]">
+      <div className="flex items-center gap-1.5 text-xs text-bolt-elements-textSecondary">
+        <div className="i-ph:funnel text-sm" />
+        <span>Filtrer</span>
+      </div>
 
-      <select
-        value={selectedLevel}
-        onChange={e => onLevelChange(e.target.value as LogLevel | 'all')}
-        className="text-xs bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor rounded px-2 py-1 text-bolt-elements-textPrimary"
-      >
-        {levels.map(level => (
-          <option key={level} value={level}>
-            {level === 'all' ? 'Tous niveaux' : level}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={selectedLevel}
+          onChange={e => onLevelChange(e.target.value as LogLevel | 'all')}
+          className={selectClassName}
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+            backgroundSize: '1.25rem',
+            backgroundPosition: 'right 0.25rem center',
+          }}
+        >
+          {levels.map(level => (
+            <option key={level} value={level}>
+              {level === 'all' ? 'Tous niveaux' : level.charAt(0).toUpperCase() + level.slice(1)}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <select
-        value={selectedAgent}
-        onChange={e => onAgentChange(e.target.value as AgentType | 'all')}
-        className="text-xs bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor rounded px-2 py-1 text-bolt-elements-textPrimary"
-      >
-        {agents.map(agent => (
-          <option key={agent} value={agent}>
-            {agent === 'all' ? 'Tous agents' : agent}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={selectedAgent}
+          onChange={e => onAgentChange(e.target.value as AgentType | 'all')}
+          className={selectClassName}
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+            backgroundSize: '1.25rem',
+            backgroundPosition: 'right 0.25rem center',
+          }}
+        >
+          {agents.map(agent => (
+            <option key={agent} value={agent}>
+              {agent === 'all' ? 'Tous agents' : agent.charAt(0).toUpperCase() + agent.slice(1)}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 });
@@ -339,19 +391,23 @@ export const AgentActivityLog = memo(({
           initial={{ opacity: 0, x: 300 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 300 }}
-          className="fixed right-0 top-0 bottom-0 w-96 bg-bolt-elements-background-depth-1 border-l border-bolt-elements-borderColor shadow-2xl z-40 flex flex-col"
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="fixed right-0 top-0 bottom-0 w-96 z-40 flex flex-col bg-[var(--bolt-glass-background-elevated)] backdrop-blur-[var(--bolt-glass-blur-strong)] border-l border-[var(--bolt-glass-border)] shadow-[var(--bolt-glass-shadow)]"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-bolt-elements-borderColor bg-bolt-elements-background-depth-2">
-            <div className="flex items-center gap-2">
-              <div className="i-ph:list-bullets text-lg text-bolt-elements-textSecondary" />
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--bolt-glass-border)]">
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-500/10">
+                <div className="i-ph:list-bullets text-lg text-accent-500" />
+              </div>
               <h3 className="font-semibold text-bolt-elements-textPrimary">
                 Activité des Agents
               </h3>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded hover:bg-bolt-elements-background-depth-3 transition-colors"
+              className="p-2 rounded-lg hover:bg-bolt-elements-background-depth-3 transition-all duration-200 active:scale-95"
+              aria-label="Fermer"
             >
               <div className="i-ph:x text-bolt-elements-textSecondary" />
             </button>
@@ -388,15 +444,16 @@ export const AgentActivityLog = memo(({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-2 border-t border-bolt-elements-borderColor bg-bolt-elements-background-depth-2 text-xs">
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-[var(--bolt-glass-border)] text-xs">
             <span className="text-bolt-elements-textTertiary">
               {filteredLogs.length} entrée{filteredLogs.length > 1 ? 's' : ''}
             </span>
             <button
               onClick={clearLogs}
-              className="text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary hover:bg-bolt-elements-background-depth-3 transition-all duration-200 active:scale-95"
             >
-              Effacer
+              <div className="i-ph:trash text-sm" />
+              <span>Effacer</span>
             </button>
           </div>
         </motion.div>
