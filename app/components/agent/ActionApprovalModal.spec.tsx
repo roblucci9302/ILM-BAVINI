@@ -64,7 +64,16 @@ describe('ActionApprovalModal', () => {
   const createMockAction = (overrides: Partial<ProposedAction> = {}): ProposedAction => ({
     id: 'action-1',
     type: 'file_create',
-    details: { path: '/test/file.ts', content: 'const x = 1;' },
+    agent: 'coder',
+    description: 'Create test file',
+    details: {
+      type: 'file_create',
+      path: '/test/file.ts',
+      content: 'const x = 1;',
+      lineCount: 1,
+    },
+    status: 'pending',
+    createdAt: new Date(),
     ...overrides,
   });
 
@@ -72,6 +81,8 @@ describe('ActionApprovalModal', () => {
     id: 'batch-1',
     agent: 'coder',
     actions,
+    description: 'Test batch',
+    status: 'pending',
     createdAt: new Date(),
   });
 
@@ -191,7 +202,7 @@ describe('ActionApprovalModal', () => {
   describe('action items', () => {
     it('should render action items', () => {
       const batch = createMockBatch([
-        createMockAction({ id: '1', type: 'file_create', details: { path: '/src/test.ts', content: '' } }),
+        createMockAction({ id: '1', type: 'file_create', details: { type: 'file_create', path: '/src/test.ts', content: '', lineCount: 0 } }),
       ]);
 
       render(
@@ -212,7 +223,7 @@ describe('ActionApprovalModal', () => {
       const batch = createMockBatch([
         createMockAction({ id: '1', type: 'file_create' }),
         createMockAction({ id: '2', type: 'file_modify' }),
-        createMockAction({ id: '3', type: 'shell_command', details: { command: 'npm install' } }),
+        createMockAction({ id: '3', type: 'shell_command', details: { type: 'shell_command', command: 'npm install', commandCheck: { command: 'npm install', level: 'allowed', allowed: true, message: 'Command allowed' } } }),
       ]);
 
       render(

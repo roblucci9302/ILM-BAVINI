@@ -35,8 +35,13 @@ describe('Artifact component logic', () => {
 
   describe('actions computed store', () => {
     it('should return empty array when no runner', () => {
-      const runner = undefined;
-      const actionsStore = runner?.actions ? computed(runner.actions, (m) => Object.values(m)) : atom([]);
+      // Test the fallback behavior when runner is undefined
+      const runner = undefined as { actions: ReturnType<typeof atom<Record<string, unknown>>> } | undefined;
+
+      // When runner is undefined, we expect the fallback to return an empty array
+      const actionsStore = runner !== undefined
+        ? computed(runner.actions, (m) => Object.values(m))
+        : atom<unknown[]>([]);
 
       expect(actionsStore.get()).toEqual([]);
     });

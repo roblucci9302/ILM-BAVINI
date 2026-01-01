@@ -138,9 +138,15 @@ describe('files store', () => {
 
   describe('saveFile logic', () => {
     it('should update files map after save', () => {
-      const files = map({
+      interface FileEntry {
+        type: 'file';
+        content: string;
+        isBinary: boolean;
+      }
+
+      const files = map<Record<string, FileEntry>>({
         '/home/project/src/index.ts': {
-          type: 'file' as const,
+          type: 'file',
           content: 'old content',
           isBinary: false,
         },
@@ -152,7 +158,7 @@ describe('files store', () => {
 
       saveFile('/home/project/src/index.ts', 'new content');
 
-      expect(files.get()['/home/project/src/index.ts'].content).toBe('new content');
+      expect(files.get()['/home/project/src/index.ts']?.content).toBe('new content');
     });
   });
 

@@ -207,7 +207,7 @@ describe('ReviewerAgent', () => {
 
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry.instance = null as any;
+    AgentRegistry.resetInstance();
 
     mockAnalyzer = createMockAnalyzer({
       analysisResult: {
@@ -297,7 +297,7 @@ describe('FixerAgent', () => {
 
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry.instance = null as any;
+    AgentRegistry.resetInstance();
 
     mockFs = createMockWritableFileSystem({
       '/project/test.ts': 'const x = 1;',
@@ -409,7 +409,7 @@ describe('SwarmCoordinator', () => {
 
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry.instance = null as any;
+    AgentRegistry.resetInstance();
     registry = AgentRegistry.getInstance();
     coordinator = new SwarmCoordinator(registry, 'test-api-key', { verbose: false });
   });
@@ -639,7 +639,7 @@ describe('MockAnalyzer', () => {
 describe('Integration Phase 4', () => {
   beforeEach(() => {
     // Reset singleton registry
-    AgentRegistry.instance = null as any;
+    AgentRegistry.resetInstance();
   });
 
   it('should register all Phase 4 agents', () => {

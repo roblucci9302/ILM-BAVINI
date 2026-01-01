@@ -170,7 +170,13 @@ describe('editor store', () => {
 
   describe('updateScrollPosition logic', () => {
     it('should update scroll position for existing document', () => {
-      const documents = map({
+      interface DocumentState {
+        value: string;
+        filePath: string;
+        scroll?: { top: number; left: number };
+      }
+
+      const documents = map<Record<string, DocumentState>>({
         '/src/index.ts': {
           value: 'code',
           filePath: '/src/index.ts',
@@ -186,13 +192,18 @@ describe('editor store', () => {
 
       updateScroll('/src/index.ts', { top: 200, left: 50 });
 
-      expect(documents.get()['/src/index.ts'].scroll).toEqual({ top: 200, left: 50 });
+      expect(documents.get()['/src/index.ts']?.scroll).toEqual({ top: 200, left: 50 });
     });
   });
 
   describe('updateFile logic', () => {
     it('should update file content when changed', () => {
-      const documents = map({
+      interface DocumentState {
+        value: string;
+        filePath: string;
+      }
+
+      const documents = map<Record<string, DocumentState>>({
         '/src/index.ts': {
           value: 'old content',
           filePath: '/src/index.ts',
@@ -208,13 +219,18 @@ describe('editor store', () => {
 
       updateFile('/src/index.ts', 'new content');
 
-      expect(documents.get()['/src/index.ts'].value).toBe('new content');
+      expect(documents.get()['/src/index.ts']?.value).toBe('new content');
     });
 
     it('should not update if content is the same', () => {
       let updateCount = 0;
 
-      const documents = map({
+      interface DocumentState {
+        value: string;
+        filePath: string;
+      }
+
+      const documents = map<Record<string, DocumentState>>({
         '/src/index.ts': {
           value: 'same content',
           filePath: '/src/index.ts',

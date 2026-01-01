@@ -190,12 +190,12 @@ describe('Messages', () => {
 
   describe('ref forwarding', () => {
     it('should forward ref to container', () => {
-      const ref = { current: null };
+      const ref = { current: null as HTMLDivElement | null };
 
       render(<Messages ref={ref} id="test-messages" />);
 
       expect(ref.current).toBeInstanceOf(HTMLDivElement);
-      expect((ref.current as HTMLDivElement).id).toBe('test-messages');
+      expect(ref.current?.id).toBe('test-messages');
     });
   });
 

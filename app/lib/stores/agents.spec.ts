@@ -103,9 +103,9 @@ describe('agents store', () => {
     it('should set current task for agent', () => {
       const task: Task = {
         id: 'task-1',
+        type: 'coder',
         prompt: 'Test prompt',
         status: 'pending',
-        agentName: 'coder',
         createdAt: new Date(),
       };
 
@@ -117,9 +117,9 @@ describe('agents store', () => {
     it('should clear current task when null', () => {
       const task: Task = {
         id: 'task-1',
+        type: 'coder',
         prompt: 'Test prompt',
         status: 'pending',
-        agentName: 'coder',
         createdAt: new Date(),
       };
 
@@ -182,9 +182,9 @@ describe('agents store', () => {
   describe('task queue operations', () => {
     const createTask = (id: string): Task => ({
       id,
+      type: 'orchestrator',
       prompt: `Task ${id}`,
       status: 'pending',
-      agentName: 'orchestrator',
       createdAt: new Date(),
     });
 
@@ -216,9 +216,9 @@ describe('agents store', () => {
     it('should add task to completed tasks', () => {
       const task: Task = {
         id: 'task-1',
+        type: 'coder',
         prompt: 'Test',
-        status: 'running',
-        agentName: 'coder',
+        status: 'in_progress',
         createdAt: new Date(),
       };
 
@@ -240,9 +240,9 @@ describe('agents store', () => {
       for (let i = 0; i < 110; i++) {
         const task: Task = {
           id: `task-${i}`,
+          type: 'coder',
           prompt: 'Test',
-          status: 'running',
-          agentName: 'coder',
+          status: 'in_progress',
           createdAt: new Date(),
         };
 
@@ -259,6 +259,7 @@ describe('agents store', () => {
         type: 'agent:started',
         agentName: 'explore',
         timestamp: new Date(),
+        data: {},
       };
 
       handleAgentEvent(event);
@@ -273,6 +274,7 @@ describe('agents store', () => {
         type: 'agent:completed',
         agentName: 'coder',
         timestamp: new Date(),
+        data: {},
       };
 
       handleAgentEvent(event);
@@ -312,6 +314,7 @@ describe('agents store', () => {
       const event: AgentEvent = {
         type: 'agent:started',
         timestamp: new Date(),
+        data: {},
       };
 
       // Should not throw
@@ -343,14 +346,14 @@ describe('agents store', () => {
 
       const task: Task = {
         id: 'task-1',
+        type: 'tester',
         prompt: 'Test',
-        status: 'running',
-        agentName: 'tester',
+        status: 'in_progress',
         createdAt: new Date(),
       };
 
       completeTask(task, { success: true, output: '' });
-      enqueueTask({ ...task, id: 'task-2' });
+      enqueueTask({ ...task, id: 'task-2', status: 'pending' });
 
       const stats = agentStatsStore.get();
 
@@ -395,9 +398,9 @@ describe('agents store', () => {
       addAgentLog('coder', { level: 'info', message: 'Test' });
       enqueueTask({
         id: '1',
+        type: 'coder',
         prompt: 'Test',
         status: 'pending',
-        agentName: 'coder',
         createdAt: new Date(),
       });
 
@@ -416,9 +419,9 @@ describe('agents store', () => {
 
       const task: Task = {
         id: 'task-1',
+        type: 'coder',
         prompt: 'Write some code for testing',
-        status: 'running',
-        agentName: 'coder',
+        status: 'in_progress',
         createdAt: new Date(),
       };
 
