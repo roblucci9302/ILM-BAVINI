@@ -15,5 +15,20 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // Optimisation du bundle
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
+    // Compression et minification
+    minify: 'esbuild',
+    target: 'esnext',
+  },
+  // Optimisation des dépendances
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
   },
 });

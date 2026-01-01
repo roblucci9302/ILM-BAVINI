@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Header } from '@/components/layout';
 import { LoginForm, RegisterForm, ProtectedRoute } from '@/components/auth';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Home, Dashboard, Profile } from '@/pages';
 
 const queryClient = new QueryClient({
@@ -29,9 +30,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
           <Routes>
             {/* Public routes */}
             <Route
@@ -70,5 +72,6 @@ export default function App() {
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
+  </ErrorBoundary>
   );
 }
