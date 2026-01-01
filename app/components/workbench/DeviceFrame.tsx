@@ -30,13 +30,13 @@ export const DeviceFrame = memo(({ children }: DeviceFrameProps) => {
   return (
     <div className="flex-1 flex items-center justify-center bg-bolt-elements-background-depth-3 overflow-hidden p-4">
       <motion.div
-        layout
+        layout="position"
         transition={{ duration: 0.3, ease: cubicEasingFn }}
         className={classNames('relative rounded-[40px] bg-gray-900 p-3 shadow-2xl', 'border-4 border-gray-800')}
       >
         {/* screen bezel */}
         <motion.div
-          layout
+          layout="size"
           transition={{ duration: 0.3, ease: cubicEasingFn }}
           className="rounded-[28px] overflow-hidden bg-white"
           style={{

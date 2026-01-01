@@ -103,19 +103,19 @@ export const RestoreModal = memo(
                       {checkpoint.description}
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs text-bolt-elements-textTertiary">
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 flex-shrink-0">
                         <span className="i-ph:clock" />
                         {checkpoint.timeAgo}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 flex-shrink-0">
                         <span className="i-ph:tag" />
                         {getTypeLabel(checkpoint.type)}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 flex-shrink-0">
                         <span className="i-ph:file" />
                         {checkpoint.filesCount} fichiers
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 flex-shrink-0">
                         <span className="i-ph:chat-circle" />
                         {checkpoint.messagesCount} messages
                       </span>

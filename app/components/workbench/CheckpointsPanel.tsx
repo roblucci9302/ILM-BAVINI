@@ -227,8 +227,8 @@ export const CheckpointsPanel = memo(({ className, compact = false, disabled = f
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="overflow-hidden"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="overflow-hidden will-change-[height,opacity]"
             >
               <div className="p-2 max-h-[300px] overflow-y-auto">
                 <CheckpointTimeline

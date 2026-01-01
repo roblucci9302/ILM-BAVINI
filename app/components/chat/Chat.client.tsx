@@ -319,7 +319,8 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
       const scrollHeight = textarea.scrollHeight;
 
       textarea.style.height = `${Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
-      textarea.style.overflowY = scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
+      // Always use 'auto' to avoid scrollbar appearing/disappearing and shifting content
+      textarea.style.overflowY = 'auto';
     }
   }, [input, textareaRef]);
 

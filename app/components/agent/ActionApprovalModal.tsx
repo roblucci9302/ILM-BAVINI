@@ -264,9 +264,9 @@ const ActionItem = memo(({ action, isSelected, isExpanded, onToggleSelect, onTog
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-nowrap min-w-0">
             <ActionTypeBadge type={action.type} />
-            <span className="text-sm text-bolt-elements-textPrimary truncate">
+            <span className="text-sm text-bolt-elements-textPrimary truncate flex-1 min-w-0">
               {displayText}
             </span>
           </div>

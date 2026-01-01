@@ -127,7 +127,7 @@ export function Menu() {
           </a>
         </div>
         <div className="text-bolt-elements-textPrimary font-medium pl-6 pr-5 my-2">Vos conversations</div>
-        <div className="flex-1 overflow-scroll pl-4 pr-5 pb-5">
+        <div className="flex-1 overflow-auto pl-4 pr-5 pb-5">
           {list.length === 0 && (
             <div className="pl-2 text-bolt-elements-textTertiary">Aucune conversation précédente</div>
           )}

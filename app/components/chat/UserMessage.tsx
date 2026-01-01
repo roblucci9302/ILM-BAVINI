@@ -35,7 +35,7 @@ export function UserMessage({ content }: UserMessageProps) {
                 key={index}
                 src={imagePart.image}
                 alt={`Image ${index + 1}`}
-                className="max-w-[200px] max-h-[200px] object-contain rounded-lg border border-bolt-elements-borderColor"
+                className="max-w-[200px] max-h-[200px] object-contain rounded-lg border border-bolt-elements-borderColor flex-shrink-0"
               />
             ))}
           </div>

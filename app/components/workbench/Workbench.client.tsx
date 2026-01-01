@@ -260,12 +260,13 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   return (
     <>
       <div
-        className="z-workbench flex-shrink-0 h-full overflow-hidden transition-all duration-300"
+        className="z-workbench flex-shrink-0 h-full overflow-hidden transition-[width,opacity] duration-300"
         style={{
           width: chatStarted && showWorkbench ? 'min(55vw, calc(100vw - 450px))' : 0,
-          minWidth: chatStarted && showWorkbench ? '350px' : 0,
-          maxWidth: chatStarted && showWorkbench ? '900px' : 0,
+          minWidth: showWorkbench ? '350px' : 0,
+          maxWidth: showWorkbench ? '900px' : 0,
           opacity: chatStarted && showWorkbench ? 1 : 0,
+          visibility: showWorkbench ? 'visible' : 'hidden',
         }}
       >
           <div className="h-full w-full py-4 pr-4">
